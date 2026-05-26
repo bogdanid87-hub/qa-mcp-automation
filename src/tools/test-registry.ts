@@ -198,6 +198,42 @@ function buildContent(entries: TestEntry[], broken: BrokenEntry[] = []): string 
   return lines.join('\n');
 }
 
+// ─── Output parsers ───────────────────────────────────────────────────────────
+
+export interface FailingTestResult {
+  spec: string;
+  describe: string;
+  name: string;
+}
+
+/**
+ * Parse every failing test from a Playwright run's stdout.
+ * Tries inline ✗ markers first; also parses the numbered failure list so both
+ * sources are covered and deduplicated.
+ */
+export function parseFailingTestsFromOutput(output: string): FailingTestResult[] {
+  const results: FailingTestResult[] = [];
+
+  // Inline ✗ markers — same layout as ✓ but without guaranteed timing suffix
+  const inlineRe = /✗\s+\d+\s+\[chromium\]\s+›\s+(tests\/[^:]+):\d+:\d+\s+›\s+(.+?)(?:\s+\(\d+m?s\))?\s*$/gm;
+  let m: RegExpExecArray | null;
+  while ((m = inlineRe.exec(output)) !== null) {
+    const spec = m[1].trim();
+    const title = m[2].trim();
+    const sep = title.indexOf(' › ');
+    if (sep === -1) continue;
+    results.push({ spec, describe: title.substring(0, sep), name: title.substring(sep + 3) });
+  }
+
+  // Numbered failure block at the bottom of the output
+  const numberedRe = /\d+\)\s+\[chromium\]\s+›\s+(tests\/[^\s:]+):\d+:\d+\s+›\s+([^›\n]+?)\s+›\s+(.+)/gm;
+  while ((m = numberedRe.exec(output)) !== null) {
+    results.push({ spec: m[1].trim(), describe: m[2].trim(), name: m[3].trim() });
+  }
+
+  return [...new Map(results.map(r => [`${r.spec}::${r.name}`, r])).values()];
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function recordPassingTests(passing: PassingTest[]): Promise<void> {
@@ -255,6 +291,45 @@ export async function removeResolvedBrokenTests(resolvedKeys: Set<string>): Prom
   if (updated.length !== broken.length) {
     await writeFile(TEST_CASES_PATH, buildContent(passing, updated), 'utf-8');
   }
+}
+
+/**
+ * Move passing tests that have become regressions into the ❌ Broken section.
+ * Removes them from the passing table and appends to broken (skips duplicates).
+ */
+export async function demoteTobroken(
+  entries: Array<{ spec: string; describe: string; name: string; kind: 'broken'; rootCause: string }>,
+): Promise<void> {
+  if (entries.length === 0) return;
+
+  let content = '';
+  try { content = await readFile(TEST_CASES_PATH, 'utf-8'); } catch { return; }
+
+  const passing = parseTestCases(content);
+  const broken = parseBrokenTests(content);
+
+  const demoteKeys = new Set(entries.map(e => `${e.spec}::${e.name}`));
+  const brokenKeys = new Set(broken.map(e => `${e.spec}::${e.name}`));
+
+  // Remove regressions from passing
+  const updatedPassing = passing.filter(e => !demoteKeys.has(`${e.spec}::${e.name}`));
+
+  // Add to broken, filling in describe from the passing entry if available
+  for (const entry of entries) {
+    const key = `${entry.spec}::${entry.name}`;
+    if (brokenKeys.has(key)) continue;
+    const passingEntry = passing.find(e => `${e.spec}::${e.name}` === key);
+    broken.push({
+      spec: entry.spec,
+      describe: entry.describe || passingEntry?.describe || '',
+      name: entry.name,
+      kind: entry.kind,
+      rootCause: entry.rootCause,
+    });
+    brokenKeys.add(key);
+  }
+
+  await writeFile(TEST_CASES_PATH, buildContent(updatedPassing, broken), 'utf-8');
 }
 
 /** Read all broken/app-bug entries from TEST_CASES.md. */

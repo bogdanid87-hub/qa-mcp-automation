@@ -23,7 +23,7 @@ Describe a test scenario in plain English. The server uses **Claude Sonnet 4.6**
 - **Test annotations** — unresolvable failures are annotated in-place: `/* ⚠️ BROKEN */` for code issues that exceeded the budget, `/* ⚠️ APP BUG */` for confirmed application defects
 - **Additional test proposals** — after generating a test, the server proposes further scenarios (negative cases, edge cases, boundary conditions, alternative happy paths); the user picks which ones to generate, saving unnecessary API calls
 - **Duplicate detection** — before calling the API, the CLI checks `TEST_CASES.md` for similar existing tests and warns the user; aborting still offers any missing additional tests for that feature
-- **Auto-tracked test registry** — `TEST_CASES.md` is updated automatically: passing tests are recorded in the main table; unresolvable failures are recorded under **⚠️ Application Bugs** or **❌ Broken Tests**; running the suite manually never touches the registry. Run `npm run update-registry` to re-check broken/app-bug entries and promote resolved tests back to the passing section
+- **Auto-tracked test registry** — `TEST_CASES.md` is updated automatically: passing tests are recorded in the main table; unresolvable failures are recorded under **⚠️ Application Bugs** or **❌ Broken Tests**; running the suite manually never touches the registry. Run `npm run update-registry` to re-check broken/app-bug entries and promote resolved tests back to the passing section. Run `npm run sync-registry` to do a full reconciliation — runs all tests, adds undocumented passing tests, promotes resolved entries, and flags regressions
 - A complete **Playwright test framework**: Page Object Model, custom fixtures, ad-blocking, popup handling, storageState, randomised test data, API-based user setup/teardown
 
 ---
@@ -503,6 +503,45 @@ The default limit is **$0.30 per session** (roughly 1 generate call + 2–3 fix 
 
 ---
 
+## Syncing TEST_CASES.md
+
+`TEST_CASES.md` is updated automatically during MCP flows, but it can drift if:
+- A server error interrupts an MCP call before the write completes
+- Tests are added or edited by hand, or written with Claude Code instead of the MCP server
+- A test regresses after it was recorded as passing
+
+Run `npm run sync-registry` to do a full reconciliation:
+
+```bash
+npm run sync-registry
+```
+
+```
+⏳ Running full test suite...
+
+▶ 14 passed, 1 failed (15 total)
+
+📝 Adding 2 undocumented passing test(s):
+   + tests/cart.spec.ts › Cart › should add a product to the cart
+   + tests/cart.spec.ts › Cart › should remove a product from the cart
+
+⚠️  Flagging 1 regression(s) as broken:
+   ❌ Regression: tests/login.spec.ts › Login › should login with valid credentials
+
+   ⚠️  BROKEN comments were NOT added to spec files — run `npm run fix -- --pattern <spec>` for each.
+
+✅ TEST_CASES.md updated (3 changes).
+```
+
+What it does in one pass:
+- **Adds** any passing test that is not yet in `TEST_CASES.md` — whether it was written manually, by Claude Code, or through a failed MCP write
+- **Promotes** broken/app-bug entries that now pass back to the passing section
+- **Flags** tests that were recorded as passing but are now failing, moving them to the `❌ Broken Tests` section
+
+Use `npm run update-registry` instead when you only want to re-check the entries already recorded as broken or app-bug (faster — does not run the whole suite).
+
+---
+
 ## Running tests directly
 
 You can run the Playwright tests without going through the MCP server:
@@ -515,6 +554,7 @@ npm run test:report         # open the HTML test report
 npm run generate            # generate a new test from my-test.txt
 npm run fix                 # fix failing tests with Claude (interactive, budget-controlled)
 npm run update-registry     # re-run broken/app-bug tests and update TEST_CASES.md if resolved
+npm run sync-registry       # full reconciliation: run all tests, sync TEST_CASES.md completely
 ```
 
 ---
@@ -529,6 +569,7 @@ qa-mcp-automation/
 │   ├── cli.ts                    ← npm run generate — test generation with prompts, budget, retry loop
 │   ├── fix-cli.ts                ← npm run fix — standalone fix loop with budget guard
 │   ├── update-registry-cli.ts    ← npm run update-registry — re-checks broken/app-bug tests, updates TEST_CASES.md
+│   ├── sync-registry-cli.ts      ← npm run sync-registry — full reconciliation between test results and TEST_CASES.md
 │   ├── tools/
 │   │   ├── generate-test.ts      ← calls Claude to write test code; auto-runs, auto-fixes, records
 │   │   ├── inspect-page.ts       ← headless DOM extraction
@@ -584,7 +625,7 @@ Every generated test and POM follows these conventions, enforced via the system 
 | User cleanup | Tests that create users delete them at the end, even on failure |
 | API-first login | Tests that need an authenticated user create the account via API first |
 | Assertions | Every test has at least one `expect()` |
-| Negative test proposals | Proposed after every positive test; no code is written until the user confirms |
+| Additional test proposals | Proposed after every test (negative cases, edge cases, alternative happy paths); no code is written until the user confirms |
 | Step comments | Every logical block in a test has a comment — `// Step N:` when steps are numbered, natural language otherwise |
 
 Lessons learned from `investigate_and_fix` are appended to `src/prompts/learned-rules.md` and treated as additional mandatory rules on every subsequent generation.
