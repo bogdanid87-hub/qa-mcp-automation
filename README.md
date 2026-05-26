@@ -330,7 +330,13 @@ Instead of going through the Claude Code chat, you can drive test generation ent
 
 ### 1. Edit `my-test.txt`
 
-The file ships with a worked example. Replace the description with what you want to test:
+A ready-to-use template is included as `my-test.txt.example`. Copy it to get started:
+
+```bash
+cp my-test.txt.example my-test.txt
+```
+
+Replace the description with what you want to test:
 
 ```
 # test_name: login

@@ -1,0 +1,38 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# HOW TO USE
+#   1. Copy this file to my-test.txt  (cp my-test.txt.example my-test.txt)
+#   2. Edit the description below — keep or remove step numbers as you like
+#   3. Set test_name and page_paths (both optional but recommended)
+#   4. Run:  npm run generate -- --file my-test.txt
+#
+# my-test.txt is gitignored — it is your local scratchpad and is never committed.
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# test_name:  sets the output file name  →  tests/<test_name>.spec.ts
+# page_paths: comma-separated paths the generator will inspect for real locators
+#             leave blank to skip live inspection (locators inferred from context)
+#
+# TIPS
+#   • Use () for implementation hints that are not test steps — the AI reads
+#     them as guidance, not as assertions:
+#       3. Verify the home page loaded (also check the carousel — update verifyLoaded())
+#   • If a spec or POM for this feature already exists the AI will ADD to it,
+#     not create a duplicate file
+#   • Remove # test_name / # page_paths lines if you don't need them
+# ─────────────────────────────────────────────────────────────────────────────
+
+# test_name: login
+# page_paths: /login
+
+Test the login flow on automationexercise.com:
+
+1. Launch browser
+2. Navigate to url 'http://automationexercise.com'
+3. Verify that the home page is visible successfully
+4. Click on 'Signup / Login' button
+5. Verify 'Login to your account' heading is visible
+6. Enter a valid email address and password
+   (use the API to create a test account first via POST /api/createAccount,
+    then log in with those credentials — delete the account in afterEach)
+7. Click the 'Login' button
+8. Verify that 'Logged in as <username>' is visible in the navigation
