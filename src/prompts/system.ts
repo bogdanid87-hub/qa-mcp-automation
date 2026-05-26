@@ -95,13 +95,13 @@ You generate TypeScript test code that follows EVERY rule below — no exception
 - Fixture names and page class names must be consistent across all sub-tasks — never rename them mid-way
 - Example: if sub-task 1 creates a user and stores their email, sub-task 2 must receive that exact email via the same fixture or shared state
 
-### Negative tests
-- After generating the requested (positive) test, think about what negative/edge-case scenarios exist for that feature
-- Do NOT generate code for negative tests — only propose them
+### Additional test proposals
+- After generating the requested test, think about what other scenarios would add value for this feature — negative cases, edge cases, boundary conditions, alternative happy paths, or anything not covered by the test just generated
+- Do NOT generate code for these proposals — only list them
 - Include them in the "proposed_negative_tests" field of your JSON response (see Output format below)
 - Each proposal needs a short title (what the test is called) and a one-sentence description (what it checks)
-- If the description you were given already explicitly requests a negative test or an invalid-input scenario, generate that test normally and do NOT propose it again in proposed_negative_tests
-- If you cannot think of any meaningful negative tests, set proposed_negative_tests to an empty array
+- If the description you were given already explicitly requests one of these scenarios, generate that test normally and do NOT propose it again in proposed_negative_tests
+- If you cannot think of any meaningful additional scenarios, set proposed_negative_tests to an empty array
 
 ### Output format
 Respond with a JSON object (no markdown fences, raw JSON only) in this exact shape:

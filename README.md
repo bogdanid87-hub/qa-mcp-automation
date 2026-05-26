@@ -21,8 +21,8 @@ Describe a test scenario in plain English. The server uses **Claude Sonnet 4.6**
 - **Focused context** — instead of sending every source file on every API call, only the files relevant to the current task (failing spec + its imports for fix calls; fixtures + feature-matching files for generate calls) are sent in full; everything else is listed by name only, keeping Claude aware of what exists without wasting tokens on unrelated code
 - **Two-phase generation for new POMs** — when no Page Object Model exists for a feature, generation splits into two sequential calls: the first commits the POM to disk, the second generates the spec reading the real POM from context; this eliminates method-name mismatches that occur when both files are invented simultaneously in a single pass; when a POM already exists the single-call path is preserved
 - **Test annotations** — unresolvable failures are annotated in-place: `/* ⚠️ BROKEN */` for code issues that exceeded the budget, `/* ⚠️ APP BUG */` for confirmed application defects
-- **Negative test proposals** — after generating a positive test, the server proposes negative/edge-case scenarios; the user picks which ones to generate, saving unnecessary API calls
-- **Duplicate detection** — before calling the API, the CLI checks `TEST_CASES.md` for similar existing tests and warns the user; aborting still offers any missing negative tests for that feature
+- **Additional test proposals** — after generating a test, the server proposes further scenarios (negative cases, edge cases, boundary conditions, alternative happy paths); the user picks which ones to generate, saving unnecessary API calls
+- **Duplicate detection** — before calling the API, the CLI checks `TEST_CASES.md` for similar existing tests and warns the user; aborting still offers any missing additional tests for that feature
 - **Auto-tracked test registry** — `TEST_CASES.md` is updated automatically: passing tests are recorded in the main table; unresolvable failures are recorded under **⚠️ Application Bugs** or **❌ Broken Tests**; running the suite manually never touches the registry. Run `npm run update-registry` to re-check broken/app-bug entries and promote resolved tests back to the passing section
 - A complete **Playwright test framework**: Page Object Model, custom fixtures, ad-blocking, popup handling, storageState, randomised test data, API-based user setup/teardown
 
@@ -51,7 +51,7 @@ The new spec is run automatically
          → code bug still failing → interactive retry loop with live token-budget display
          → budget reached or user declines → ⚠️ BROKEN annotation written into the spec + recorded in TEST_CASES.md
           ↓
-Proposed negative tests are listed — you choose which ones to generate (same flow)
+Proposed additional tests are listed — you choose which ones to generate (same flow)
           ↓
 If a test needs manual fixing later, run: npm run fix [-- --pattern tests/foo.spec.ts]
 ```
@@ -197,9 +197,9 @@ After saving the files, `generate_test` immediately runs the new spec with Playw
 
 If it fails, the tool automatically attempts a fix: it asks Claude to diagnose the root cause, patches the relevant files, saves the lesson to `learned-rules.md`, and re-runs. If the fix works, the test is recorded. If it still fails, the CLI enters an interactive retry loop — each attempt shows the running token cost, and when the configured budget ($0.30 by default) is reached you are asked whether to continue. If you decline, a `/* ⚠️ BROKEN */` comment is written directly before the failing `test()` call so it is easy to find and fix manually later.
 
-**Negative test proposals:**
+**Additional test proposals:**
 
-After writing the positive test, `generate_test` also proposes negative/edge-case scenarios — but does not generate code for them yet. Proposals that are already recorded in `TEST_CASES.md` are filtered out so you are only shown scenarios that haven't been implemented. The full output looks like this:
+After writing the test, `generate_test` also proposes further scenarios (negative cases, edge cases, boundary conditions, alternative happy paths) — but does not generate code for them yet. Proposals that are already recorded in `TEST_CASES.md` are filtered out so you are only shown scenarios that haven't been implemented. The full output looks like this:
 
 ```
 ✅ Contact Us form happy-path test added to tests/contactUs.spec.ts
@@ -209,13 +209,13 @@ Files written:
 
 ✅ 1 test passed — recorded in TEST_CASES.md
 
-Proposed negative tests — call generate_test again with the ones you want:
+Proposed additional tests — call generate_test again with the ones you want:
   1. should show an error when the email field is empty — Submits the form without an email and asserts a validation message appears.
   2. should show an error when all fields are blank — Clicks Submit with no input and checks that the form does not proceed.
   3. should reject an invalid email format — Enters a malformed email and verifies the form flags it before submission.
 ```
 
-Reply with the numbers you want (e.g. "generate negative tests 1 and 3") and call `generate_test` again with those scenarios. No tokens are spent on tests you don't need.
+Reply with the numbers you want (e.g. "generate additional tests 1 and 3") and call `generate_test` again with those scenarios. No tokens are spent on tests you don't need.
 
 ---
 
@@ -321,8 +321,8 @@ Always check this before generating a new test to understand what already exists
                                  ↳ auto-runs; auto-fixes on failure; records in TEST_CASES.md if passing
 4. investigate_and_fix         → deeper fix if auto-fix could not resolve it
                                  ↳ re-runs after fixing; records in TEST_CASES.md if now passing
-5. review proposed negatives   → pick which negative tests to generate (or skip)
-6. generate_test (negatives)   → generate the selected negative tests (same auto-run + record flow)
+5. review proposed additions   → pick which additional tests to generate (or skip)
+6. generate_test (additions)   → generate the selected additional tests (same auto-run + record flow)
 7. run_tests                   → optional: run the full suite to check nothing else broke
 ```
 
@@ -368,7 +368,7 @@ The CLI will:
 3. Run the new spec automatically
 4. Record it in `TEST_CASES.md` if it passes
 5. Print a summary of which files were **created** and which were **edited**
-6. Offer any proposed negative tests that haven't been generated yet
+6. Offer any proposed additional tests that haven't been generated yet
 7. Ask whether to run the full test suite before exiting:
 
 ```
@@ -381,14 +381,14 @@ The CLI will:
     ~ TEST_CASES.md
 ────────────────────────────────────────────────
 
-Proposed negative tests:
+Proposed additional tests:
 
   1. should show error when email is invalid
      Enters a malformed email and verifies the form flags it.
   2. should show error when password is too short
      Enters a password below the minimum length and checks for a validation message.
 
-Generate which negative tests? Enter numbers (e.g. 1,3), "all", or Enter to skip:
+Generate which additional tests? Enter numbers (e.g. 1,3), "all", or Enter to skip:
 
 Run all tests to verify nothing is broken? [y/N]
 ```
@@ -409,21 +409,21 @@ Generate a new test anyway? [y/N]
 ```
 
 - Answer **`y`** to generate a new test regardless.
-- Answer **`N`** (or press Enter) to skip generation — but the CLI will still check whether any **negative tests** for that feature are missing and offer to generate them.
+- Answer **`N`** (or press Enter) to skip generation — but the CLI will still check whether any **additional tests** for that feature are missing and offer to generate them.
 
 ```
-⏳ Checking for missing negative tests...
+⏳ Checking for additional test scenarios...
 
 ────────────────────────────────────────────────
-  Proposed negative tests:
+  Proposed additional tests:
 
   1. should show error for invalid email format
      ...
 ────────────────────────────────────────────────
-Generate which negative tests? Enter numbers (e.g. 1,3), "all", or Enter to skip:
+Generate which additional tests? Enter numbers (e.g. 1,3), "all", or Enter to skip:
 ```
 
-Negative tests that are already recorded in `TEST_CASES.md` are filtered out automatically — only genuinely new scenarios are offered.
+Additional tests that are already recorded in `TEST_CASES.md` are filtered out automatically — only genuinely new scenarios are offered.
 
 You can also override or skip the metadata by passing flags directly:
 

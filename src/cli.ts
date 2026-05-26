@@ -160,7 +160,7 @@ interface NegativeProposal {
   detail: string;
 }
 
-/** Extract proposed negative tests from the generate_test output text. */
+/** Extract proposed additional tests from the generate_test output text. */
 function parseProposedNegatives(output: string): NegativeProposal[] {
   const proposals: NegativeProposal[] = [];
   // Matches lines like:   1. **title** — detail text
@@ -316,13 +316,13 @@ async function main(): Promise<void> {
         }
 
         // Ask before spending tokens on an API call
-        const checkApi = await askYesNo('Check for additional new negative test scenarios? [y/N] ');
+        const checkApi = await askYesNo('Check for additional test scenarios? [y/N] ');
         if (!checkApi) {
           console.log('\nExiting.\n');
           process.exit(0);
         }
 
-        console.log('\n⏳ Checking for missing negative tests...\n');
+        console.log('\n⏳ Checking for additional test scenarios...\n');
         const propResult = await generateTestTool({ description, page_paths: pagePaths, proposalsOnly: true });
         const propOutput = propResult.content[0]?.text ?? '';
 
@@ -337,13 +337,13 @@ async function main(): Promise<void> {
         }
 
         if (newProps.length === 0) {
-          console.log('No new negative tests to propose. Exiting.\n');
+          console.log('No additional tests to propose. Exiting.\n');
           process.exit(0);
         }
 
         const bar = '─'.repeat(48);
         console.log(`${bar}`);
-        console.log('  Proposed negative tests:');
+        console.log('  Proposed additional tests:');
         newProps.forEach((p, i) => {
           console.log(`\n  ${i + 1}. ${p.title}`);
           console.log(`     ${p.detail}`);
@@ -351,7 +351,7 @@ async function main(): Promise<void> {
         console.log(`\n${bar}`);
 
         const answer = await ask(
-          'Generate which negative tests? Enter numbers (e.g. 1,3), "all", or Enter to skip: ',
+          'Generate which additional tests? Enter numbers (e.g. 1,3), "all", or Enter to skip: ',
         );
 
         let selected: NegativeProposal[] = [];
@@ -363,10 +363,10 @@ async function main(): Promise<void> {
         }
 
         if (selected.length > 0) {
-          const specHint = similar[0]?.spec ? `Add these negative tests to ${similar[0].spec}:\n\n` : 'Add these negative tests:\n\n';
+          const specHint = similar[0]?.spec ? `Add these additional tests to ${similar[0].spec}:\n\n` : 'Add these additional tests:\n\n';
           const negDesc = specHint + selected.map((p, i) => `${i + 1}. ${p.title} — ${p.detail}`).join('\n');
 
-          console.log('\n⏳ Generating negative tests...\n');
+          console.log('\n⏳ Generating additional tests...\n');
 
           const before = await snapshotFiles();
           const negResult = await generateTestTool({ description: negDesc, page_paths: pagePaths });
@@ -383,7 +383,7 @@ async function main(): Promise<void> {
             console.log('\nSkipped. Run `npm test` when ready.\n');
           }
         } else {
-          console.log('\nSkipped negative tests. Exiting.\n');
+          console.log('\nSkipped additional tests. Exiting.\n');
         }
 
         process.exit(0);
@@ -456,7 +456,7 @@ async function main(): Promise<void> {
     }
   }
 
-  // ── Step 2: Offer negative tests ──────────────────────────────────────────
+  // ── Step 2: Offer additional tests ────────────────────────────────────────
   const allTestsAfter = await readTestCases();
   const existingNames = new Set(allTestsAfter.map(t => t.name.toLowerCase()));
 
@@ -494,7 +494,7 @@ async function main(): Promise<void> {
 
     if (selected.length > 0) {
       const specFile = findSpecFile(created, edited);
-      const specHint = specFile ? `Add these negative tests to ${specFile}:\n\n` : 'Add these negative tests:\n\n';
+      const specHint = specFile ? `Add these additional tests to ${specFile}:\n\n` : 'Add these additional tests:\n\n';
       const negDesc = specHint + selected.map((p, i) => `${i + 1}. ${p.title} — ${p.detail}`).join('\n');
 
       console.log('\n⏳ Generating negative tests...\n');

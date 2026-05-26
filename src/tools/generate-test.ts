@@ -181,7 +181,7 @@ export async function generateTestTool(args: {
       content: [{
         type: 'text',
         text: negatives.length > 0
-          ? ['**Proposed negative tests:**', ...negatives.map((t, i) => `  ${i + 1}. **${t.title}** — ${t.description}`)].join('\n')
+          ? ['**Proposed additional tests:**', ...negatives.map((t, i) => `  ${i + 1}. **${t.title}** — ${t.description}`)].join('\n')
           : '',
       }],
     };
@@ -273,7 +273,7 @@ export async function generateTestTool(args: {
   if (negatives.length > 0) {
     lines.push(
       '',
-      '**Proposed negative tests** — call `generate_test` again with the ones you want (none have been written yet):',
+      '**Proposed additional tests** — call `generate_test` again with the ones you want (none have been written yet):',
       ...negatives.map((t, i) => `  ${i + 1}. **${t.title}** — ${t.description}`),
     );
   }
