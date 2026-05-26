@@ -1,6 +1,6 @@
 # Test Cases
 
-**Total: 6 tests** | **Latest:** #6 — Place Order: Add Products in Cart › should add two products to cart and verify prices, quantity and total
+**Total: 8 tests** | **Latest:** #8 — Place Order: Add Products in Cart › should remove a product from the cart and update the cart
 
 ---
 
@@ -42,4 +42,16 @@
 
 | # | Test |
 |---|------|
-| 6 | should add two products to cart and verify prices, quantity and total ← latest |
+| 6 | should add two products to cart and verify prices, quantity and total |
+| 7 | should show empty cart when no products have been added |
+| 8 | should remove a product from the cart and update the cart ← latest |
+
+---
+
+## ❌ Broken Tests
+
+> Fix manually or run: `npm run fix -- --pattern <spec>`
+
+| Spec | Describe | Test | Root cause |
+|------|----------|------|------------|
+| tests/cart.spec.ts | Place Order: Add Products in Cart | should update total correctly when product quantity is changed in cart | Failing but never recorded — run `npm run fix` to investigate. |
