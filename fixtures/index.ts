@@ -2,6 +2,7 @@ import { test as base } from '@playwright/test';
 import { HomePage } from '../pages/HomePage';
 import { ContactUsPage } from '../pages/ContactUsPage';
 import { ProductsPage } from '../pages/ProductsPage';
+import { CartPage } from '../pages/CartPage';
 import { blockAds } from '../utils/adBlocker';
 import { dismissPopups } from '../utils/popupDismisser';
 
@@ -9,6 +10,7 @@ type PageFixtures = {
   homePage: HomePage;
   contactUsPage: ContactUsPage;
   productsPage: ProductsPage;
+  cartPage: CartPage;
 };
 
 export const test = base.extend<PageFixtures>({
@@ -39,6 +41,10 @@ export const test = base.extend<PageFixtures>({
 
   productsPage: async ({ page }, use) => {
     await use(new ProductsPage(page));
+  },
+
+  cartPage: async ({ page }, use) => {
+    await use(new CartPage(page));
   },
 });
 
