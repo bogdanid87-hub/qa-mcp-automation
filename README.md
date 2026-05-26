@@ -23,7 +23,7 @@ Describe a test scenario in plain English. The server uses **Claude Sonnet 4.6**
 - **Test annotations** — unresolvable failures are annotated in-place: `/* ⚠️ BROKEN */` for code issues that exceeded the budget, `/* ⚠️ APP BUG */` for confirmed application defects
 - **Negative test proposals** — after generating a positive test, the server proposes negative/edge-case scenarios; the user picks which ones to generate, saving unnecessary API calls
 - **Duplicate detection** — before calling the API, the CLI checks `TEST_CASES.md` for similar existing tests and warns the user; aborting still offers any missing negative tests for that feature
-- **Auto-tracked test registry** — `TEST_CASES.md` is updated only when a new test is generated and passes; running the suite manually never touches the registry
+- **Auto-tracked test registry** — `TEST_CASES.md` is updated automatically: passing tests are recorded in the main table; unresolvable failures are recorded under **⚠️ Application Bugs** or **❌ Broken Tests**; running the suite manually never touches the registry. Run `npm run update-registry` to re-check broken/app-bug entries and promote resolved tests back to the passing section
 - A complete **Playwright test framework**: Page Object Model, custom fixtures, ad-blocking, popup handling, storageState, randomised test data, API-based user setup/teardown
 
 ---
@@ -46,9 +46,10 @@ The new spec is run automatically
   Passes → recorded in TEST_CASES.md
   Fails  → auto-fix attempted — Claude classifies the failure first:
            code bug  → patches the code, saves lesson, re-runs
-           app bug   → test is NOT changed; ⚠️ APP BUG annotation written into the spec
+           app bug   → test is NOT changed; ⚠️ APP BUG annotation written into the spec + recorded in TEST_CASES.md
+         → code bug still failing → ⚠️ BROKEN annotation written into the spec + recorded in TEST_CASES.md
          → code bug still failing → interactive retry loop with live token-budget display
-         → budget reached or user declines → ⚠️ BROKEN annotation written into the spec
+         → budget reached or user declines → ⚠️ BROKEN annotation written into the spec + recorded in TEST_CASES.md
           ↓
 Proposed negative tests are listed — you choose which ones to generate (same flow)
           ↓
@@ -513,6 +514,7 @@ npm run test:debug          # step through with the Playwright inspector
 npm run test:report         # open the HTML test report
 npm run generate            # generate a new test from my-test.txt
 npm run fix                 # fix failing tests with Claude (interactive, budget-controlled)
+npm run update-registry     # re-run broken/app-bug tests and update TEST_CASES.md if resolved
 ```
 
 ---
@@ -526,6 +528,7 @@ qa-mcp-automation/
 │   ├── index.ts                  ← MCP server entry point — 5 tools registered here
 │   ├── cli.ts                    ← npm run generate — test generation with prompts, budget, retry loop
 │   ├── fix-cli.ts                ← npm run fix — standalone fix loop with budget guard
+│   ├── update-registry-cli.ts    ← npm run update-registry — re-checks broken/app-bug tests, updates TEST_CASES.md
 │   ├── tools/
 │   │   ├── generate-test.ts      ← calls Claude to write test code; auto-runs, auto-fixes, records
 │   │   ├── inspect-page.ts       ← headless DOM extraction
@@ -559,7 +562,7 @@ qa-mcp-automation/
 │   └── sample-upload.txt         ← sample file used in upload tests
 │
 ├── my-test.txt                   ← local template for terminal-driven test generation (gitignored)
-├── TEST_CASES.md                 ← auto-updated registry of all passing tests
+├── TEST_CASES.md                 ← auto-updated registry: passing tests, app bugs, and broken tests
 └── playwright.config.ts          ← Chromium only, baseURL, storageState
 ```
 
