@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Playwright output
+test-results/
+playwright-report/
+
+# Auth state (created at runtime by global.setup.ts)
+test-data/.auth/
+
+# Local config — contains your API key and absolute path; never commit this
+.claude/settings.local.json
+
+# Local test description (personal working file)
+my-test.txt
+
+# macOS
+.DS_Store
