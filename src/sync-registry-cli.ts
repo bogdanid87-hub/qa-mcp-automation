@@ -7,6 +7,7 @@ import {
   parsePassingTests,
   parseFailingTestsFromOutput,
   demoteTobroken,
+  type FailingTestResult,
 } from './tools/test-registry.js';
 
 async function main(): Promise<void> {
@@ -50,12 +51,44 @@ async function main(): Promise<void> {
   // ── 2. Broken/app-bug tests that now pass → promote ───────────────────────
   const toPromote = recordedBroken.filter(e => passingResultKeys.has(`${e.spec}::${e.name}`));
 
-  // ── 3. Previously-passing tests that are now failing → regression ─────────
-  const toFlag = failingResults.filter(f => {
+  // ── 3. Previously-passing tests that are now failing → verify before flagging
+  // Re-run the affected spec(s) once to rule out transient failures (high traffic,
+  // network blip, etc.). Only flag as broken if the test fails both times.
+  const candidateRegressions = failingResults.filter(f => {
     const key = `${f.spec}::${f.name}`;
     return passingKeys.has(key) && !brokenKeys.has(key);
   });
 
+  let toFlag: FailingTestResult[] = [];
+  let flaky: FailingTestResult[] = [];
+
+  if (candidateRegressions.length > 0) {
+    // Group candidates by spec so we run each spec file at most once
+    const specsToRerun = [...new Set(candidateRegressions.map(f => f.spec))];
+    console.log(`⚡ ${candidateRegressions.length} candidate regression(s) — re-running to rule out transient failures...\n`);
+
+    const stillFailingKeys = new Set<string>();
+
+    for (const spec of specsToRerun) {
+      console.log(`   ↺  Re-running ${spec}...`);
+      const retryOutput = await runTests(spec);
+      const retryFailing = parseFailingTestsFromOutput(retryOutput);
+      for (const f of retryFailing) {
+        stillFailingKeys.add(`${f.spec}::${f.name}`);
+      }
+    }
+    console.log('');
+
+    for (const f of candidateRegressions) {
+      if (stillFailingKeys.has(`${f.spec}::${f.name}`)) {
+        toFlag.push(f);
+      } else {
+        flaky.push(f);
+      }
+    }
+  }
+
+  // ── Apply changes ──────────────────────────────────────────────────────────
   let changed = 0;
 
   if (toAdd.length > 0) {
@@ -83,17 +116,25 @@ async function main(): Promise<void> {
     console.log('');
   }
 
+  if (flaky.length > 0) {
+    console.log(`⚡ ${flaky.length} test(s) passed on re-run — likely transient (high traffic / network blip), not flagged:`);
+    for (const f of flaky) {
+      console.log(`   ~ ${f.spec} › ${f.name}`);
+    }
+    console.log('');
+  }
+
   if (toFlag.length > 0) {
-    console.log(`⚠️  Flagging ${toFlag.length} regression(s) as broken:`);
+    console.log(`⚠️  Flagging ${toFlag.length} confirmed regression(s) as broken (failed twice):`);
     await demoteTobroken(
       toFlag.map(f => ({
         ...f,
         kind: 'broken' as const,
-        rootCause: 'Regression — was passing but is now failing. Run `npm run fix` to investigate.',
+        rootCause: 'Regression — failed on two consecutive runs. Run `npm run fix` to investigate.',
       })),
     );
     for (const f of toFlag) {
-      console.log(`   ❌ Regression: ${f.spec} › ${f.name}`);
+      console.log(`   ❌ ${f.spec} › ${f.name}`);
     }
     changed += toFlag.length;
     console.log('\n   ⚠️  BROKEN comments were NOT added to spec files — run `npm run fix -- --pattern <spec>` for each.\n');

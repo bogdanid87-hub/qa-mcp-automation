@@ -519,14 +519,22 @@ npm run sync-registry
 ```
 ⏳ Running full test suite...
 
-▶ 14 passed, 1 failed (15 total)
+▶ 14 passed, 2 failed (16 total)
 
 📝 Adding 2 undocumented passing test(s):
    + tests/cart.spec.ts › Cart › should add a product to the cart
    + tests/cart.spec.ts › Cart › should remove a product from the cart
 
-⚠️  Flagging 1 regression(s) as broken:
-   ❌ Regression: tests/login.spec.ts › Login › should login with valid credentials
+⚡ 2 candidate regression(s) — re-running to rule out transient failures...
+
+   ↺  Re-running tests/login.spec.ts...
+   ↺  Re-running tests/checkout.spec.ts...
+
+⚡ 1 test(s) passed on re-run — likely transient (high traffic / network blip), not flagged:
+   ~ tests/checkout.spec.ts › Checkout › should complete a purchase
+
+⚠️  Flagging 1 confirmed regression(s) as broken (failed twice):
+   ❌ tests/login.spec.ts › Login › should login with valid credentials
 
    ⚠️  BROKEN comments were NOT added to spec files — run `npm run fix -- --pattern <spec>` for each.
 
@@ -536,7 +544,7 @@ npm run sync-registry
 What it does in one pass:
 - **Adds** any passing test that is not yet in `TEST_CASES.md` — whether it was written manually, by Claude Code, or through a failed MCP write
 - **Promotes** broken/app-bug entries that now pass back to the passing section
-- **Flags** tests that were recorded as passing but are now failing, moving them to the `❌ Broken Tests` section
+- **Confirms regressions with a re-run** — if a previously-passing test fails, the spec is re-run once before deciding; tests that pass on the second attempt are skipped (transient/flaky), only tests that fail twice are moved to `❌ Broken Tests`
 
 Use `npm run update-registry` instead when you only want to re-check the entries already recorded as broken or app-bug (faster — does not run the whole suite).
 
