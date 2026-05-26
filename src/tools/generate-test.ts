@@ -211,8 +211,9 @@ export async function generateTestTool(args: {
     const passed = (testOutput.match(/✓/g) ?? []).length;
     const hasFailed = testOutput.includes('failed') || (testOutput.match(/✗/g) ?? []).length > 0;
 
+    if (passed > 0) await recordPassingTests(parsePassingTests(testOutput));
+
     if (passed > 0 && !hasFailed) {
-      await recordPassingTests(parsePassingTests(testOutput));
       testRunNote = `✅ ${passed} test${passed === 1 ? '' : 's'} passed — recorded in TEST_CASES.md`;
     } else {
       passing = false;
