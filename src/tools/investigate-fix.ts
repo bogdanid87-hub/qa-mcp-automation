@@ -1,8 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { writeFile, mkdir } from 'fs/promises';
 import { dirname, join } from 'path';
-import { getSystemPrompt, appendLearnedRule } from '../prompts/system.js';
-import { readProjectContext } from './list-resources.js';
+import { getSystemBlocks, appendLearnedRule } from '../prompts/system.js';
+import { readFocusedContextForFailure } from './list-resources.js';
 import { runTests, runTestsTool } from './run-tests.js';
 import { parsePassingTests, recordPassingTests } from './test-registry.js';
 import { TokenBudget } from './budget.js';
@@ -50,26 +50,10 @@ export async function autoFixFailure(
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
-  const existingContext = await readProjectContext();
+  const existingContext = await readFocusedContextForFailure(failureOutput);
   const client = new Anthropic({ apiKey });
 
-  const userPrompt = `\
-## Failing test output
-
-\`\`\`
-${failureOutput}
-\`\`\`
-
----
-
-## Current codebase
-
-${existingContext}
-
----
-
-## Your task
-
+  const TASK_PROMPT = `\
 First, decide what kind of failure this is:
 
 **"code_bug"** — the test logic is mechanically wrong: bad locator, wrong selector, missing wait,
@@ -107,15 +91,32 @@ If no files need changing for a code_bug, return an empty array for "files".
 If the failure is not reproducible or the cause is unclear, set "lesson" to null.
 `;
 
+  const userBlocks = [
+    {
+      type: 'text' as const,
+      text: `## Current codebase\n\n${existingContext}`,
+      cache_control: { type: 'ephemeral' as const },
+    },
+    {
+      type: 'text' as const,
+      text: `## Failing test output\n\n\`\`\`\n${failureOutput}\n\`\`\`\n\n---\n\n## Your task\n\n${TASK_PROMPT}`,
+    },
+  ];
+
   let raw: string;
   try {
     const message = await client.messages.create({
       model: MODEL,
       max_tokens: 8192,
-      system: await getSystemPrompt(),
-      messages: [{ role: 'user', content: userPrompt }],
+      system: await getSystemBlocks(),
+      messages: [{ role: 'user', content: userBlocks }],
     });
-    budget?.add(message.usage.input_tokens, message.usage.output_tokens);
+    budget?.add(
+      message.usage.input_tokens,
+      message.usage.output_tokens,
+      message.usage.cache_creation_input_tokens ?? 0,
+      message.usage.cache_read_input_tokens ?? 0,
+    );
     raw = message.content
       .filter((b) => b.type === 'text')
       .map((b) => (b as { type: 'text'; text: string }).text)

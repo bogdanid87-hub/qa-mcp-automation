@@ -17,6 +17,8 @@ Describe a test scenario in plain English. The server uses **Claude Sonnet 4.6**
 - **Auto-fix on failure** — after generating a test, if it fails the tool immediately attempts a fix; if it still fails the CLI enters an interactive retry loop with a cost guard
 - **Code bug vs app bug detection** — the fix engine classifies every failure: *code bugs* (wrong locator, bad selector) are fixed automatically; *app bugs* (the site behaves differently from what the test asserts) are never "fixed" by changing the test — instead the test is annotated and preserved as documentation of the defect
 - **Token budget** — every CLI session is capped at $0.30 by default; when the budget is reached the user is prompted before any further API spend
+- **Prompt caching** — the system prompt and per-call codebase context are marked for Anthropic's server-side prompt cache; repeated calls within a session pay the cheap cache-read rate instead of the full input rate
+- **Focused context** — instead of sending every source file on every API call, only the files relevant to the current task (failing spec + its imports for fix calls; fixtures + feature-matching files for generate calls) are sent in full; everything else is listed by name only, keeping Claude aware of what exists without wasting tokens on unrelated code
 - **Test annotations** — unresolvable failures are annotated in-place: `/* ⚠️ BROKEN */` for code issues that exceeded the budget, `/* ⚠️ APP BUG */` for confirmed application defects
 - **Negative test proposals** — after generating a positive test, the server proposes negative/edge-case scenarios; the user picks which ones to generate, saving unnecessary API calls
 - **Duplicate detection** — before calling the API, the CLI checks `TEST_CASES.md` for similar existing tests and warns the user; aborting still offers any missing negative tests for that feature
@@ -495,7 +497,7 @@ test('should not accept duplicate email subscriptions', async ({ homePage }) => 
 
 **Token budget**
 
-The default limit is **$0.30 per session** (roughly 1 generate call + 2–3 fix attempts at current Claude Sonnet 4.6 pricing). The budget is tracked from actual token usage returned by the API, not estimated. To change the limit, update `DEFAULT_BUDGET_USD` in [src/cli.ts](src/cli.ts) and [src/fix-cli.ts](src/fix-cli.ts).
+The default limit is **$0.30 per session** (roughly 1 generate call + 2–3 fix attempts at current Claude Sonnet 4.6 pricing). The budget is tracked from actual token usage returned by the API — including prompt cache write and read costs — not estimated. To change the limit, update `DEFAULT_BUDGET_USD` in [src/cli.ts](src/cli.ts) and [src/fix-cli.ts](src/fix-cli.ts).
 
 ---
 

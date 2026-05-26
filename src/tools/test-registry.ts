@@ -5,10 +5,20 @@ const ROOT = process.cwd();
 const TEST_CASES_PATH = join(ROOT, 'TEST_CASES.md');
 
 const STOPWORDS = new Set([
+  // Generic English
   'test', 'that', 'with', 'from', 'this', 'should', 'will', 'when', 'then',
-  'have', 'been', 'make', 'into', 'also', 'which', 'verify', 'check', 'click',
-  'step', 'navigate', 'browser', 'launch', 'enter', 'submit', 'form', 'button',
-  'page', 'visible', 'successfully', 'invalid', 'valid', 'using',
+  'have', 'been', 'make', 'into', 'also', 'which', 'each', 'does', 'after',
+  'before', 'while', 'about', 'than', 'more', 'some', 'such', 'they', 'their',
+  // QA / browser actions — too common to be identifying
+  'verify', 'check', 'click', 'step', 'navigate', 'browser', 'launch', 'enter',
+  'submit', 'assert', 'ensure', 'confirm', 'open', 'close', 'scroll', 'back',
+  // Web element types — appear in almost every test
+  'form', 'button', 'page', 'link', 'text', 'field', 'input', 'label', 'modal',
+  'menu', 'icon', 'image', 'logo', 'header', 'footer', 'section', 'item',
+  // Site-wide concepts on automationexercise.com — too broad to identify a feature
+  'home', 'email', 'address', 'user', 'name', 'data', 'account',
+  'success', 'error', 'message', 'visible', 'successfully', 'invalid', 'valid',
+  'using', 'show', 'display', 'appear', 'redirect', 'load', 'loaded',
 ]);
 
 function extractWords(text: string): string[] {
@@ -23,10 +33,6 @@ function stem(w: string): string {
   return w.slice(0, Math.min(6, w.length));
 }
 
-function stemOverlap(aWords: string[], bWords: string[]): number {
-  const bStems = bWords.map(stem);
-  return aWords.filter(w => bStems.includes(stem(w))).length;
-}
 
 export interface TestEntry {
   num: number;
@@ -149,17 +155,32 @@ export async function readTestCases(): Promise<TestEntry[]> {
 
 /**
  * Return entries from `all` that appear similar to `description`.
- * Similarity: the describe-block name must stem-overlap with the description,
- * AND at least one word from the test name must also stem-overlap.
+ *
+ * Two conditions must BOTH hold:
+ *   1. Every word in the describe block must stem-match a word in the description.
+ *      (e.g. "Product Search" only matches if the description contains words for
+ *       both "product" and "search" — one word is not enough.)
+ *   2. At least 2 words from the test name must also stem-match the description.
+ *
+ * Stopwords and short words (<= 3 chars) are stripped before comparison so that
+ * generic terms like "home", "email", or "button" cannot be the sole match.
  */
 export function findSimilarTests(description: string, all: TestEntry[]): TestEntry[] {
   const descWords = extractWords(description);
   if (descWords.length === 0) return [];
 
+  const descStems = descWords.map(stem);
+
   return all.filter(entry => {
+    // Condition 1: ALL feature words (describe block) must appear in the description.
     const featureWords = extractWords(entry.describe);
-    if (stemOverlap(featureWords, descWords) === 0) return false;
+    if (featureWords.length === 0) return false;
+    const allFeatureMatch = featureWords.every(fw => descStems.includes(stem(fw)));
+    if (!allFeatureMatch) return false;
+
+    // Condition 2: At least 2 words from the test name must also appear.
     const nameWords = extractWords(entry.name);
-    return stemOverlap(nameWords, descWords) >= 1;
+    const nameMatchCount = nameWords.filter(nw => descStems.includes(stem(nw))).length;
+    return nameMatchCount >= 2;
   });
 }

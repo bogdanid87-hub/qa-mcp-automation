@@ -162,6 +162,45 @@ ${learned}
 `;
 }
 
+type CacheableBlock = { type: 'text'; text: string; cache_control: { type: 'ephemeral' } };
+type PlainBlock = { type: 'text'; text: string };
+
+/**
+ * Returns the system prompt as a single cacheable content block.
+ * Callers pass this directly as the `system` parameter of a Messages API call.
+ */
+export async function getSystemBlocks(): Promise<CacheableBlock[]> {
+  return [{ type: 'text', text: await getSystemPrompt(), cache_control: { type: 'ephemeral' } }];
+}
+
+/**
+ * Builds the user-turn content as two blocks:
+ *  1. Codebase context — marked cacheable so repeated calls with the same context
+ *     pay only the cheap cache-read price instead of the full input price.
+ *  2. Test description + optional DOM snapshot — never cached (varies per request).
+ */
+export function buildUserBlocks(opts: {
+  description: string;
+  existingContext: string;
+  domContext?: string;
+}): (CacheableBlock | PlainBlock)[] {
+  const domSection = opts.domContext
+    ? `## Live DOM snapshot (real elements from the page — use these for locators)\n\n${opts.domContext}\n\n---\n\n`
+    : '';
+
+  return [
+    {
+      type: 'text',
+      text: `## Existing project context\n\n${opts.existingContext}`,
+      cache_control: { type: 'ephemeral' },
+    },
+    {
+      type: 'text',
+      text: `---\n\n${domSection}## Test to generate\n\n${opts.description}\n\nRespond with raw JSON only — no markdown, no explanation outside the JSON object.`,
+    },
+  ];
+}
+
 /**
  * Persist a new rule discovered during failure investigation.
  * Appends inside the <!-- rules-start/end --> markers.

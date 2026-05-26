@@ -1,8 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { writeFile, mkdir } from 'fs/promises';
 import { dirname, join } from 'path';
-import { getSystemPrompt, buildUserPrompt } from '../prompts/system.js';
-import { readProjectContext } from './list-resources.js';
+import { getSystemBlocks, buildUserBlocks } from '../prompts/system.js';
+import { readFocusedContextForFeature } from './list-resources.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { runTests } from './run-tests.js';
 import { parsePassingTests, recordPassingTests } from './test-registry.js';
@@ -51,8 +51,12 @@ export async function generateTestTool(args: {
 
   const client = new Anthropic({ apiKey });
 
-  // Build context: existing codebase
-  const existingContext = await readProjectContext();
+  // Build context: fixtures + files matching the feature keyword, names-only for the rest
+  const featureKeywords = [
+    ...(args.test_name ? args.test_name.split(/\W+/) : []),
+    ...args.description.toLowerCase().split(/\s+/).filter((w) => w.length > 3).slice(0, 10),
+  ];
+  const existingContext = await readFocusedContextForFeature(featureKeywords);
 
   // Optionally inspect live pages for accurate locators
   let domContext = '';
@@ -73,17 +77,22 @@ export async function generateTestTool(args: {
     ? '\n\n**Important**: The positive test already exists — do NOT generate any new files. Set `files` to `[]` and `fixture_additions` to `null`. Only populate `proposed_negative_tests` with scenarios not yet implemented.'
     : '';
 
-  const userPrompt = buildUserPrompt({ description: description + proposalsHint, existingContext, domContext });
+  const userBlocks = buildUserBlocks({ description: description + proposalsHint, existingContext, domContext });
 
   let raw: string;
   try {
     const message = await client.messages.create({
       model: MODEL,
       max_tokens: 8192,
-      system: await getSystemPrompt(),
-      messages: [{ role: 'user', content: userPrompt }],
+      system: await getSystemBlocks(),
+      messages: [{ role: 'user', content: userBlocks }],
     });
-    args.budget?.add(message.usage.input_tokens, message.usage.output_tokens);
+    args.budget?.add(
+      message.usage.input_tokens,
+      message.usage.output_tokens,
+      message.usage.cache_creation_input_tokens ?? 0,
+      message.usage.cache_read_input_tokens ?? 0,
+    );
 
     raw = message.content
       .filter((b) => b.type === 'text')
