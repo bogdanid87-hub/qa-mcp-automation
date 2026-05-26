@@ -109,6 +109,20 @@ export async function readFocusedContextForFeature(keywords: string[]): Promise<
   return buildFocusedContext(all, relevant);
 }
 
+/**
+ * Returns true if at least one file in pages/ already matches a feature keyword.
+ * Used to decide whether to split POM and spec generation into two calls.
+ */
+export async function pomExistsForFeature(keywords: string[]): Promise<boolean> {
+  const lower = keywords.map((k) => k.toLowerCase()).filter((k) => k.length > 3);
+  try {
+    const entries = await readdir(join(ROOT, 'pages'));
+    return entries.some((f) => lower.some((k) => f.toLowerCase().includes(k)));
+  } catch {
+    return false;
+  }
+}
+
 export async function listResourcesTool(): Promise<{ content: { type: 'text'; text: string }[] }> {
   const [pages, fixtures, tests] = await Promise.all([
     readDir('pages'),
