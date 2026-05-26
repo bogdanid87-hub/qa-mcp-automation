@@ -3,6 +3,7 @@ import {
   readTestCases,
   readBrokenTests,
   recordPassingTests,
+  recordBrokenTest,
   removeResolvedBrokenTests,
   parsePassingTests,
   parseFailingTestsFromOutput,
@@ -51,7 +52,15 @@ async function main(): Promise<void> {
   // ── 2. Broken/app-bug tests that now pass → promote ───────────────────────
   const toPromote = recordedBroken.filter(e => passingResultKeys.has(`${e.spec}::${e.name}`));
 
-  // ── 3. Previously-passing tests that are now failing → verify before flagging
+  // ── 3. Failing tests with no entry anywhere in TEST_CASES.md ─────────────
+  // These were never recorded — written manually, via Claude Code, or from an
+  // interrupted MCP write that annotated the spec file but never updated the registry.
+  const toAddBroken = failingResults.filter(f => {
+    const key = `${f.spec}::${f.name}`;
+    return !passingKeys.has(key) && !brokenKeys.has(key);
+  });
+
+  // ── 4. Previously-passing tests that are now failing → verify before flagging
   // Re-run the affected spec(s) once to rule out transient failures (high traffic,
   // network blip, etc.). Only flag as broken if the test fails both times.
   const candidateRegressions = failingResults.filter(f => {
@@ -90,6 +99,22 @@ async function main(): Promise<void> {
 
   // ── Apply changes ──────────────────────────────────────────────────────────
   let changed = 0;
+
+  if (toAddBroken.length > 0) {
+    console.log(`⚠️  Adding ${toAddBroken.length} unrecorded failing test(s) to broken list:`);
+    for (const f of toAddBroken) {
+      console.log(`   ❌ ${f.spec} › ${f.name}`);
+    }
+    for (const f of toAddBroken) {
+      await recordBrokenTest({
+        ...f,
+        kind: 'broken',
+        rootCause: 'Failing but never recorded — run `npm run fix` to investigate.',
+      });
+    }
+    changed += toAddBroken.length;
+    console.log('');
+  }
 
   if (toAdd.length > 0) {
     console.log(`📝 Adding ${toAdd.length} undocumented passing test(s):`);
