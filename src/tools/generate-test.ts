@@ -7,6 +7,7 @@ import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { runTests } from './run-tests.js';
 import { parsePassingTests, recordPassingTests } from './test-registry.js';
 import { autoFixFailure } from './investigate-fix.js';
+import { writeTestAnnotation } from './annotations.js';
 import { TokenBudget } from './budget.js';
 
 const ROOT = process.cwd();
@@ -220,10 +221,11 @@ export async function generateTestTool(args: {
       const fix = await autoFixFailure(testOutput, specFile.path, args.budget);
       if (fix.verdict === 'app_bug') {
         lastFailureOutput = testOutput;
+        await writeTestAnnotation(specFile.path, testOutput, 'app_bug', fix.rootCause, fix.actualBehavior);
         testRunNote += [
           '⚠️  Application bug detected — the test is correct but the site behaves differently.',
           `  What the site does: ${fix.actualBehavior ?? fix.rootCause}`,
-          '  The test was NOT modified. It documents a real defect.',
+          '  The test was NOT modified — annotated in the spec with ⚠️ APP BUG.',
         ].join('\n');
       } else if (fix.fixed) {
         passing = true;
@@ -237,7 +239,8 @@ export async function generateTestTool(args: {
       } else {
         lastFailureOutput = fix.verifyOutput || testOutput;
         const budgetNote = fix.budgetExceeded ? ' (token budget reached)' : '';
-        testRunNote += [`❌ Could not auto-fix${budgetNote}`, `  Root cause: ${fix.rootCause}`].join('\n');
+        await writeTestAnnotation(specFile.path, lastFailureOutput, 'broken', fix.rootCause);
+        testRunNote += [`❌ Could not auto-fix${budgetNote} — annotated in the spec with ⚠️ BROKEN`, `  Root cause: ${fix.rootCause}`].join('\n');
       }
     }
   }

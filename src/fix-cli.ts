@@ -1,9 +1,10 @@
 import { join } from 'path';
-import { readFile, writeFile } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import * as readline from 'readline';
 import { autoFixFailure } from './tools/investigate-fix.js';
 import { runTests } from './tools/run-tests.js';
 import { TokenBudget } from './tools/budget.js';
+import { writeTestAnnotation } from './tools/annotations.js';
 
 const ROOT = process.cwd();
 const DEFAULT_BUDGET_USD = 0.30;
@@ -38,59 +39,6 @@ async function askYesNo(question: string): Promise<boolean> {
   return (await ask(question)).toLowerCase() === 'y';
 }
 
-function parseFailingTestNames(output: string): string[] {
-  const names: string[] = [];
-  const re = /\d+\)\s+\[chromium\]\s+›\s+[^›\n]+›\s+[^›\n]+›\s+(.+)/gm;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(output)) !== null) names.push(m[1].trim());
-  return [...new Set(names)];
-}
-
-type AnnotationKind = 'broken' | 'app_bug';
-
-async function writeTestAnnotation(
-  specPath: string,
-  failureOutput: string,
-  kind: AnnotationKind,
-  rootCause: string,
-  actualBehavior?: string,
-): Promise<void> {
-  const abs = join(ROOT, specPath);
-  let src: string;
-  try { src = await readFile(abs, 'utf-8'); } catch { return; }
-
-  function buildComment(indent: string): string {
-    if (kind === 'app_bug') {
-      return [
-        `${indent}/* ⚠️  APP BUG — This test is correct; the application under test has a defect.`,
-        `${indent} * Expected behaviour: ${rootCause}`,
-        `${indent} * Actual behaviour:   ${actualBehavior ?? 'see failure output'}`,
-        `${indent} * Do NOT change this test — it documents a real bug. Fix the application instead. */`,
-      ].join('\n');
-    }
-    return [
-      `${indent}/* ⚠️  BROKEN — failed and exceeded the auto-fix token budget.`,
-      `${indent} * Root cause: ${rootCause}`,
-      `${indent} * Fix manually or run: npm run fix */`,
-    ].join('\n');
-  }
-
-  const failingNames = parseFailingTestNames(failureOutput);
-  if (failingNames.length === 0) {
-    await writeFile(abs, buildComment('') + '\n\n' + src, 'utf-8');
-    return;
-  }
-
-  let updated = src;
-  for (const name of failingNames) {
-    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(`([ \\t]*)(test\\s*\\(\\s*['"\`]${escaped}['"\`])`, 'm');
-    updated = updated.replace(re, (_, indent, testCall) =>
-      `${buildComment(indent)}\n${indent}${testCall}`
-    );
-  }
-  await writeFile(abs, updated, 'utf-8');
-}
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
