@@ -33,6 +33,12 @@ function stem(w: string): string {
   return w.slice(0, Math.min(6, w.length));
 }
 
+/** Replace characters that would break markdown table cells. */
+function sanitizeCell(s: string): string {
+  return s.replace(/\|/g, '–').replace(/\n/g, ' ').trim();
+}
+
+// ─── Passing tests ────────────────────────────────────────────────────────────
 
 export interface TestEntry {
   num: number;
@@ -78,44 +84,121 @@ function parseTestCases(content: string): TestEntry[] {
   return entries.sort((a, b) => a.num - b.num);
 }
 
-function buildContent(entries: TestEntry[]): string {
-  if (entries.length === 0) return '# Test Cases\n\n**Total: 0 tests**\n';
+// ─── Broken / app-bug tests ───────────────────────────────────────────────────
 
-  const latest = entries[entries.length - 1];
-  const total = entries.length;
-  const latestLabel = `#${latest.num} — ${latest.describe} › ${latest.name}`;
+export interface BrokenEntry {
+  spec: string;
+  describe: string;
+  name: string;
+  kind: 'broken' | 'app_bug';
+  rootCause: string;
+  actualBehavior?: string;
+}
 
-  const groups = new Map<string, Map<string, TestEntry[]>>();
-  for (const entry of entries) {
-    if (!groups.has(entry.spec)) groups.set(entry.spec, new Map());
-    const byDescribe = groups.get(entry.spec)!;
-    if (!byDescribe.has(entry.describe)) byDescribe.set(entry.describe, []);
-    byDescribe.get(entry.describe)!.push(entry);
+function extractSection(content: string, header: string): string {
+  const start = content.indexOf(header);
+  if (start === -1) return '';
+  const rest = content.slice(start + header.length);
+  const nextSection = rest.search(/\n## /);
+  return nextSection === -1 ? rest : rest.slice(0, nextSection);
+}
+
+function parseTableRows(section: string): string[][] {
+  const rows: string[][] = [];
+  for (const line of section.split('\n')) {
+    if (!line.startsWith('|')) continue;
+    const cells = line.split('|').slice(1, -1).map(c => c.trim());
+    if (cells.length === 0) continue;
+    if (cells.every(c => /^[-: ]+$/.test(c))) continue; // separator row
+    if (cells[0] === 'Spec') continue;                   // header row
+    rows.push(cells);
+  }
+  return rows;
+}
+
+function parseBrokenTests(content: string): BrokenEntry[] {
+  const entries: BrokenEntry[] = [];
+
+  for (const row of parseTableRows(extractSection(content, '## ⚠️ Application Bugs'))) {
+    const [spec, describe, name, rootCause, actualBehavior] = row;
+    if (spec && describe && name && rootCause) {
+      entries.push({ spec, describe, name, kind: 'app_bug', rootCause, actualBehavior: actualBehavior || undefined });
+    }
   }
 
-  const lines: string[] = [
-    '# Test Cases',
-    '',
-    `**Total: ${total} ${total === 1 ? 'test' : 'tests'}** | **Latest:** ${latestLabel}`,
-    '',
-  ];
-
-  for (const [spec, byDescribe] of groups) {
-    lines.push('---', '', `## ${spec}`, '');
-    for (const [describe, tests] of byDescribe) {
-      lines.push(`### ${describe}`, '');
-      lines.push('| # | Test |');
-      lines.push('|---|------|');
-      for (const t of tests) {
-        const marker = t.num === latest.num ? ' ← latest' : '';
-        lines.push(`| ${t.num} | ${t.name}${marker} |`);
-      }
-      lines.push('');
+  for (const row of parseTableRows(extractSection(content, '## ❌ Broken Tests'))) {
+    const [spec, describe, name, rootCause] = row;
+    if (spec && describe && name && rootCause) {
+      entries.push({ spec, describe, name, kind: 'broken', rootCause });
     }
+  }
+
+  return entries;
+}
+
+// ─── File builder ─────────────────────────────────────────────────────────────
+
+function buildContent(entries: TestEntry[], broken: BrokenEntry[] = []): string {
+  const lines: string[] = ['# Test Cases', ''];
+
+  if (entries.length === 0) {
+    lines.push('**Total: 0 passing tests**', '');
+  } else {
+    const latest = entries[entries.length - 1];
+    const latestLabel = `#${latest.num} — ${latest.describe} › ${latest.name}`;
+    lines.push(`**Total: ${entries.length} ${entries.length === 1 ? 'test' : 'tests'}** | **Latest:** ${latestLabel}`, '');
+
+    const groups = new Map<string, Map<string, TestEntry[]>>();
+    for (const entry of entries) {
+      if (!groups.has(entry.spec)) groups.set(entry.spec, new Map());
+      const byDescribe = groups.get(entry.spec)!;
+      if (!byDescribe.has(entry.describe)) byDescribe.set(entry.describe, []);
+      byDescribe.get(entry.describe)!.push(entry);
+    }
+
+    for (const [spec, byDescribe] of groups) {
+      lines.push('---', '', `## ${spec}`, '');
+      for (const [describe, tests] of byDescribe) {
+        lines.push(`### ${describe}`, '');
+        lines.push('| # | Test |');
+        lines.push('|---|------|');
+        for (const t of tests) {
+          const marker = t.num === entries[entries.length - 1].num ? ' ← latest' : '';
+          lines.push(`| ${t.num} | ${t.name}${marker} |`);
+        }
+        lines.push('');
+      }
+    }
+  }
+
+  const appBugs = broken.filter(e => e.kind === 'app_bug');
+  if (appBugs.length > 0) {
+    lines.push('---', '', '## ⚠️ Application Bugs', '');
+    lines.push('> These tests are correct — the application has a defect. Do not modify them.', '');
+    lines.push('| Spec | Describe | Test | Root cause | Actual behaviour |');
+    lines.push('|------|----------|------|------------|-----------------|');
+    for (const e of appBugs) {
+      lines.push(`| ${e.spec} | ${e.describe} | ${sanitizeCell(e.name)} | ${sanitizeCell(e.rootCause)} | ${sanitizeCell(e.actualBehavior ?? '—')} |`);
+    }
+    lines.push('');
+  }
+
+  const brokenTests = broken.filter(e => e.kind === 'broken');
+  if (brokenTests.length > 0) {
+    lines.push('---', '', '## ❌ Broken Tests', '');
+    lines.push('> Fix manually or run: `npm run fix -- --pattern <spec>`', '');
+    lines.push('| Spec | Describe | Test | Root cause |');
+    lines.push('|------|----------|------|------------|');
+    for (const e of brokenTests) {
+      lines.push(`| ${e.spec} | ${e.describe} | ${sanitizeCell(e.name)} | ${sanitizeCell(e.rootCause)} |`);
+    }
+    lines.push('');
   }
 
   return lines.join('\n');
 }
+
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function recordPassingTests(passing: PassingTest[]): Promise<void> {
   if (passing.length === 0) return;
@@ -124,6 +207,7 @@ export async function recordPassingTests(passing: PassingTest[]): Promise<void> 
   try { content = await readFile(TEST_CASES_PATH, 'utf-8'); } catch { /* new file */ }
 
   const existing = parseTestCases(content);
+  const broken = parseBrokenTests(content);
   const existingKeys = new Set(existing.map((e) => `${e.spec}::${e.name}`));
   let nextNum = existing.length > 0 ? Math.max(...existing.map((e) => e.num)) + 1 : 1;
   let changed = false;
@@ -141,10 +225,48 @@ export async function recordPassingTests(passing: PassingTest[]): Promise<void> 
     }
   }
 
-  if (changed) await writeFile(TEST_CASES_PATH, buildContent(existing), 'utf-8');
+  if (changed) await writeFile(TEST_CASES_PATH, buildContent(existing, broken), 'utf-8');
 }
 
-/** Read all recorded test cases from TEST_CASES.md (returns [] if file missing). */
+/** Add a broken or app-bug test to TEST_CASES.md. Skips if already recorded. */
+export async function recordBrokenTest(entry: BrokenEntry): Promise<void> {
+  let content = '';
+  try { content = await readFile(TEST_CASES_PATH, 'utf-8'); } catch { /* new file */ }
+
+  const passing = parseTestCases(content);
+  const broken = parseBrokenTests(content);
+
+  const key = `${entry.spec}::${entry.name}`;
+  if (broken.some(e => `${e.spec}::${e.name}` === key)) return;
+
+  broken.push(entry);
+  await writeFile(TEST_CASES_PATH, buildContent(passing, broken), 'utf-8');
+}
+
+/** Remove entries whose tests now pass. Called by the update-registry CLI. */
+export async function removeResolvedBrokenTests(resolvedKeys: Set<string>): Promise<void> {
+  let content = '';
+  try { content = await readFile(TEST_CASES_PATH, 'utf-8'); } catch { return; }
+
+  const passing = parseTestCases(content);
+  const broken = parseBrokenTests(content);
+  const updated = broken.filter(e => !resolvedKeys.has(`${e.spec}::${e.name}`));
+
+  if (updated.length !== broken.length) {
+    await writeFile(TEST_CASES_PATH, buildContent(passing, updated), 'utf-8');
+  }
+}
+
+/** Read all broken/app-bug entries from TEST_CASES.md. */
+export async function readBrokenTests(): Promise<BrokenEntry[]> {
+  try {
+    return parseBrokenTests(await readFile(TEST_CASES_PATH, 'utf-8'));
+  } catch {
+    return [];
+  }
+}
+
+/** Read all recorded passing test cases from TEST_CASES.md. */
 export async function readTestCases(): Promise<TestEntry[]> {
   try {
     return parseTestCases(await readFile(TEST_CASES_PATH, 'utf-8'));
@@ -158,12 +280,7 @@ export async function readTestCases(): Promise<TestEntry[]> {
  *
  * Two conditions must BOTH hold:
  *   1. Every word in the describe block must stem-match a word in the description.
- *      (e.g. "Product Search" only matches if the description contains words for
- *       both "product" and "search" — one word is not enough.)
  *   2. At least 2 words from the test name must also stem-match the description.
- *
- * Stopwords and short words (<= 3 chars) are stripped before comparison so that
- * generic terms like "home", "email", or "button" cannot be the sole match.
  */
 export function findSimilarTests(description: string, all: TestEntry[]): TestEntry[] {
   const descWords = extractWords(description);
@@ -172,13 +289,11 @@ export function findSimilarTests(description: string, all: TestEntry[]): TestEnt
   const descStems = descWords.map(stem);
 
   return all.filter(entry => {
-    // Condition 1: ALL feature words (describe block) must appear in the description.
     const featureWords = extractWords(entry.describe);
     if (featureWords.length === 0) return false;
     const allFeatureMatch = featureWords.every(fw => descStems.includes(stem(fw)));
     if (!allFeatureMatch) return false;
 
-    // Condition 2: At least 2 words from the test name must also appear.
     const nameWords = extractWords(entry.name);
     const nameMatchCount = nameWords.filter(nw => descStems.includes(stem(nw))).length;
     return nameMatchCount >= 2;

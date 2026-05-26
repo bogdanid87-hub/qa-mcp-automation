@@ -1,16 +1,26 @@
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
+import { recordBrokenTest } from './test-registry.js';
 
 const ROOT = process.cwd();
 
 export type AnnotationKind = 'broken' | 'app_bug';
 
-function parseFailingTestNames(output: string): string[] {
-  const names: string[] = [];
-  const re = /\d+\)\s+\[chromium\]\s+›\s+[^›\n]+›\s+[^›\n]+›\s+(.+)/gm;
+interface FailingTest {
+  spec: string;
+  describe: string;
+  name: string;
+}
+
+function parseFailingTests(output: string): FailingTest[] {
+  const results: FailingTest[] = [];
+  const re = /\d+\)\s+\[chromium\]\s+›\s+(tests\/[^\s:]+):\d+:\d+\s+›\s+([^›\n]+?)\s+›\s+(.+)/gm;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(output)) !== null) names.push(m[1].trim());
-  return [...new Set(names)];
+  while ((m = re.exec(output)) !== null) {
+    results.push({ spec: m[1].trim(), describe: m[2].trim(), name: m[3].trim() });
+  }
+  // Deduplicate by spec::name
+  return [...new Map(results.map(r => [`${r.spec}::${r.name}`, r])).values()];
 }
 
 function buildComment(kind: AnnotationKind, indent: string, rootCause: string, actualBehavior?: string): string {
@@ -30,8 +40,8 @@ function buildComment(kind: AnnotationKind, indent: string, rootCause: string, a
 }
 
 /**
- * Write an annotation comment directly before each failing test() call in the spec.
- * Falls back to prepending at the top of the file if test names cannot be parsed.
+ * Write an annotation comment directly before each failing test() call in the spec,
+ * and record the failure in TEST_CASES.md under the appropriate section.
  */
 export async function writeTestAnnotation(
   specPath: string,
@@ -44,19 +54,31 @@ export async function writeTestAnnotation(
   let src: string;
   try { src = await readFile(abs, 'utf-8'); } catch { return; }
 
-  const failingNames = parseFailingTestNames(failureOutput);
+  const failingTests = parseFailingTests(failureOutput);
+  const failingNames = failingTests.map(t => t.name);
+
+  // Write annotation comments into the spec file
   if (failingNames.length === 0) {
     await writeFile(abs, buildComment(kind, '', rootCause, actualBehavior) + '\n\n' + src, 'utf-8');
-    return;
+  } else {
+    let updated = src;
+    for (const name of failingNames) {
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(`([ \\t]*)(test\\s*\\(\\s*['"\`]${escaped}['"\`])`, 'm');
+      updated = updated.replace(re, (_, indent, testCall) =>
+        `${buildComment(kind, indent, rootCause, actualBehavior)}\n${indent}${testCall}`
+      );
+    }
+    await writeFile(abs, updated, 'utf-8');
   }
 
-  let updated = src;
-  for (const name of failingNames) {
-    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(`([ \\t]*)(test\\s*\\(\\s*['"\`]${escaped}['"\`])`, 'm');
-    updated = updated.replace(re, (_, indent, testCall) =>
-      `${buildComment(kind, indent, rootCause, actualBehavior)}\n${indent}${testCall}`
-    );
+  // Record each failing test in TEST_CASES.md
+  for (const t of failingTests) {
+    await recordBrokenTest({ ...t, kind, rootCause, actualBehavior });
   }
-  await writeFile(abs, updated, 'utf-8');
+
+  // Fallback: if the output didn't contain parseable test names, record using specPath alone
+  if (failingTests.length === 0) {
+    await recordBrokenTest({ spec: specPath, describe: '', name: specPath, kind, rootCause, actualBehavior });
+  }
 }

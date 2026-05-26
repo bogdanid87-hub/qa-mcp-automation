@@ -6,6 +6,7 @@
   "scripts": {
     "generate": "tsx src/cli.ts",
     "fix": "tsx src/fix-cli.ts",
+    "update-registry": "tsx src/update-registry-cli.ts",
     "mcp": "tsx src/index.ts",
     "test": "playwright test",
     "test:headed": "playwright test --headed",
