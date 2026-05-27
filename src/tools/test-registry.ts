@@ -297,9 +297,7 @@ export async function removeResolvedBrokenTests(resolvedKeys: Set<string>): Prom
  * Move passing tests that have become regressions into the ❌ Broken section.
  * Removes them from the passing table and appends to broken (skips duplicates).
  */
-export async function demoteTobroken(
-  entries: Array<{ spec: string; describe: string; name: string; kind: 'broken'; rootCause: string }>,
-): Promise<void> {
+export async function demoteTobroken(entries: BrokenEntry[]): Promise<void> {
   if (entries.length === 0) return;
 
   let content = '';
@@ -325,6 +323,7 @@ export async function demoteTobroken(
       name: entry.name,
       kind: entry.kind,
       rootCause: entry.rootCause,
+      actualBehavior: entry.actualBehavior,
     });
     brokenKeys.add(key);
   }

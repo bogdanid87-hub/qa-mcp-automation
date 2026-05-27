@@ -8,8 +8,10 @@ import {
   parsePassingTests,
   parseFailingTestsFromOutput,
   demoteTobroken,
+  type BrokenEntry,
   type FailingTestResult,
 } from './tools/test-registry.js';
+import { readAnnotationFromSpec } from './tools/annotations.js';
 
 async function main(): Promise<void> {
   console.log('\n⏳ Running full test suite...\n');
@@ -101,15 +103,17 @@ async function main(): Promise<void> {
   let changed = 0;
 
   if (toAddBroken.length > 0) {
-    console.log(`⚠️  Adding ${toAddBroken.length} unrecorded failing test(s) to broken list:`);
+    console.log(`⚠️  Adding ${toAddBroken.length} unrecorded failing test(s):`);
     for (const f of toAddBroken) {
-      console.log(`   ❌ ${f.spec} › ${f.name}`);
-    }
-    for (const f of toAddBroken) {
+      const annotation = await readAnnotationFromSpec(f.spec, f.name);
+      const kind = annotation?.kind ?? 'broken';
+      const label = kind === 'app_bug' ? '⚠️  APP BUG' : '❌ BROKEN';
+      console.log(`   ${label}: ${f.spec} › ${f.name}`);
       await recordBrokenTest({
         ...f,
-        kind: 'broken',
-        rootCause: 'Failing but never recorded — run `npm run fix` to investigate.',
+        kind,
+        rootCause: annotation?.rootCause ?? 'Failing but never recorded — run `npm run fix` to investigate.',
+        actualBehavior: annotation?.actualBehavior,
       });
     }
     changed += toAddBroken.length;
@@ -150,16 +154,22 @@ async function main(): Promise<void> {
   }
 
   if (toFlag.length > 0) {
-    console.log(`⚠️  Flagging ${toFlag.length} confirmed regression(s) as broken (failed twice):`);
-    await demoteTobroken(
-      toFlag.map(f => ({
-        ...f,
-        kind: 'broken' as const,
-        rootCause: 'Regression — failed on two consecutive runs. Run `npm run fix` to investigate.',
-      })),
+    console.log(`⚠️  Flagging ${toFlag.length} confirmed regression(s) (failed twice):`);
+    const flagEntries: BrokenEntry[] = await Promise.all(
+      toFlag.map(async f => {
+        const annotation = await readAnnotationFromSpec(f.spec, f.name);
+        return {
+          ...f,
+          kind: annotation?.kind ?? ('broken' as const),
+          rootCause: annotation?.rootCause ?? 'Regression — failed on two consecutive runs. Run `npm run fix` to investigate.',
+          actualBehavior: annotation?.actualBehavior,
+        };
+      }),
     );
-    for (const f of toFlag) {
-      console.log(`   ❌ ${f.spec} › ${f.name}`);
+    await demoteTobroken(flagEntries);
+    for (const entry of flagEntries) {
+      const label = entry.kind === 'app_bug' ? '⚠️  APP BUG' : '❌ Regression';
+      console.log(`   ${label}: ${entry.spec} › ${entry.name}`);
     }
     changed += toFlag.length;
     console.log('\n   ⚠️  BROKEN comments were NOT added to spec files — run `npm run fix -- --pattern <spec>` for each.\n');
