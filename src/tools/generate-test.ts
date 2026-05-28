@@ -9,7 +9,6 @@ import { runTests } from './run-tests.js';
 import { parsePassingTests, recordPassingTests } from './test-registry.js';
 import { autoFixFailure } from './investigate-fix.js';
 import { writeTestAnnotation } from './annotations.js';
-import { TokenBudget } from './budget.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -124,7 +123,6 @@ export async function generateTestTool(args: {
   page_paths?: string[];
   spec_file?: string;
   proposalsOnly?: boolean;
-  budget?: TokenBudget;
 }): Promise<{ content: { type: 'text'; text: string }[]; _meta?: { specFile?: string; lastFailureOutput?: string; passing: boolean } }> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -143,12 +141,6 @@ export async function generateTestTool(args: {
       system: systemBlocks,
       messages: [{ role: 'user', content: userBlocks }],
     });
-    args.budget?.add(
-      message.usage.input_tokens,
-      message.usage.output_tokens,
-      message.usage.cache_creation_input_tokens ?? 0,
-      message.usage.cache_read_input_tokens ?? 0,
-    );
     return message.content
       .filter((b) => b.type === 'text')
       .map((b) => (b as { type: 'text'; text: string }).text)
@@ -411,7 +403,7 @@ Respond with the standard JSON:
       passing = false;
       lastFailureOutput = testOutput;
       testRunNote = '⚠️ Initial run failed — attempting auto-fix...\n';
-      const fix = await autoFixFailure(testOutput, specFile.path, args.budget);
+      const fix = await autoFixFailure(testOutput, specFile.path);
       if (fix.verdict === 'app_bug') {
         lastFailureOutput = testOutput;
         await writeTestAnnotation(specFile.path, testOutput, 'app_bug', fix.rootCause, fix.actualBehavior);
@@ -431,9 +423,8 @@ Respond with the standard JSON:
         testRunNote += parts.join('\n');
       } else {
         lastFailureOutput = fix.verifyOutput || testOutput;
-        const budgetNote = fix.budgetExceeded ? ' (token budget reached)' : '';
         await writeTestAnnotation(specFile.path, lastFailureOutput, 'broken', fix.rootCause);
-        testRunNote += [`❌ Could not auto-fix${budgetNote} — annotated in the spec with ⚠️ BROKEN`, `  Root cause: ${fix.rootCause}`].join('\n');
+        testRunNote += [`❌ Could not auto-fix — annotated in the spec with ⚠️ BROKEN`, `  Root cause: ${fix.rootCause}`].join('\n');
       }
     }
   }

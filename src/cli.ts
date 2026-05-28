@@ -189,7 +189,6 @@ function parseMultipleSections(raw: string): Array<{
 // ---------------------------------------------------------------------------
 async function runBatch(
   sections: Array<{ description: string; testName?: string; pagePaths?: string[]; specFile?: string }>,
-  budget: TokenBudget,
 ): Promise<void> {
   console.log(`\n📋 Batch mode — ${sections.length} tests to generate\n`);
 
@@ -202,12 +201,6 @@ async function runBatch(
     console.log(`  [${i + 1}/${sections.length}]  ${label}`);
     console.log(`${bar}\n`);
 
-    if (budget.exceeded) {
-      console.log(`⚠️  Token budget of $${budget.limitUsd.toFixed(2)} reached — skipping remaining tests.\n`);
-      summary.push({ label, status: '⏭  skipped (budget)' });
-      continue;
-    }
-
     console.log(`⏳ Generating...\n`);
     const before = await snapshotFiles();
     const result = await generateTestTool({
@@ -215,7 +208,6 @@ async function runBatch(
       test_name: section.testName,
       page_paths: section.pagePaths,
       spec_file: section.specFile,
-      budget,
     });
     console.log(result.content[0]?.text ?? '');
     const { created, edited } = await diffFiles(before);
@@ -229,7 +221,6 @@ async function runBatch(
   console.log(`\n${eq}`);
   console.log(`  Batch complete — ${sections.length} test${sections.length === 1 ? '' : 's'}:`);
   for (const { label, status } of summary) console.log(`    ${status}  ${label}`);
-  console.log(`  Token budget used: ${budget.summary}`);
   console.log(`${eq}\n`);
 }
 
@@ -317,7 +308,7 @@ async function writeTestAnnotation(
       ].join('\n');
     }
     return [
-      `${indent}/* ⚠️  BROKEN — failed and exceeded the auto-fix token budget.`,
+      `${indent}/* ⚠️  BROKEN — failed and could not be auto-fixed.`,
       `${indent} * Root cause: ${rootCause}`,
       `${indent} * Fix manually or run: npm run fix */`,
     ].join('\n');
@@ -356,7 +347,6 @@ async function writeTestAnnotation(
 async function claudeSimilarityCheck(
   description: string,
   allTests: TestEntry[],
-  budget: TokenBudget,
 ): Promise<TestEntry[]> {
   if (allTests.length === 0) return [];
   const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
@@ -395,12 +385,6 @@ async function claudeSimilarityCheck(
       }],
     });
 
-    budget.add(
-      message.usage.input_tokens,
-      message.usage.output_tokens,
-      message.usage.cache_creation_input_tokens ?? 0,
-      message.usage.cache_read_input_tokens ?? 0,
-    );
 
     const raw = message.content
       .filter(b => b.type === 'text')
@@ -436,7 +420,7 @@ async function main(): Promise<void> {
     // Multi-test: sections separated by --- lines → batch mode (non-interactive)
     const sections = parseMultipleSections(fileContent);
     if (sections.length > 0) {
-      await runBatch(sections, budget);
+      await runBatch(sections);
       process.exit(0);
     }
 
@@ -462,7 +446,7 @@ async function main(): Promise<void> {
   const allTests = await readTestCases();
   if (allTests.length > 0) {
     process.stdout.write('  Checking for existing coverage...\r');
-    const similar = await claudeSimilarityCheck(description, allTests, budget);
+    const similar = await claudeSimilarityCheck(description, allTests);
     process.stdout.write('                                    \r'); // clear the line
     if (similar.length > 0) {
       printSimilarTests(similar);
@@ -564,7 +548,7 @@ async function main(): Promise<void> {
   console.log('\n⏳ Generating test...\n');
 
   let before = await snapshotFiles();
-  const result = await generateTestTool({ description, page_paths: pagePaths, test_name: testName, spec_file: specFile, budget });
+  const result = await generateTestTool({ description, page_paths: pagePaths, test_name: testName, spec_file: specFile });
   const output = result.content[0]?.text ?? '';
   console.log(output);
 
@@ -580,7 +564,7 @@ async function main(): Promise<void> {
     while (stillFailing) {
       const budgetBar = '─'.repeat(48);
       console.log(`\n${budgetBar}`);
-      console.log(`  Token budget used: ${budget.summary}`);
+      console.log(`  Fix budget used: ${budget.summary}`);
       console.log(`${budgetBar}`);
 
       const retry = await askYesNo('Test is still failing. Attempt another fix? [y/N] ');
@@ -592,11 +576,11 @@ async function main(): Promise<void> {
       }
 
       if (budget.exceeded) {
-        console.log(`\n⚠️  Token budget of $${budget.limitUsd.toFixed(2)} reached (${budget.summary}).`);
+        console.log(`\n⚠️  Fix budget of $${budget.limitUsd.toFixed(2)} reached (${budget.summary}).`);
         const continueAnyway = await askYesNo('Continue spending tokens anyway? [y/N] ');
         if (!continueAnyway) {
           console.log('\n⚠️  Writing BROKEN comment into the spec file...');
-          await writeTestAnnotation(specFile, lastFailureOutput, 'broken', 'Exceeded token budget during auto-fix');
+          await writeTestAnnotation(specFile, lastFailureOutput, 'broken', 'Fix budget exceeded — run npm run fix to continue');
           console.log(`  Done. Open ${specFile} to review.\n`);
           break;
         }
