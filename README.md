@@ -19,7 +19,8 @@ Describe a test scenario in plain English. The server uses **Claude Sonnet 4.6**
 - **Token budget** — every CLI session is capped at $0.30 by default; when the budget is reached the user is prompted before any further API spend
 - **Prompt caching** — the system prompt and per-call codebase context are marked for Anthropic's server-side prompt cache; repeated calls within a session pay the cheap cache-read rate instead of the full input rate
 - **Focused context** — instead of sending every source file on every API call, only the files relevant to the current task (failing spec + its imports for fix calls; fixtures + feature-matching files for generate calls) are sent in full; everything else is listed by name only, keeping Claude aware of what exists without wasting tokens on unrelated code
-- **Two-phase generation for new POMs** — when no Page Object Model exists for a feature, generation splits into two sequential calls: the first commits the POM to disk, the second generates the spec reading the real POM from context; this eliminates method-name mismatches that occur when both files are invented simultaneously in a single pass; when a POM already exists the single-call path is preserved
+- **Two-phase generation for new POMs** — when no Page Object Model exists for a feature, generation splits into two sequential calls: the first commits the POM to disk, the second generates the spec reading the real POM from context; this eliminates method-name mismatches that occur when both files are invented simultaneously in a single pass; when a POM already exists the single-call path is preserved. The POM step is routed through the **local LLM** when Ollama is running (zero API cost); the spec step always uses the Claude API for accuracy
+- **Local LLM support (Ollama)** — POM generation is offloaded to a locally-running model (`qwen2.5-coder:14b` by default) when Ollama is reachable; if Ollama is not running the flow falls back to the Claude API transparently. Set `OLLAMA_HOST` or `LOCAL_MODEL` env vars to override defaults
 - **Test annotations** — unresolvable failures are annotated in-place: `/* ⚠️ BROKEN */` for code issues that exceeded the budget, `/* ⚠️ APP BUG */` for confirmed application defects
 - **Additional test proposals** — after generating a test, the server proposes further scenarios (negative cases, edge cases, boundary conditions, alternative happy paths); the user picks which ones to generate, saving unnecessary API calls
 - **Duplicate detection** — before calling the API, the CLI checks `TEST_CASES.md` for similar existing tests and warns the user; aborting still offers any missing additional tests for that feature
@@ -128,6 +129,22 @@ npm run mcp
 ```
 
 You should see `qa-mcp-automation MCP server running` in the terminal.
+
+### 6. (Optional) Set up local LLM for POM generation
+
+Install [Ollama](https://ollama.com), then pull the model:
+
+```bash
+ollama pull qwen2.5-coder:14b
+```
+
+No further configuration is needed. When Ollama is running and the model is available, POM generation is automatically routed to the local model at no API cost. If Ollama is not running, the flow falls back to the Claude API transparently.
+
+To use a different model or a remote Ollama instance, set environment variables before starting the server:
+
+```bash
+OLLAMA_HOST=http://my-server:11434 LOCAL_MODEL=qwen2.5-coder:32b npm run mcp
+```
 
 ---
 
@@ -579,7 +596,8 @@ qa-mcp-automation/
 │   ├── update-registry-cli.ts    ← npm run update-registry — re-checks broken/app-bug tests, updates TEST_CASES.md
 │   ├── sync-registry-cli.ts      ← npm run sync-registry — full reconciliation between test results and TEST_CASES.md
 │   ├── tools/
-│   │   ├── generate-test.ts      ← calls Claude to write test code; auto-runs, auto-fixes, records
+│   │   ├── generate-test.ts      ← calls Claude (spec) or local LLM (POM) to write test code; auto-runs, auto-fixes, records
+│   │   ├── local-llm.ts          ← Ollama client; availability check + chat call with JSON-mode output
 │   │   ├── inspect-page.ts       ← headless DOM extraction
 │   │   ├── investigate-fix.ts    ← failure analysis, fix, re-run, rule learning + recording
 │   │   ├── list-resources.ts     ← lists existing files
