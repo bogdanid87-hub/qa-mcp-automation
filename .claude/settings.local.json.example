@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "qa-mcp-automation": {
+      "command": "npx",
+      "args": ["tsx", "src/index.ts"],
+      "cwd": "/absolute/path/to/your/clone",
+      "env": {
+        "ANTHROPIC_API_KEY": "sk-ant-your-key-here"
+      }
+    }
+  }
+}

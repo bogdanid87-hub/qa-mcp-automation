@@ -1,6 +1,7 @@
 # Tool Reference
 
-Quick index of all available tools. See the `docs/` folder for detailed usage guides.
+Quick index of all available tools. New here? Start with [docs/getting-started.md](docs/getting-started.md).
+Detailed per-tool guides are in the `docs/` folder.
 
 ---
 
