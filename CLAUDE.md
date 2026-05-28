@@ -78,8 +78,8 @@ fixtures/index.ts       — custom test + expect (ad-blocking + popup handling)
 
 | File | Managed by |
 |------|-----------|
-| `TEST_CASES.md` | `generate_test`, `sync-registry`, `update-registry` — UI and E2E tests |
-| `TEST_API.md` | same tools — API tests (`tests/api/`) only |
+| `TEST_CASES.md` | `generate_test` tool, `npm run sync-registry`, `npm run update-registry` — UI and E2E tests |
+| `TEST_API.md` | same — API tests (`tests/api/`) only |
 | `src/prompts/learned-rules.md` | `investigate_and_fix` (auto-appends after every fix) |
 | `test-data/.auth/guest.json` | `global.setup.ts` (Playwright setup) |
 

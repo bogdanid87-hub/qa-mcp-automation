@@ -10,7 +10,7 @@ to the Claude API automatically. Writes to `tests/api/` and records results in
 ## When to use it
 
 - Testing an HTTP endpoint directly (status code, response body, error handling)
-- After running `analyze_prd --url <api-docs-page>` — the generated `prd-tests.txt`
+- After running `npm run analyze-prd -- --url <api-docs-page>` — the generated `prd-tests.txt`
   already has `# spec_file: tests/api/...` set; call this tool for each suggested block
 - When you want API test coverage without spending Claude API tokens on generation
 
