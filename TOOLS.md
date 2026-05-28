@@ -9,27 +9,27 @@ Quick index of all available tools. See the `docs/` folder for detailed usage gu
 | Tool | What it does | Doc |
 |------|-------------|-----|
 | `analyze_prd` | Read a PRD or feature description and generate a risk-prioritised test backlog in `prd-tests.txt` | [docs/analyze-prd.md](docs/analyze-prd.md) |
-| `generate_pom` | Inspect a live page and generate a locator-only POM file — run this before `generate_test` when starting on a new page | — |
-| `generate_test` | Generate a complete Playwright test: POM + spec + auto-run + auto-fix + registry update | — |
-| `inspect_page` | Navigate to a page headlessly and return all DOM elements with their best locator | — |
-| `investigate_and_fix` | Diagnose a failing test (code bug vs app bug), patch the file, and save a learned rule | — |
-| `run_tests` | Run the Playwright test suite and return the output | — |
-| `list_resources` | List all existing page objects, fixtures, and spec files | — |
+| `generate_pom` | Inspect a live page and generate a locator-only POM file — run this before `generate_test` when starting on a new page | [docs/generate-pom.md](docs/generate-pom.md) |
+| `generate_test` | Generate a complete Playwright test: POM + spec + auto-run + auto-fix + registry update | [docs/generate-test.md](docs/generate-test.md) |
+| `inspect_page` | Navigate to a page headlessly and return all DOM elements with their best locator | [docs/inspect-page.md](docs/inspect-page.md) |
+| `investigate_and_fix` | Diagnose a failing test (code bug vs app bug), patch the file, and save a learned rule | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
+| `run_tests` | Run the Playwright test suite and return the output | [docs/run-tests.md](docs/run-tests.md) |
+| `list_resources` | List all existing page objects, fixtures, and spec files | [docs/list-resources.md](docs/list-resources.md) |
 
 ---
 
 ## Terminal commands
 
-| Command | What it does |
-|---------|-------------|
-| `npm run analyze-prd` | CLI version of `analyze_prd` — supports PDF and image inputs |
-| `npm run generate` | Generate a test from `my-test.txt` (or any batch `.txt` file) |
-| `npm run fix` | Interactive fix loop for failing tests |
-| `npm run sync-registry` | Full reconciliation of `TEST_CASES.md` against actual test results |
-| `npm run update-registry` | Re-check only recorded broken/app-bug entries |
-| `npm test` | Run all tests headless |
-| `npm run test:headed` | Run with browser visible |
-| `npm run test:report` | Open the HTML test report |
+| Command | What it does | Doc |
+|---------|-------------|-----|
+| `npm run analyze-prd` | CLI version of `analyze_prd` — supports PDF and image inputs | [docs/analyze-prd.md](docs/analyze-prd.md) |
+| `npm run generate` | Generate a test from `my-test.txt` (or any batch `.txt` file) | [docs/generate-test.md](docs/generate-test.md) |
+| `npm run fix` | Interactive fix loop for failing tests | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
+| `npm run sync-registry` | Full reconciliation of `TEST_CASES.md` against actual test results | [docs/test-registry.md](docs/test-registry.md) |
+| `npm run update-registry` | Re-check only recorded broken/app-bug entries | [docs/test-registry.md](docs/test-registry.md) |
+| `npm test` | Run all tests headless | [docs/run-tests.md](docs/run-tests.md) |
+| `npm run test:headed` | Run with browser visible | [docs/run-tests.md](docs/run-tests.md) |
+| `npm run test:report` | Open the HTML test report | [docs/run-tests.md](docs/run-tests.md) |
 
 ---
 

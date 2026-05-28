@@ -1,0 +1,127 @@
+# generate\_pom
+
+Inspects one or more live pages and generates a Page Object Model file containing
+only `readonly Locator` property declarations — no methods. Run this before
+`generate_test` when working on a page that doesn't have a POM yet.
+
+---
+
+## Why locators-only first?
+
+When `generate_test` creates a POM and spec in a single step, it has to invent
+locators at the same time it's writing test logic. If a locator is wrong, the test
+fails, the auto-fix loop runs, and you spend tokens correcting something that could
+have been right from the start.
+
+`generate_pom` separates locator discovery from method writing:
+
+1. `generate_pom /login` — inspect the real DOM, write correct locators to `pages/LoginPage.ts`
+2. `generate_test` — sees the existing POM, adds only the methods it needs, writes the spec
+
+The test rarely fails due to bad locators because they came from the real page.
+
+---
+
+## What the generated file looks like
+
+```typescript
+import { Page, Locator } from '@playwright/test';
+import { BasePage } from './BasePage';
+
+export class LoginPage extends BasePage {
+  readonly loginEmailInput: Locator;
+  readonly loginPasswordInput: Locator;
+  readonly loginButton: Locator;
+  readonly signupNameInput: Locator;
+  readonly signupEmailInput: Locator;
+  readonly signupButton: Locator;
+
+  constructor(page: Page) {
+    super(page);
+    this.loginEmailInput = page.locator('[data-qa="login-email"]');
+    this.loginPasswordInput = page.locator('[data-qa="login-password"]');
+    this.loginButton = page.locator('[data-qa="login-button"]');
+    this.signupNameInput = page.locator('[data-qa="signup-name"]');
+    this.signupEmailInput = page.locator('[data-qa="signup-email"]');
+    this.signupButton = page.locator('[data-qa="signup-button"]');
+  }
+}
+```
+
+No `async` methods. Just properties and constructor assignments.
+
+---
+
+## Locator priority
+
+Locators are chosen following this priority order:
+
+1. `page.locator('[data-qa="..."]')` — always first when `data-qa` exists on the site
+2. `page.getByRole(...)`
+3. `page.getByLabel(...)`
+4. `page.getByPlaceholder(...)`
+5. `page.getByText(...)`
+6. `page.locator('#id')`
+
+---
+
+## How it runs
+
+The tool uses the local LLM (Ollama, `qwen2.5-coder:14b`) when available — locator
+generation is a mechanical DOM-to-TypeScript mapping that the local model handles
+well. If Ollama isn't running, it falls back to the Claude API.
+
+When multiple URLs are passed, one LLM call fires per URL in parallel, so inspecting
+four pages takes roughly the same time as inspecting one.
+
+---
+
+## Guard behaviour
+
+`generate_pom` will not overwrite a POM file that already has `async` methods.
+Once `generate_test` has added methods to a POM, the file is considered "promoted"
+and `generate_pom` skips it with a message. Use `generate_test` to extend a
+promoted file.
+
+If a file exists but has only locators (no methods), `generate_pom` will update it,
+adding new locators without removing existing ones.
+
+---
+
+## Usage
+
+### From Claude Code
+
+```
+Generate a POM for the login page
+Generate POMs for /login and /checkout
+Generate a POM for /payment — name it PaymentPage
+```
+
+### Parameters
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `urls` | yes | Page paths to inspect, e.g. `["/login", "/checkout"]` |
+| `page_name` | no | Class name override when inspecting a single URL, e.g. `"LoginPage"` |
+
+### There is no terminal CLI for this tool
+
+`generate_pom` is only available through the MCP server (Claude Code chat).
+
+---
+
+## Workflow integration
+
+```
+New page with no POM:
+  1. generate_pom /the-page        → pages/ThePage.ts with real locators
+  2. generate_test                  → adds methods + spec, auto-runs
+
+Complex flow spanning multiple pages:
+  1. generate_pom /login /checkout /payment    → all three POMs in parallel
+  2. generate_test                              → Claude builds spec using real POMs
+
+Existing page — POM already has methods:
+  1. generate_test                  → extends the existing POM directly, skips pom step
+```
