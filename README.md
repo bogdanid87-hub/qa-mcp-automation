@@ -22,6 +22,8 @@ Describe a test scenario in plain English. The server uses **Claude Sonnet 4.6**
 - **Two-phase generation for new POMs** — when no Page Object Model exists for a feature, generation splits into two sequential calls: the first commits the POM to disk, the second generates the spec reading the real POM from context; this eliminates method-name mismatches that occur when both files are invented simultaneously in a single pass; when a POM already exists the single-call path is preserved. The POM step is routed through the **local LLM** when Ollama is running (zero API cost); the spec step always uses the Claude API for accuracy
 - **Local LLM support (Ollama)** — POM generation is offloaded to a locally-running model (`qwen2.5-coder:14b` by default) when Ollama is reachable; if Ollama is not running the flow falls back to the Claude API transparently. Set `OLLAMA_HOST` or `LOCAL_MODEL` env vars to override defaults
 - **Test annotations** — unresolvable failures are annotated in-place: `/* ⚠️ BROKEN */` for code issues that exceeded the budget, `/* ⚠️ APP BUG */` for confirmed application defects
+- **PRD risk analysis** — `analyze_prd` reads a PRD or feature description, classifies every feature by risk tier (critical/high/medium/low), and writes a `prd-tests.txt` backlog file in the same batch format as `my-test.txt`; tests already in `TEST_CASES.md` are filtered out so the output is a genuine coverage gap list
+- **Locator-first POM generation** — `generate_pom` inspects one or more live pages and writes a locators-only `pages/X.ts` file before any test is written; running this first eliminates wrong-locator failures and the fix-loop iterations they cause
 - **Additional test proposals** — after generating a test, the server proposes further scenarios (negative cases, edge cases, boundary conditions, alternative happy paths); the user picks which ones to generate, saving unnecessary API calls
 - **Duplicate detection** — before calling the API, the CLI checks `TEST_CASES.md` for similar existing tests and warns the user; aborting still offers any missing additional tests for that feature
 - **Auto-tracked test registry** — `TEST_CASES.md` is updated automatically: passing tests are recorded in the main table; unresolvable failures are recorded under **⚠️ Application Bugs** or **❌ Broken Tests**; running the suite manually never touches the registry. Run `npm run update-registry` to re-check broken/app-bug entries and promote resolved tests back to the passing section. Run `npm run sync-registry` to do a full reconciliation — runs all tests, adds undocumented passing tests, promotes resolved entries, and flags regressions
@@ -150,7 +152,7 @@ OLLAMA_HOST=http://my-server:11434 LOCAL_MODEL=qwen2.5-coder:32b npm run mcp
 
 ## Using the tools
 
-Once the MCP server is connected, five tools are available inside Claude Code.
+Once the MCP server is connected, seven tools are available inside Claude Code.
 
 > **Important:** Tools are invoked by typing messages in the **Claude Code chat**, not in the terminal. Open Claude Code in this project folder, start a conversation, and type the examples below directly into the chat. Claude will call the MCP tool on your behalf.
 
@@ -326,6 +328,40 @@ Returns:
 ```
 
 Always check this before generating a new test to understand what already exists.
+
+---
+
+### Tool 6 — `generate_pom`
+
+Inspect one or more pages and generate a locators-only POM file. Run this before
+`generate_test` when starting work on a new page — it guarantees selectors are
+correct from the real DOM before any code is written.
+
+```
+Generate a POM for the login page
+Generate POMs for /login and /checkout
+```
+
+---
+
+### Tool 7 — `analyze_prd`
+
+Analyse a PRD or feature description and produce a risk-prioritised test backlog.
+Filters out tests already in `TEST_CASES.md` so the output is a genuine gap list.
+Writes `prd-tests.txt`, which can be fed directly to `npm run generate`.
+
+```
+Analyze this PRD and suggest test cases:
+[paste PRD text]
+```
+
+Risk tiers: **critical** (revenue) → **high** (trust/data) → **medium** (conversion) → **low** (content).
+
+From the terminal:
+```bash
+npm run analyze-prd -- --file prd.md
+npm run generate -- --file prd-tests.txt
+```
 
 ---
 
@@ -577,6 +613,7 @@ npm run test:headed         # run with the browser visible
 npm run test:debug          # step through with the Playwright inspector
 npm run test:report         # open the HTML test report
 npm run generate            # generate a new test from my-test.txt
+npm run analyze-prd         # analyse a PRD and write prd-tests.txt (risk-prioritised gap list)
 npm run fix                 # fix failing tests with Claude (interactive, budget-controlled)
 npm run update-registry     # re-run broken/app-bug tests and update TEST_CASES.md if resolved
 npm run sync-registry       # full reconciliation: run all tests, sync TEST_CASES.md completely
@@ -590,16 +627,19 @@ npm run sync-registry       # full reconciliation: run all tests, sync TEST_CASE
 qa-mcp-automation/
 │
 ├── src/                          ← MCP server + CLIs
-│   ├── index.ts                  ← MCP server entry point — 5 tools registered here
+│   ├── index.ts                  ← MCP server entry point — 7 tools registered here
 │   ├── cli.ts                    ← npm run generate — test generation with prompts, budget, retry loop
 │   ├── fix-cli.ts                ← npm run fix — standalone fix loop with budget guard
 │   ├── update-registry-cli.ts    ← npm run update-registry — re-checks broken/app-bug tests, updates TEST_CASES.md
 │   ├── sync-registry-cli.ts      ← npm run sync-registry — full reconciliation between test results and TEST_CASES.md
+│   ├── analyze-prd-cli.ts        ← npm run analyze-prd — risk-analysis of a PRD, writes prd-tests.txt
 │   ├── tools/
 │   │   ├── generate-test.ts      ← calls Claude (spec) or local LLM (POM) to write test code; auto-runs, auto-fixes, records
+│   │   ├── generate-pom.ts       ← locator-only POM generation from live DOM; local LLM + Claude fallback
+│   │   ├── analyze-prd.ts        ← PRD risk analysis; classifies features, writes prd-tests.txt gap list
 │   │   ├── local-llm.ts          ← Ollama client; availability check + chat call with JSON-mode output
 │   │   ├── inspect-page.ts       ← headless DOM extraction
-│   │   ├── investigate-fix.ts    ← failure analysis, fix, re-run, rule learning + recording
+│   │   ├── investigate-fix.ts    ← failure analysis, fix, re-run, rule learning + recording (screenshot + DOM aware)
 │   │   ├── list-resources.ts     ← lists existing files
 │   │   ├── run-tests.ts          ← shells out to Playwright (run and report only)
 │   │   ├── test-registry.ts      ← shared logic for reading/writing TEST_CASES.md

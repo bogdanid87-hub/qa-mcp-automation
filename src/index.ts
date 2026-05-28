@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { generateTestTool } from './tools/generate-test.js';
 import { generatePomTool } from './tools/generate-pom.js';
+import { analyzePrdTool } from './tools/analyze-prd.js';
 import { runTestsTool } from './tools/run-tests.js';
 import { listResourcesTool } from './tools/list-resources.js';
 import { investigateFixTool } from './tools/investigate-fix.js';
@@ -24,6 +25,23 @@ server.registerTool(
     },
   },
   (args) => generateTestTool(args),
+);
+
+server.registerTool(
+  'analyze_prd',
+  {
+    description:
+      'Analyse a PRD or feature description and generate a prioritised list of test case suggestions ' +
+      'grouped by risk level (critical → high → medium → low). ' +
+      'Filters out tests that already exist in TEST_CASES.md so the output is a genuine gap list. ' +
+      'Writes suggestions to prd-tests.txt in the same batch format as my-test.txt so you can run ' +
+      '`npm run generate -- --file prd-tests.txt` directly without any copy-pasting.',
+    inputSchema: {
+      prd_content: z.string().describe('The PRD text to analyse. Paste the full document, a feature section, or a list of user stories.'),
+      output_file: z.string().optional().describe('Output file path. Defaults to prd-tests.txt in the project root.'),
+    },
+  },
+  (args) => analyzePrdTool({ prdContent: args.prd_content, outputFile: args.output_file }),
 );
 
 server.registerTool(

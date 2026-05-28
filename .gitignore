@@ -11,8 +11,10 @@ test-data/.auth/
 # Local config — contains your API key and absolute path; never commit this
 .claude/settings.local.json
 
-# Local test description (personal working file)
+# Local working files (personal, not committed)
 my-test.txt
+prd.md
+prd-tests.txt
 
 # macOS
 .DS_Store

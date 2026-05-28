@@ -6,6 +6,33 @@ Quick reference for all tools. See [README.md](README.md) for full documentation
 
 ## MCP tools (Claude Code chat)
 
+### `analyze_prd` — turn a PRD into a prioritised test backlog
+
+Reads a PRD (or any feature description) and generates a `prd-tests.txt` file
+containing test suggestions grouped by risk level. Filters out tests that already
+exist in `TEST_CASES.md` so the output is a genuine gap list.
+
+```
+Analyze this PRD and suggest test cases:
+[paste PRD text or feature description]
+```
+
+| Parameter | Required | Example |
+|-----------|----------|---------|
+| `prd_content` | yes | full PRD text or a feature section |
+| `output_file` | no | `"sprint-12-tests.txt"` (default: `prd-tests.txt`) |
+
+The output file uses the same format as `my-test.txt`, so you can feed it directly
+to `generate_test` without any copy-pasting:
+
+```bash
+npm run generate -- --file prd-tests.txt
+```
+
+Risk levels: **critical** (revenue) → **high** (trust/data) → **medium** (conversion) → **low** (content/UX)
+
+---
+
 ### `generate_pom` — build a locator-only POM from the live page
 
 Inspects the real DOM and generates a `pages/X.ts` file with only `readonly Locator`
@@ -107,6 +134,23 @@ List existing resources
 
 ## Terminal commands
 
+### PRD analysis
+
+**`prd.md`** is a local scratch file (gitignored) where you paste a PRD or feature
+description. **`prd-tests.txt`** is the generated output (also gitignored).
+
+```bash
+npm run analyze-prd -- --file prd.md               # write to prd-tests.txt (default)
+npm run analyze-prd -- --file prd.md --output sprint-12-tests.txt
+npm run generate -- --file prd-tests.txt           # generate all suggested tests
+```
+
+The output contains one test block per suggestion, separated by `---`, with
+`# risk:` and `# reason:` annotations for context. Delete the blocks you don't
+want before running `generate`.
+
+---
+
 ### Test generation
 
 **`my-test.txt`** is a local scratch file (gitignored) used to describe tests
@@ -189,6 +233,11 @@ npm run mcp                 # start MCP server manually (Claude Code does this a
 ## Recommended flow
 
 ```
+Starting from a PRD or feature spec:
+  1. analyze_prd / npm run analyze-prd  → generate prd-tests.txt (gap list)
+  2. review prd-tests.txt               → delete suggestions you don't want
+  3. npm run generate -- --file prd-tests.txt  → generate all selected tests
+
 New page, no POM yet:
   1. generate_pom /the-page         → correct locators on disk
   2. generate_test                  → adds methods + spec, auto-runs
