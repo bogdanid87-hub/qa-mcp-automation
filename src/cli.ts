@@ -1,9 +1,10 @@
+import Anthropic from '@anthropic-ai/sdk';
 import { readFile, readdir, stat, writeFile } from 'fs/promises';
 import { join } from 'path';
 import * as readline from 'readline';
 import { generateTestTool } from './tools/generate-test.js';
 import { runTests } from './tools/run-tests.js';
-import { readTestCases, findSimilarTests, type TestEntry } from './tools/test-registry.js';
+import { readTestCases, type TestEntry } from './tools/test-registry.js';
 import { autoFixFailure } from './tools/investigate-fix.js';
 import { TokenBudget } from './tools/budget.js';
 
@@ -324,6 +325,80 @@ async function writeTestAnnotation(
 }
 
 // ---------------------------------------------------------------------------
+// Similarity check (Claude-based, replaces keyword heuristic)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ask Claude whether any existing tests already cover the same scenario as the
+ * new description. Returns the matching TestEntry items, or [] on any failure
+ * (the check is advisory — errors must never block generation).
+ *
+ * The test list is marked cacheable so repeated calls in the same session pay
+ * the cheap cache-read rate rather than the full input price.
+ */
+async function claudeSimilarityCheck(
+  description: string,
+  allTests: TestEntry[],
+  budget: TokenBudget,
+): Promise<TestEntry[]> {
+  if (allTests.length === 0) return [];
+  const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
+  if (!apiKey) return [];
+
+  const testList = allTests
+    .map(t => `#${t.num}: ${t.describe} › ${t.name}`)
+    .join('\n');
+
+  try {
+    const client = new Anthropic({ apiKey });
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 256,
+      system:
+        'You are a test coverage checker. Given a list of existing Playwright tests ' +
+        'and a new test description, identify which existing tests already cover the ' +
+        'exact same scenario.\n\n' +
+        'Only flag a test as duplicate if it exercises the same user action AND ' +
+        'verifies the same outcome — even if worded differently. Do NOT flag tests ' +
+        'that cover a different aspect or edge case of the same feature area.\n\n' +
+        'Respond with ONLY a JSON array of matching test numbers, e.g. [3, 7] or [].',
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: `Existing tests:\n${testList}`,
+            cache_control: { type: 'ephemeral' },
+          },
+          {
+            type: 'text',
+            text: `New test description:\n${description}`,
+          },
+        ],
+      }],
+    });
+
+    budget.add(
+      message.usage.input_tokens,
+      message.usage.output_tokens,
+      message.usage.cache_creation_input_tokens ?? 0,
+      message.usage.cache_read_input_tokens ?? 0,
+    );
+
+    const raw = message.content
+      .filter(b => b.type === 'text')
+      .map(b => (b as { type: 'text'; text: string }).text)
+      .join('')
+      .replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
+
+    const nums = JSON.parse(raw) as number[];
+    return allTests.filter(t => nums.includes(t.num));
+  } catch {
+    return []; // network error, parse failure, etc. — skip silently
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 async function main(): Promise<void> {
@@ -366,7 +441,9 @@ async function main(): Promise<void> {
   // ── Step 0: Similarity check ──────────────────────────────────────────────
   const allTests = await readTestCases();
   if (allTests.length > 0) {
-    const similar = findSimilarTests(description, allTests);
+    process.stdout.write('  Checking for existing coverage...\r');
+    const similar = await claudeSimilarityCheck(description, allTests, budget);
+    process.stdout.write('                                    \r'); // clear the line
     if (similar.length > 0) {
       printSimilarTests(similar);
       const proceed = await askYesNo('Generate a new test anyway? [y/N] ');

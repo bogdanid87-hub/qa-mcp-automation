@@ -365,27 +365,3 @@ export async function readTestCases(): Promise<TestEntry[]> {
   }
 }
 
-/**
- * Return entries from `all` that appear similar to `description`.
- *
- * Two conditions must BOTH hold:
- *   1. Every word in the describe block must stem-match a word in the description.
- *   2. At least 2 words from the test name must also stem-match the description.
- */
-export function findSimilarTests(description: string, all: TestEntry[]): TestEntry[] {
-  const descWords = extractWords(description);
-  if (descWords.length === 0) return [];
-
-  const descStems = descWords.map(stem);
-
-  return all.filter(entry => {
-    const featureWords = extractWords(entry.describe);
-    if (featureWords.length === 0) return false;
-    const allFeatureMatch = featureWords.every(fw => descStems.includes(stem(fw)));
-    if (!allFeatureMatch) return false;
-
-    const nameWords = extractWords(entry.name);
-    const nameMatchCount = nameWords.filter(nw => descStems.includes(stem(nw))).length;
-    return nameMatchCount >= 2;
-  });
-}
