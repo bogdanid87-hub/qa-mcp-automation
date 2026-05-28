@@ -20,11 +20,12 @@ server.registerTool(
       'Provide test steps as a description; Claude Sonnet 4.6 writes the code following project conventions and saves the files.',
     inputSchema: {
       description: z.string().describe('Test steps or description of what to test. May be plain text or a numbered list.'),
-      test_name: z.string().optional().describe('Optional hint for naming the test file, e.g. "register" → tests/register.spec.ts'),
+      test_name: z.string().optional().describe('Names the test() and describe() blocks. Does not control the filename.'),
+      spec_file: z.string().optional().describe('Target spec file path, e.g. "tests/ui/cart.spec.ts" or "tests/e2e/place-order.spec.ts". Created if it does not exist; new test is added if it does.'),
       page_paths: z.array(z.string()).optional().describe('Page paths to inspect live for accurate locators, e.g. ["/contact_us", "/login"]. The server navigates each page headlessly and extracts real DOM elements before generating the POM.'),
     },
   },
-  (args) => generateTestTool(args),
+  (args) => generateTestTool({ ...args, spec_file: (args as { spec_file?: string }).spec_file }),
 );
 
 server.registerTool(

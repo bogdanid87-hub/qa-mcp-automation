@@ -122,6 +122,7 @@ export async function generateTestTool(args: {
   description: string;
   test_name?: string;
   page_paths?: string[];
+  spec_file?: string;
   proposalsOnly?: boolean;
   budget?: TokenBudget;
 }): Promise<{ content: { type: 'text'; text: string }[]; _meta?: { specFile?: string; lastFailureOutput?: string; passing: boolean } }> {
@@ -171,9 +172,11 @@ export async function generateTestTool(args: {
     }
   }
 
-  const description = args.test_name
-    ? `Test name hint: ${args.test_name}\n\n${args.description}`
-    : args.description;
+  const description = [
+    args.test_name ? `Test name hint: ${args.test_name}` : '',
+    args.spec_file ? `Spec file hint: write this test into ${args.spec_file} — create the file if it does not exist, or add to it if it does` : '',
+    args.description,
+  ].filter(Boolean).join('\n\n');
 
   const proposalsHint = args.proposalsOnly
     ? '\n\n**Important**: The positive test already exists — do NOT generate any new files. Set `files` to `[]` and `fixture_additions` to `null`. Only populate `proposed_negative_tests` with scenarios not yet implemented.'

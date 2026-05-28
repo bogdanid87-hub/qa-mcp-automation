@@ -39,7 +39,8 @@ The spec step always uses the Claude API — it requires the most accuracy.
 generating it. Three directives at the top control metadata:
 
 ```
-# test_name: login-happy-path       ← names the output: tests/login-happy-path.spec.ts
+# test_name: login-happy-path       ← names the test() and describe() blocks
+# spec_file: tests/ui/auth.spec.ts  ← target file (created if missing, appended if exists)
 # page_paths: /login, /             ← pages to inspect live for correct locators
 
 Test the login flow with valid credentials.
@@ -94,7 +95,8 @@ Generate a test for the login flow — page_paths: /login
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `description` | yes | Test steps or description of what to test |
-| `test_name` | no | File name hint — `"login"` → `tests/login.spec.ts` |
+| `test_name` | no | Names the `test()` and `describe()` blocks — does not control the filename |
+| `spec_file` | no | Target spec file, e.g. `"tests/ui/auth.spec.ts"` or `"tests/e2e/place-order.spec.ts"` |
 | `page_paths` | no (recommended) | Pages to inspect live for accurate locators |
 
 > **Always provide `page_paths`** when you know which pages the test touches.

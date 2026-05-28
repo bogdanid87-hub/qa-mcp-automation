@@ -1,5 +1,5 @@
-import { test, expect } from '../fixtures';
-import { randomEmail } from '../utils/randomData';
+import { test, expect } from '../../fixtures';
+import { randomEmail } from '../../utils/randomData';
 
 test.describe('Subscription', () => {
   test('should subscribe via the footer subscription form on the home page', async ({ homePage, page }) => {

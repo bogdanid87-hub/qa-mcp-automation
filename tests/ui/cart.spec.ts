@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures';
+import { test, expect } from '../../fixtures';
 
 test.describe('Place Order: Add Products in Cart', () => {
   test('should add two products to cart and verify prices, quantity and total', async ({ homePage, productsPage, cartPage }) => {

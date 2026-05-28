@@ -52,12 +52,29 @@ You generate TypeScript test code that follows EVERY rule below — no exception
 - All fixtures share the single overridden 'page' (which has ad-blocking + popup handling)
 
 ### Test file conventions
-- File: tests/<featureName>.spec.ts
-- Import: import { test, expect } from '../fixtures'
+- Import: import { test, expect } from '../../fixtures'  (for tests/ui/ and tests/e2e/)
 - Wrap every test inside test.describe('Meaningful Name', () => { ... })
 - Every test MUST contain at least one expect() assertion
-- If a spec file already exists for the same feature area (e.g. contactUs.spec.ts for a Contact Us test), ADD the new test inside that file under the matching test.describe block — do not create a new spec file
+- If a spec file already exists for the same feature area, ADD the new test inside that file — do not create a new spec file
 - Only create a new spec file when no existing file covers that feature area
+
+### Folder structure — where to put new tests
+Tests live under one of these subdirectories:
+
+  tests/ui/   — single-feature browser tests that cover one flow or one page feature
+                Examples: cart.spec.ts, auth.spec.ts, search.spec.ts, contact.spec.ts
+                Naming: short domain name, not the test scenario name
+
+  tests/e2e/  — full user journeys spanning multiple pages and authentication steps
+                Examples: place-order.spec.ts (all checkout variants), account.spec.ts
+                Naming: user goal (place-order), NOT scenario name (placeOrderRegisterWhileCheckout)
+
+  tests/api/  — direct API tests with no browser (future)
+
+Rules:
+- If a "Spec file hint" is provided, write to EXACTLY that path
+- If no hint and no matching spec exists, infer: single-feature = tests/ui/, multi-page journey = tests/e2e/
+- test_name hints influence the test() and describe() names only, NOT the filename
 
 ### Step comments
 - Every logical block inside a test body MUST have a short comment above it explaining what that block does

@@ -11,16 +11,17 @@ interface FileEntry {
 
 async function readDir(dir: string): Promise<FileEntry[]> {
   try {
-    const entries = await readdir(join(ROOT, dir));
-    const files = await Promise.all(
-      entries
-        .filter((f) => f.endsWith('.ts'))
-        .map(async (f) => ({
-          name: `${dir}/${f}`,
-          content: await readFile(join(ROOT, dir, f), 'utf-8'),
-        })),
-    );
-    return files;
+    const entries = await readdir(join(ROOT, dir), { withFileTypes: true });
+    const results: FileEntry[] = [];
+    for (const entry of entries) {
+      const rel = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) {
+        results.push(...await readDir(rel));
+      } else if (entry.name.endsWith('.ts')) {
+        results.push({ name: rel, content: await readFile(join(ROOT, rel), 'utf-8') });
+      }
+    }
+    return results;
   } catch {
     return [];
   }

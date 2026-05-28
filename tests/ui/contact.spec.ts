@@ -1,6 +1,6 @@
 import path from 'path';
-import { test, expect } from '../fixtures';
-import { randomEmail, randomName, randomString } from '../utils/randomData';
+import { test, expect } from '../../fixtures';
+import { randomEmail, randomName, randomString } from '../../utils/randomData';
 
 test.describe('Contact Us Form', () => {
   test('should submit the contact form and show success message', async ({ page, homePage, contactUsPage }) => {

@@ -34,12 +34,18 @@ Separate every block with a line containing exactly three dashes: ---
 Each block must follow this exact structure:
 
 # test_name: kebab-case-descriptive-name
+# spec_file: tests/ui/feature.spec.ts
 # page_paths: /path1, /path2
 # risk: critical|high|medium|low
 # reason: One sentence explaining why this risk level applies.
 
 Plain description or numbered steps of what the test does and asserts.
 Be specific enough that a developer can implement it without reading the PRD.
+
+spec_file rules:
+- tests/e2e/  for multi-page journeys (checkout, registration flows, full purchase)
+- tests/ui/   for single-feature tests (cart, auth, search, forms)
+- Group related tests in the same file (all cart tests → tests/ui/cart.spec.ts)
 
 ---
 

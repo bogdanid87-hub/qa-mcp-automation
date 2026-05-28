@@ -29,16 +29,24 @@ async function ensureApiKey(): Promise<void> {
 // ---------------------------------------------------------------------------
 // File change tracking
 // ---------------------------------------------------------------------------
+async function walkTs(dir: string, snap: Map<string, number>): Promise<void> {
+  try {
+    const entries = await readdir(join(ROOT, dir), { withFileTypes: true });
+    for (const e of entries) {
+      if (e.isDirectory()) await walkTs(`${dir}/${e.name}`, snap);
+      else if (e.name.endsWith('.ts')) {
+        const abs = join(ROOT, dir, e.name);
+        snap.set(abs, (await stat(abs)).mtimeMs);
+      }
+    }
+  } catch { /* dir may not exist yet */ }
+}
+
 async function snapshotFiles(): Promise<Map<string, number>> {
   const snap = new Map<string, number>();
 
   for (const dir of TRACKED_DIRS) {
-    try {
-      for (const f of (await readdir(join(ROOT, dir))).filter(f => f.endsWith('.ts'))) {
-        const abs = join(ROOT, dir, f);
-        snap.set(abs, (await stat(abs)).mtimeMs);
-      }
-    } catch { /* dir may not exist yet */ }
+    await walkTs(dir, snap);
   }
 
   for (const rel of TRACKED_EXTRAS) {
@@ -55,16 +63,13 @@ async function diffFiles(before: Map<string, number>): Promise<{ created: string
   const created: string[] = [];
   const edited: string[] = [];
 
-  for (const dir of TRACKED_DIRS) {
-    try {
-      for (const f of (await readdir(join(ROOT, dir))).filter(f => f.endsWith('.ts'))) {
-        const abs = join(ROOT, dir, f);
-        const rel = `${dir}/${f}`;
-        const mtime = (await stat(abs)).mtimeMs;
-        if (!before.has(abs)) created.push(rel);
-        else if (mtime > before.get(abs)!) edited.push(rel);
-      }
-    } catch { /* skip */ }
+  const after = new Map<string, number>();
+  for (const dir of TRACKED_DIRS) await walkTs(dir, after);
+
+  for (const [abs, mtime] of after) {
+    const rel = abs.replace(ROOT + '/', '');
+    if (!before.has(abs)) created.push(rel);
+    else if (mtime > before.get(abs)!) edited.push(rel);
   }
 
   for (const rel of TRACKED_EXTRAS) {
@@ -128,14 +133,16 @@ function parseFileMetadata(raw: string): {
   description: string;
   testName?: string;
   pagePaths?: string[];
+  specFile?: string;
 } {
   const lines = raw.split('\n');
   let testName: string | undefined;
   let pagePaths: string[] | undefined;
+  let specFile: string | undefined;
   const descLines: string[] = [];
 
   for (const line of lines) {
-    const meta = line.match(/^#\s*(test_name|page_paths)\s*:\s*(.+)/i);
+    const meta = line.match(/^#\s*(test_name|page_paths|spec_file)\s*:\s*(.+)/i);
     if (meta) {
       const [, key, value] = meta;
       if (key.toLowerCase() === 'test_name') testName = value.trim();
@@ -143,6 +150,7 @@ function parseFileMetadata(raw: string): {
         const paths = value.split(',').map(p => p.trim()).filter(Boolean);
         if (paths.length) pagePaths = paths;
       }
+      if (key.toLowerCase() === 'spec_file') specFile = value.trim();
     } else if (line.startsWith('#')) {
       // skip other comment/instruction lines
     } else {
@@ -150,7 +158,7 @@ function parseFileMetadata(raw: string): {
     }
   }
 
-  return { description: descLines.join('\n').trim(), testName, pagePaths };
+  return { description: descLines.join('\n').trim(), testName, pagePaths, specFile };
 }
 
 /**
@@ -162,6 +170,7 @@ function parseMultipleSections(raw: string): Array<{
   description: string;
   testName?: string;
   pagePaths?: string[];
+  specFile?: string;
 }> {
   const sections = raw.split(/^-{3,}\s*$/m).map(s => s.trim()).filter(Boolean);
   if (sections.length <= 1) return [];
@@ -172,7 +181,7 @@ function parseMultipleSections(raw: string): Array<{
 // Batch mode (multiple tests in one file)
 // ---------------------------------------------------------------------------
 async function runBatch(
-  sections: Array<{ description: string; testName?: string; pagePaths?: string[] }>,
+  sections: Array<{ description: string; testName?: string; pagePaths?: string[]; specFile?: string }>,
   budget: TokenBudget,
 ): Promise<void> {
   console.log(`\n📋 Batch mode — ${sections.length} tests to generate\n`);
@@ -198,6 +207,7 @@ async function runBatch(
       description: section.description,
       test_name: section.testName,
       page_paths: section.pagePaths,
+      spec_file: section.specFile,
       budget,
     });
     console.log(result.content[0]?.text ?? '');
@@ -410,6 +420,7 @@ async function main(): Promise<void> {
   let description = args.description;
   let testName = args.testName;
   let pagePaths = args.pagePaths;
+  let specFile: string | undefined;
 
   if (!description && args.filePath) {
     const fileContent = await readFile(args.filePath, 'utf-8');
@@ -425,6 +436,7 @@ async function main(): Promise<void> {
     description = meta.description;
     if (!testName && meta.testName) testName = meta.testName;
     if (!pagePaths && meta.pagePaths) pagePaths = meta.pagePaths;
+    if (meta.specFile) specFile = meta.specFile;
   }
 
   if (!description) {
@@ -544,7 +556,7 @@ async function main(): Promise<void> {
   console.log('\n⏳ Generating test...\n');
 
   let before = await snapshotFiles();
-  const result = await generateTestTool({ description, page_paths: pagePaths, test_name: testName, budget });
+  const result = await generateTestTool({ description, page_paths: pagePaths, test_name: testName, spec_file: specFile, budget });
   const output = result.content[0]?.text ?? '';
   console.log(output);
 
