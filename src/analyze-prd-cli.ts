@@ -1,5 +1,6 @@
 import { readFile } from 'fs/promises';
 import { extname, join } from 'path';
+import { chromium } from '@playwright/test';
 import { analyzePrdTool, type PrdFile } from './tools/analyze-prd.js';
 
 const ROOT = process.cwd();
@@ -19,6 +20,28 @@ async function ensureApiKey(): Promise<void> {
     const key = JSON.parse(raw)?.mcpServers?.['qa-mcp-automation']?.env?.ANTHROPIC_API_KEY;
     if (key) process.env.ANTHROPIC_API_KEY = key;
   } catch { /* not found */ }
+}
+
+/**
+ * Navigate to a URL headlessly and return the page's rendered text content.
+ * Uses Playwright so JS-rendered pages are handled correctly.
+ */
+async function fetchUrlAsText(url: string): Promise<string> {
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const context = await browser.newContext();
+    await context.route('**/*', route => {
+      const ads = ['googlesyndication', 'doubleclick', 'googleads', 'adsbygoogle'];
+      if (ads.some(f => route.request().url().includes(f))) route.abort();
+      else route.continue();
+    });
+    const page = await context.newPage();
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    const text = await page.evaluate(() => document.body.innerText);
+    return text.trim();
+  } finally {
+    await browser.close();
+  }
 }
 
 async function loadAsPrdFile(filePath: string): Promise<PrdFile> {
@@ -43,51 +66,71 @@ async function main(): Promise<void> {
   }
 
   const filePath = raw['file'];
-  if (!filePath) {
+  const pageUrl = raw['url'];
+
+  if (!filePath && !pageUrl) {
     console.error(
       '\nUsage:\n' +
       '  npm run analyze-prd -- --file prd.md\n' +
       '  npm run analyze-prd -- --file spec.pdf\n' +
       '  npm run analyze-prd -- --file wireframe.png\n' +
+      '  npm run analyze-prd -- --url https://example.com/api-docs\n' +
       '  npm run analyze-prd -- --file prd.md --images wireframe.png,mockup.jpg\n' +
       '  npm run analyze-prd -- --file prd.md --output sprint-tests.txt\n' +
       '  npm run analyze-prd -- --file prd.md --tier critical,high\n' +
       '  npm run analyze-prd -- --file prd.md --focus checkout,authentication\n' +
-      '\nSupported formats:\n' +
-      '  Text/Markdown  (.md .txt)     — read as plain text\n' +
-      '  PDF            (.pdf)         — passed to Claude natively (preserves layout)\n' +
-      '  Images         (.png .jpg .jpeg .gif .webp) — Claude reads wireframes/mockups\n' +
-      '  PowerPoint/Excel/Word         — export to PDF first, then use --file spec.pdf\n',
+      '\nSupported inputs:\n' +
+      '  --file prd.md          Text/Markdown — read as plain text\n' +
+      '  --file spec.pdf        PDF — passed to Claude natively (preserves layout)\n' +
+      '  --file wireframe.png   Image (.png .jpg .jpeg .gif .webp) — Claude reads visuals\n' +
+      '  --url https://...      Web page — rendered text extracted via headless browser\n' +
+      '  PowerPoint/Excel/Word  Export to PDF first, then use --file spec.pdf\n',
     );
     process.exit(1);
   }
 
-  const ext = extname(filePath).toLowerCase();
-  const isImage = ext in IMAGE_TYPES;
-  const isPdf = ext === '.pdf';
-  const isText = !isImage && !isPdf;
+  if (filePath && pageUrl) {
+    console.error('\nError: provide either --file or --url, not both.\n');
+    process.exit(1);
+  }
 
-  // Load main file
+  // Load main input
   let prdContent: string | undefined;
   let prdFile: PrdFile | undefined;
   let primaryLabel: string;
 
-  try {
-    if (isText) {
-      prdContent = await readFile(filePath, 'utf-8');
-      primaryLabel = `${filePath} (text)`;
-    } else if (isPdf) {
-      prdFile = await loadAsPrdFile(filePath);
-      primaryLabel = `${filePath} (PDF)`;
-    } else {
-      // Single image passed as the main file
-      prdFile = await loadAsImage(filePath);
-      prdFile.mediaType = IMAGE_TYPES[ext];
-      primaryLabel = `${filePath} (image)`;
+  if (pageUrl) {
+    // Fetch a live web page — API docs, feature specs, wikis, etc.
+    try {
+      console.log(`\n  Fetching ${pageUrl}...`);
+      prdContent = await fetchUrlAsText(pageUrl);
+      primaryLabel = pageUrl;
+    } catch (err: any) {
+      console.error(`\nCould not fetch ${pageUrl}: ${err.message}\n`);
+      process.exit(1);
     }
-  } catch (err: any) {
-    console.error(`\nCould not read ${filePath}: ${err.message}\n`);
-    process.exit(1);
+  } else {
+    const ext = extname(filePath!).toLowerCase();
+    const isImage = ext in IMAGE_TYPES;
+    const isPdf = ext === '.pdf';
+    const isText = !isImage && !isPdf;
+
+    try {
+      if (isText) {
+        prdContent = await readFile(filePath!, 'utf-8');
+        primaryLabel = `${filePath} (text)`;
+      } else if (isPdf) {
+        prdFile = await loadAsPrdFile(filePath!);
+        primaryLabel = `${filePath} (PDF)`;
+      } else {
+        prdFile = await loadAsImage(filePath!);
+        prdFile.mediaType = IMAGE_TYPES[ext];
+        primaryLabel = `${filePath} (image)`;
+      }
+    } catch (err: any) {
+      console.error(`\nCould not read ${filePath}: ${err.message}\n`);
+      process.exit(1);
+    }
   }
 
   // Load supplementary images (--images flag, comma-separated)
@@ -115,7 +158,7 @@ async function main(): Promise<void> {
 
   const result = await analyzePrdTool({
     prdContent,
-    prdFile: isPdf || isImage ? prdFile : undefined,
+    prdFile: prdFile,
     images: images.length > 0 ? images : undefined,
     outputFile: raw['output'] ? join(ROOT, raw['output']) : undefined,
     tier: tier?.length ? tier : undefined,

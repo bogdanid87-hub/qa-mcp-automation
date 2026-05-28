@@ -30,6 +30,20 @@ Every test suggestion is classified into one of four tiers:
 
 ## Input formats
 
+### Web page — `--url`
+
+Point directly at any URL — API documentation, a wiki page, a Confluence spec, a feature changelog. The tool navigates headlessly via Playwright, extracts the fully-rendered text, and passes it to Claude as the PRD. Handles JS-rendered content.
+
+```bash
+npm run analyze-prd -- --url https://automationexercise.com/api_list
+npm run analyze-prd -- --url https://example.com/api-docs --tier high,critical
+npm run analyze-prd -- --url https://wiki.internal/feature-spec --focus checkout
+```
+
+This is the recommended input for API test generation — point at the API docs page and get a test backlog without any copy-pasting.
+
+---
+
 ### Text or Markdown — `prd.md`
 
 Paste any content into `prd.md`: user stories, acceptance criteria, feature lists,
