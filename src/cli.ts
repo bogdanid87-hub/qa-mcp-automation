@@ -152,6 +152,69 @@ function parseFileMetadata(raw: string): {
   return { description: descLines.join('\n').trim(), testName, pagePaths };
 }
 
+/**
+ * Split a file's content into multiple test sections, separated by lines
+ * containing only three or more dashes (---). Returns an empty array if
+ * there is only one section — caller falls through to the single-test flow.
+ */
+function parseMultipleSections(raw: string): Array<{
+  description: string;
+  testName?: string;
+  pagePaths?: string[];
+}> {
+  const sections = raw.split(/^-{3,}\s*$/m).map(s => s.trim()).filter(Boolean);
+  if (sections.length <= 1) return [];
+  return sections.map(s => parseFileMetadata(s));
+}
+
+// ---------------------------------------------------------------------------
+// Batch mode (multiple tests in one file)
+// ---------------------------------------------------------------------------
+async function runBatch(
+  sections: Array<{ description: string; testName?: string; pagePaths?: string[] }>,
+  budget: TokenBudget,
+): Promise<void> {
+  console.log(`\n📋 Batch mode — ${sections.length} tests to generate\n`);
+
+  const summary: Array<{ label: string; status: string }> = [];
+
+  for (const [i, section] of sections.entries()) {
+    const label = section.testName ?? `test ${i + 1}`;
+    const bar = '─'.repeat(48);
+    console.log(`\n${bar}`);
+    console.log(`  [${i + 1}/${sections.length}]  ${label}`);
+    console.log(`${bar}\n`);
+
+    if (budget.exceeded) {
+      console.log(`⚠️  Token budget of $${budget.limitUsd.toFixed(2)} reached — skipping remaining tests.\n`);
+      summary.push({ label, status: '⏭  skipped (budget)' });
+      continue;
+    }
+
+    console.log(`⏳ Generating...\n`);
+    const before = await snapshotFiles();
+    const result = await generateTestTool({
+      description: section.description,
+      test_name: section.testName,
+      page_paths: section.pagePaths,
+      budget,
+    });
+    console.log(result.content[0]?.text ?? '');
+    const { created, edited } = await diffFiles(before);
+    printDiff(created, edited);
+
+    const passing = result._meta?.passing !== false;
+    summary.push({ label, status: passing ? '✅' : '❌ failed' });
+  }
+
+  const eq = '═'.repeat(48);
+  console.log(`\n${eq}`);
+  console.log(`  Batch complete — ${sections.length} test${sections.length === 1 ? '' : 's'}:`);
+  for (const { label, status } of summary) console.log(`    ${status}  ${label}`);
+  console.log(`  Token budget used: ${budget.summary}`);
+  console.log(`${eq}\n`);
+}
+
 // ---------------------------------------------------------------------------
 // Negative test selection
 // ---------------------------------------------------------------------------
@@ -274,7 +337,16 @@ async function main(): Promise<void> {
   let pagePaths = args.pagePaths;
 
   if (!description && args.filePath) {
-    const meta = parseFileMetadata(await readFile(args.filePath, 'utf-8'));
+    const fileContent = await readFile(args.filePath, 'utf-8');
+
+    // Multi-test: sections separated by --- lines → batch mode (non-interactive)
+    const sections = parseMultipleSections(fileContent);
+    if (sections.length > 0) {
+      await runBatch(sections, budget);
+      process.exit(0);
+    }
+
+    const meta = parseFileMetadata(fileContent);
     description = meta.description;
     if (!testName && meta.testName) testName = meta.testName;
     if (!pagePaths && meta.pagePaths) pagePaths = meta.pagePaths;

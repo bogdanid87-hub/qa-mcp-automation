@@ -109,13 +109,44 @@ List existing resources
 
 ### Test generation
 
-```bash
-# Edit my-test.txt with your test description, then:
-npm run generate
+**`my-test.txt`** is a local scratch file (gitignored) used to describe tests
+before generating them. Three directives at the top of each block set the
+metadata; everything else is the test description.
 
-# Flags (all optional — can also be set inside my-test.txt with # comments)
+```
+# test_name: login-happy-path       ← names the output file tests/login-happy-path.spec.ts
+# page_paths: /login, /             ← pages to inspect live for correct locators
+
+Test the login flow with valid credentials.
+1. Navigate to the login page
+2. Fill in email and password
+3. Click the Login button
+4. Verify "Logged in as <username>" appears in the nav
+```
+
+Run it:
+```bash
 npm run generate -- --file my-test.txt
-npm run generate -- --description "Test the login flow" --page_paths /login
+```
+
+**Multiple tests in one file** — separate blocks with `---` on its own line.
+All tests run non-interactively in sequence (batch mode):
+
+```
+# test_name: login-happy-path
+# page_paths: /login
+Test login with valid credentials...
+
+---
+
+# test_name: login-wrong-password
+# page_paths: /login
+Test login with an incorrect password...
+```
+
+You can also skip the file and pass everything inline:
+```bash
+npm run generate -- --description "Test the login flow..." --page_paths /login
 npm run generate -- --test_name login --page_paths /login,/
 ```
 
