@@ -75,6 +75,8 @@ export async function analyzePrdTool(args: {
   prdFile?: PrdFile;      // PDF passed directly to Claude
   images?: PrdFile[];     // wireframes, mockups, screenshots
   outputFile?: string;
+  tier?: string[];        // e.g. ['critical', 'high'] — omit medium/low
+  focus?: string[];       // e.g. ['checkout', 'authentication'] — omit other features
 }): Promise<{ content: { type: 'text'; text: string }[] }> {
   const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
   if (!apiKey) {
@@ -125,6 +127,23 @@ export async function analyzePrdTool(args: {
     });
   }
 
+  // Scope constraints — appended last so Claude sees them right before responding
+  const constraints: string[] = [];
+  if (args.tier && args.tier.length > 0) {
+    const allowed = args.tier.join(', ');
+    constraints.push(`Risk filter: ONLY generate tests where # risk: is one of [${allowed}]. Omit all other risk levels entirely.`);
+  }
+  if (args.focus && args.focus.length > 0) {
+    const areas = args.focus.join(', ');
+    constraints.push(`Feature filter: ONLY generate tests related to these areas: ${areas}. Omit all other features entirely.`);
+  }
+  if (constraints.length > 0) {
+    userContent.push({
+      type: 'text',
+      text: `## Scope constraints — apply strictly\n${constraints.map(c => `- ${c}`).join('\n')}`,
+    });
+  }
+
   const hasPdf = !!args.prdFile && args.prdFile.mediaType === 'application/pdf';
 
   let raw: string;
@@ -152,9 +171,14 @@ export async function analyzePrdTool(args: {
   const highCount = (raw.match(/^# risk: high/gm) ?? []).length;
 
   const outputPath = args.outputFile ?? join(ROOT, 'prd-tests.txt');
+  const filterNote = [
+    ...(args.tier?.length ? [`# Tier filter:    ${args.tier.join(', ')}`] : []),
+    ...(args.focus?.length ? [`# Feature filter: ${args.focus.join(', ')}`] : []),
+  ];
   const header = [
     '# ─────────────────────────────────────────────────────────────────────────',
     `# PRD Test Analysis — ${new Date().toISOString().slice(0, 10)}`,
+    ...(filterNote.length ? ['# ─────────────────────────────────────────────────────────────────────────', ...filterNote] : []),
     '# ─────────────────────────────────────────────────────────────────────────',
     '#',
     '# Review: keep the tests you want, delete the ones you don\'t.',

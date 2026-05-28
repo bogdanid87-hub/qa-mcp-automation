@@ -39,9 +39,16 @@ server.registerTool(
     inputSchema: {
       prd_content: z.string().describe('The PRD text to analyse. Paste the full document, a feature section, or a list of user stories.'),
       output_file: z.string().optional().describe('Output file path. Defaults to prd-tests.txt in the project root.'),
+      tier: z.array(z.enum(['critical', 'high', 'medium', 'low'])).optional().describe('Only generate tests at these risk levels, e.g. ["critical", "high"]. Omits all others.'),
+      focus: z.array(z.string()).optional().describe('Only generate tests for these feature areas, e.g. ["checkout", "authentication"]. Omits all others.'),
     },
   },
-  (args) => analyzePrdTool({ prdContent: args.prd_content, outputFile: args.output_file }),
+  (args) => analyzePrdTool({
+    prdContent: args.prd_content,
+    outputFile: args.output_file,
+    tier: args.tier,
+    focus: args.focus,
+  }),
 );
 
 server.registerTool(

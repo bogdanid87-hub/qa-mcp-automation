@@ -51,6 +51,8 @@ async function main(): Promise<void> {
       '  npm run analyze-prd -- --file wireframe.png\n' +
       '  npm run analyze-prd -- --file prd.md --images wireframe.png,mockup.jpg\n' +
       '  npm run analyze-prd -- --file prd.md --output sprint-tests.txt\n' +
+      '  npm run analyze-prd -- --file prd.md --tier critical,high\n' +
+      '  npm run analyze-prd -- --file prd.md --focus checkout,authentication\n' +
       '\nSupported formats:\n' +
       '  Text/Markdown  (.md .txt)     — read as plain text\n' +
       '  PDF            (.pdf)         — passed to Claude natively (preserves layout)\n' +
@@ -101,14 +103,23 @@ async function main(): Promise<void> {
     }
   }
 
+  const tier = raw['tier']?.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  const focus = raw['focus']?.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
   const inputDesc = [primaryLabel, ...images.map((_: PrdFile, i: number) => raw['images']?.split(',')[i]?.trim())].filter(Boolean).join(' + ');
-  console.log(`\n⏳ Analysing PRD (${inputDesc})...\n`);
+  const filterDesc = [
+    ...(tier?.length ? [`tier: ${tier.join(', ')}`] : []),
+    ...(focus?.length ? [`focus: ${focus.join(', ')}`] : []),
+  ].join(' | ');
+  console.log(`\n⏳ Analysing PRD (${inputDesc}${filterDesc ? ` — ${filterDesc}` : ''})...\n`);
 
   const result = await analyzePrdTool({
     prdContent,
     prdFile: isPdf || isImage ? prdFile : undefined,
     images: images.length > 0 ? images : undefined,
     outputFile: raw['output'] ? join(ROOT, raw['output']) : undefined,
+    tier: tier?.length ? tier : undefined,
+    focus: focus?.length ? focus : undefined,
   });
 
   console.log(result.content[0]?.text ?? '');

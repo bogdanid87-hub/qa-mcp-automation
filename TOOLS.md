@@ -21,6 +21,8 @@ Analyze this PRD and suggest test cases:
 |-----------|----------|---------|
 | `prd_content` | yes (MCP) | full PRD text, user stories, or feature description |
 | `output_file` | no | `"sprint-12-tests.txt"` (default: `prd-tests.txt`) |
+| `tier` | no | `["critical", "high"]` — omit medium and low |
+| `focus` | no | `["checkout", "authentication"]` — omit other features |
 
 The output file uses the same format as `my-test.txt`, so you can feed it directly
 to `generate_test` without any copy-pasting:
@@ -151,6 +153,15 @@ npm run analyze-prd -- --file wireframe.png
 
 # Text + supplementary images
 npm run analyze-prd -- --file prd.md --images wireframe.png,mockup.jpg
+
+# Only critical and high risk tests (skip medium and low)
+npm run analyze-prd -- --file prd.md --tier critical,high
+
+# Only tests for specific features
+npm run analyze-prd -- --file prd.md --focus checkout,authentication
+
+# Combine filters
+npm run analyze-prd -- --file prd.md --tier critical --focus checkout
 
 # Custom output file
 npm run analyze-prd -- --file prd.md --output sprint-12-tests.txt
