@@ -33,11 +33,12 @@ No parameters.
   - fixtures/index.ts
 
 ### Tests
-  - tests/cart.spec.ts
-  - tests/contactUs.spec.ts
-  - tests/placeOrderRegisterWhileCheckout.spec.ts
-  - tests/searchProduct.spec.ts
-  - tests/subscription.spec.ts
+  - tests/api/products.spec.ts
+  - tests/e2e/place-order.spec.ts
+  - tests/ui/cart.spec.ts
+  - tests/ui/contact.spec.ts
+  - tests/ui/search.spec.ts
+  - tests/ui/subscription.spec.ts
 ```
 
 ---

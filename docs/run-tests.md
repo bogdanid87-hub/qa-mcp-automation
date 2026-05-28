@@ -59,8 +59,8 @@ error details.
 
 ## Run tests vs sync-registry
 
-Running tests manually never touches `TEST_CASES.md`. If you want the registry
-updated after a manual run, use:
+Running tests manually never touches `TEST_CASES.md` or `TEST_API.md`. If you want
+the registries updated after a manual run, use:
 
 ```bash
 npm run sync-registry    # reconcile TEST_CASES.md with actual results

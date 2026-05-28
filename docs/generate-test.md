@@ -1,5 +1,11 @@
 # generate\_test
 
+> **For API tests** (HTTP endpoints, request fixture, no browser) use
+> [`generate_api_test`](generate-api-test.md) instead — it uses the local LLM by
+> default (free) and records to `TEST_API.md` automatically.
+
+
+
 Generates a complete Playwright test: creates or updates the Page Object Model,
 writes the spec file, runs it automatically, attempts to fix any failures, and
 records the result in `TEST_CASES.md`. The single most-used tool in the project.
@@ -143,7 +149,14 @@ To change it, update `DEFAULT_BUDGET_USD` in `src/cli.ts` and `src/fix-cli.ts`.
 
 ---
 
-## TEST_CASES.md recording
+## Registry recording
+
+Results are written to the correct registry automatically based on the spec path:
+
+| Spec location | Registry |
+|---------------|---------|
+| `tests/ui/`, `tests/e2e/` | `TEST_CASES.md` |
+| `tests/api/` | `TEST_API.md` |
 
 | Outcome | What gets recorded |
 |---------|-------------------|

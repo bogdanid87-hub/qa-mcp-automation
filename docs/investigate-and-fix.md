@@ -116,6 +116,12 @@ and when the $0.30 budget is reached you're asked whether to continue.
 
 ---
 
+## Registry routing
+
+The fix tool writes results to the correct registry based on the spec path:
+- `tests/api/` specs → `TEST_API.md`
+- `tests/ui/` and `tests/e2e/` specs → `TEST_CASES.md`
+
 ## When `generate_test` auto-fix isn't enough
 
 `generate_test` runs one auto-fix attempt automatically. If that doesn't resolve the

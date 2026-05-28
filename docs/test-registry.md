@@ -1,7 +1,14 @@
-# Test Registry — TEST\_CASES.md
+# Test Registry — TEST\_CASES.md and TEST\_API.md
 
-`TEST_CASES.md` is the single source of truth for test status. It is updated
-automatically by the MCP tools — you should rarely need to edit it by hand.
+The project uses two registry files, automatically chosen based on the spec path:
+
+| Spec location | Registry |
+|---------------|---------|
+| `tests/ui/` and `tests/e2e/` | `TEST_CASES.md` |
+| `tests/api/` | `TEST_API.md` |
+
+Both files have the same structure and are managed by the same tools. You should
+rarely need to edit either by hand.
 
 ---
 
@@ -30,15 +37,16 @@ The file has three sections:
 
 ## How it gets updated automatically
 
-| Event | What gets recorded |
-|-------|-------------------|
-| `generate_test` passes | Test added to passing table |
-| `generate_test` detects an app bug | Entry added to Application Bugs with root cause and actual behaviour |
-| `generate_test` cannot fix a failure | Entry added to Broken Tests |
-| `investigate_and_fix` resolves a failure | Entry moved from Broken to passing |
-| `sync-registry` runs | Full reconciliation (see below) |
+| Event | What gets recorded | Registry |
+|-------|-------------------|---------|
+| `generate_test` passes | Test added to passing table | Based on spec path |
+| `generate_api_test` passes | Test added to passing table | `TEST_API.md` |
+| `generate_test` / `generate_api_test` detects an app bug | Added to Application Bugs | Based on spec path |
+| `generate_test` / `generate_api_test` cannot fix a failure | Added to Broken Tests | Based on spec path |
+| `investigate_and_fix` resolves a failure | Entry moved from Broken to passing | Based on spec path |
+| `sync-registry` runs | Full reconciliation of both registries | Both |
 
-Running `npm test` manually **never** touches the registry.
+Running `npm test` manually **never** touches either registry.
 
 ---
 
@@ -84,6 +92,7 @@ app bug and you want to check if the entries can be promoted to passing.
 | | sync-registry | update-registry |
 |--|---------------|-----------------|
 | Runs the full suite | ✓ | ✗ (only affected specs) |
+| Handles both TEST_CASES.md and TEST_API.md | ✓ | ✓ |
 | Finds undocumented passing tests | ✓ | ✗ |
 | Finds regressions in passing tests | ✓ | ✗ |
 | Promotes resolved broken/app-bug entries | ✓ | ✓ |

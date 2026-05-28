@@ -264,6 +264,28 @@ See [docs/analyze-prd.md](analyze-prd.md) for full details.
 
 ---
 
+## Generating API tests
+
+Use `generate_api_test` for direct HTTP endpoint tests — no browser, no page objects,
+uses the local LLM (free) by default:
+
+```
+Generate API tests for the GET /api/productsList endpoint
+Generate API tests for the login endpoint — spec_file: tests/api/auth.spec.ts
+```
+
+Or generate a whole backlog from an API docs page:
+
+```bash
+npm run analyze-prd -- --url https://automationexercise.com/api_list
+# review prd-tests.txt, then for each test use generate_api_test from Claude Code
+```
+
+API tests go to `tests/api/` and are recorded in `TEST_API.md` (separate from
+`TEST_CASES.md`). See [docs/generate-api-test.md](generate-api-test.md) for details.
+
+---
+
 ## Keeping TEST_CASES.md in sync
 
 If you've added tests manually, fixed tests outside the MCP tools, or had a server
@@ -281,5 +303,8 @@ For a faster check (only re-runs known broken/app-bug entries):
 ```bash
 npm run update-registry
 ```
+
+The same commands handle both `TEST_CASES.md` (UI/E2E tests) and `TEST_API.md` (API
+tests) automatically — routing is based on spec path.
 
 See [docs/test-registry.md](test-registry.md) for full details on the registry structure.

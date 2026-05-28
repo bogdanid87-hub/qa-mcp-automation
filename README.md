@@ -109,7 +109,7 @@ Eight tools are available in Claude Code chat and (most) from the terminal. See 
 |------|-----------|-------|
 | `analyze_prd` | Turn a PRD into a risk-prioritised test backlog (`prd-tests.txt`) | [docs/analyze-prd.md](docs/analyze-prd.md) |
 | `generate_pom` | Inspect a live page, write a locator-only POM — run before `generate_test` for new pages | [docs/generate-pom.md](docs/generate-pom.md) |
-| `generate_api_test` | Generate an API test (request fixture, no browser) — local LLM first, records to `TEST_API.md` | — |
+| `generate_api_test` | Generate an API test (request fixture, no browser) — local LLM first, records to `TEST_API.md` | [docs/generate-api-test.md](docs/generate-api-test.md) |
 | `generate_test` | Generate a complete UI/E2E test: POM + spec + auto-run + auto-fix + registry | [docs/generate-test.md](docs/generate-test.md) |
 | `inspect_page` | See real DOM elements and locators on a page | [docs/inspect-page.md](docs/inspect-page.md) |
 | `investigate_and_fix` | Diagnose a failure (code bug vs app bug), patch, learn, re-run | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
