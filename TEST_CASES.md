@@ -1,6 +1,6 @@
 # Test Cases
 
-**Total: 9 tests** | **Latest:** #9 — Place Order: Register while Checkout › should register during checkout, place an order, and delete the account
+**Total: 9 tests** | **Latest:** #9 — Place Order › should register during checkout, place an order, and delete the account
 
 ---
 
@@ -50,7 +50,7 @@
 
 ## tests/e2e/place-order.spec.ts
 
-### Place Order: Register while Checkout
+### Place Order
 
 | # | Test |
 |---|------|

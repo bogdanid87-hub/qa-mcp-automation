@@ -1,7 +1,7 @@
 import { test, expect } from '../../fixtures';
 import { randomName, randomEmail, randomPassword } from '../../utils/randomData';
 
-test.describe('Place Order: Register while Checkout', () => {
+test.describe('Place Order', () => {
   test('should register during checkout, place an order, and delete the account', async ({
     page,
     homePage,
