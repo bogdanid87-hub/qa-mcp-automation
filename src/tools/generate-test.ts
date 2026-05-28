@@ -244,6 +244,45 @@ export async function generateTestTool(args: {
         }
 
         pomGeneratedByLocal = written.some(p => p.startsWith('pages/'));
+
+        // ── Fallback: any planned POM not on disk → generate via Claude API ──
+        // This covers files the local model failed, returned null for, or that
+        // were rejected by the method-drop guard.
+        const writtenSet = new Set(written);
+        const missingPoms = plan.poms.filter(p => p.file.startsWith('pages/') && !writtenSet.has(p.file));
+
+        if (missingPoms.length > 0) {
+          const updatedContext = await readFocusedContextForFeature(featureKeywords);
+          const missingList = missingPoms.map(p => `- ${p.file} (methods: ${p.methods.join(', ')})`).join('\n');
+          const fallbackHint = `
+
+IMPORTANT — FALLBACK POM STEP: The local model failed to generate these files.
+Generate them now following all POM rules:
+
+${missingList}
+
+Respond with the standard JSON:
+{
+  "summary": "...",
+  "files": [{ "path": "pages/X.ts", "content": "..." }]
+}`;
+          try {
+            const fallbackRaw = await callClaude(buildUserBlocks({
+              description: description + fallbackHint,
+              existingContext: updatedContext,
+              domContext,
+            }));
+            const fallbackParsed = parseJson(fallbackRaw);
+            for (const file of fallbackParsed.files ?? []) {
+              if (!file.path.startsWith('pages/')) continue;
+              const abs = join(ROOT, file.path);
+              await mkdir(dirname(abs), { recursive: true });
+              await writeFile(abs, file.content, 'utf-8');
+              written.push(file.path);
+            }
+          } catch { /* fallback failed — spec step will work with what's on disk */ }
+        }
+
         usedOrchestratedFlow = true;
       }
     }
