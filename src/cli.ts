@@ -107,11 +107,17 @@ function parseArgs(argv: string[]): {
   description?: string;
   pagePaths?: string[];
   testName?: string;
+  noLocal?: boolean;
 } {
   const raw: Record<string, string> = {};
+  const flags = new Set<string>();
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i].startsWith('--') && argv[i + 1] && !argv[i + 1].startsWith('--')) {
-      raw[argv[i].slice(2)] = argv[++i];
+    if (!argv[i].startsWith('--')) continue;
+    const key = argv[i].slice(2);
+    if (argv[i + 1] && !argv[i + 1].startsWith('--')) {
+      raw[key] = argv[++i];
+    } else {
+      flags.add(key);
     }
   }
   return {
@@ -119,6 +125,7 @@ function parseArgs(argv: string[]): {
     description: raw['description'],
     pagePaths: raw['page_paths']?.split(',').map(p => p.trim()),
     testName: raw['test_name'],
+    noLocal: flags.has('no-local'),
   };
 }
 
@@ -414,6 +421,7 @@ async function claudeSimilarityCheck(
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   await ensureApiKey();
+  if (args.noLocal) process.env.NO_LOCAL_LLM = '1';
   const budget = new TokenBudget(DEFAULT_BUDGET_USD);
 
   // Resolve description and metadata

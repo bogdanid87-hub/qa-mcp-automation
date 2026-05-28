@@ -97,7 +97,16 @@ fixtures/index.ts       — custom test + expect (ad-blocking + popup handling)
 
 Local LLM: `qwen2.5-coder:14b` via Ollama (`http://localhost:11434`).
 Override with `OLLAMA_HOST` or `LOCAL_MODEL` env vars.
-If Ollama is not running, all tasks fall back to Claude API silently.
+
+If Ollama is not running:
+- **CLI** — prompts the user and offers to start it automatically (`open -a Ollama`)
+- **MCP server** — warns to stderr, falls back to Claude API
+
+Opt out for a session:
+```bash
+npm run generate -- --file my-test.txt --no-local   # skip Ollama, use Claude
+NO_LOCAL_LLM=1 npm run generate -- --file my-test.txt  # same via env var
+```
 
 ---
 
