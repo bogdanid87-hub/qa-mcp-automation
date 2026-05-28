@@ -3,6 +3,7 @@ import { readFile, readdir, stat, writeFile } from 'fs/promises';
 import { join } from 'path';
 import * as readline from 'readline';
 import { generateTestTool } from './tools/generate-test.js';
+import { generateApiTestTool } from './tools/generate-api-test.js';
 import { runTests } from './tools/run-tests.js';
 import { readTestCases, TEST_API_PATH, type TestEntry } from './tools/test-registry.js';
 import { autoFixFailure } from './tools/investigate-fix.js';
@@ -203,12 +204,19 @@ async function runBatch(
 
     console.log(`⏳ Generating...\n`);
     const before = await snapshotFiles();
-    const result = await generateTestTool({
-      description: section.description,
-      test_name: section.testName,
-      page_paths: section.pagePaths,
-      spec_file: section.specFile,
-    });
+    const isApiTest = section.specFile?.startsWith('tests/api/');
+    const result = isApiTest
+      ? await generateApiTestTool({
+          description: section.description,
+          test_name: section.testName,
+          spec_file: section.specFile,
+        })
+      : await generateTestTool({
+          description: section.description,
+          test_name: section.testName,
+          page_paths: section.pagePaths,
+          spec_file: section.specFile,
+        });
     console.log(result.content[0]?.text ?? '');
     const { created, edited } = await diffFiles(before);
     printDiff(created, edited);
@@ -549,7 +557,10 @@ async function main(): Promise<void> {
   console.log('\n⏳ Generating test...\n');
 
   let before = await snapshotFiles();
-  const result = await generateTestTool({ description, page_paths: pagePaths, test_name: testName, spec_file: specFile });
+  const isApiTest = specFile?.startsWith('tests/api/');
+  const result = isApiTest
+    ? await generateApiTestTool({ description, test_name: testName, spec_file: specFile })
+    : await generateTestTool({ description, page_paths: pagePaths, test_name: testName, spec_file: specFile });
   const output = result.content[0]?.text ?? '';
   console.log(output);
 
