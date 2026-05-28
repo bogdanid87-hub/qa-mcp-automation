@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 
 import { generateTestTool } from './tools/generate-test.js';
+import { generatePomTool } from './tools/generate-pom.js';
 import { runTestsTool } from './tools/run-tests.js';
 import { listResourcesTool } from './tools/list-resources.js';
 import { investigateFixTool } from './tools/investigate-fix.js';
@@ -23,6 +24,23 @@ server.registerTool(
     },
   },
   (args) => generateTestTool(args),
+);
+
+server.registerTool(
+  'generate_pom',
+  {
+    description:
+      'Inspect one or more pages on automationexercise.com and generate locator-only Page Object Model files. ' +
+      'Each file contains readonly Locator properties and constructor assignments — no methods. ' +
+      'Use this before generate_test to pre-populate correct locators from the live DOM, eliminating ' +
+      'locator guessing and the fix-loop iterations it causes. ' +
+      'generate_test will add methods to these files when building tests.',
+    inputSchema: {
+      urls: z.array(z.string()).describe('Page paths to inspect and generate POMs for, e.g. ["/login", "/checkout"].'),
+      page_name: z.string().optional().describe('Class name override when inspecting a single URL, e.g. "LoginPage". Inferred from the URL if omitted.'),
+    },
+  },
+  (args) => generatePomTool(args),
 );
 
 server.registerTool(
