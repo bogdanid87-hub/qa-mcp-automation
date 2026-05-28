@@ -10,6 +10,7 @@ export class HomePage extends BasePage {
   readonly subscribeBtn: Locator;
   readonly subscribeSuccessMessage: Locator;
   readonly footer: Locator;
+  readonly loggedInAs: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -21,6 +22,7 @@ export class HomePage extends BasePage {
     this.subscribeBtn = page.locator('#subscribe');
     this.subscribeSuccessMessage = page.locator('.alert-success.alert');
     this.footer = page.locator('#footer');
+    this.loggedInAs = page.locator('.navbar-nav li a', { hasText: /Logged in as/ });
   }
 
   async goto(): Promise<void> {

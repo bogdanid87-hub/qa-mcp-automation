@@ -3,6 +3,9 @@ import { HomePage } from '../pages/HomePage';
 import { ContactUsPage } from '../pages/ContactUsPage';
 import { ProductsPage } from '../pages/ProductsPage';
 import { CartPage } from '../pages/CartPage';
+import { CheckoutPage } from '../pages/CheckoutPage';
+import { LoginPage } from '../pages/LoginPage';
+import { AccountPage } from '../pages/AccountPage';
 import { blockAds } from '../utils/adBlocker';
 import { dismissPopups } from '../utils/popupDismisser';
 
@@ -11,6 +14,9 @@ type PageFixtures = {
   contactUsPage: ContactUsPage;
   productsPage: ProductsPage;
   cartPage: CartPage;
+  checkoutPage: CheckoutPage;
+  loginPage: LoginPage;
+  accountPage: AccountPage;
 };
 
 export const test = base.extend<PageFixtures>({
@@ -45,6 +51,18 @@ export const test = base.extend<PageFixtures>({
 
   cartPage: async ({ page }, use) => {
     await use(new CartPage(page));
+  },
+
+  checkoutPage: async ({ page }, use) => {
+    await use(new CheckoutPage(page));
+  },
+
+  loginPage: async ({ page }, use) => {
+    await use(new LoginPage(page));
+  },
+
+  accountPage: async ({ page }, use) => {
+    await use(new AccountPage(page));
   },
 });
 

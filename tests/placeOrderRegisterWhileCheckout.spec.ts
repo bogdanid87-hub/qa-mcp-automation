@@ -2,84 +2,92 @@ import { test, expect } from '../fixtures';
 import { randomName, randomEmail, randomPassword } from '../utils/randomData';
 
 test.describe('Place Order: Register while Checkout', () => {
-  test('should register during checkout, place order, and delete account', async ({
+  test('should register during checkout, place an order, and delete the account', async ({
     page,
     homePage,
     productsPage,
     cartPage,
     checkoutPage,
+    loginPage,
+    accountPage,
   }) => {
-
     // Step 2-3: Navigate to home page and verify it loaded successfully
     await homePage.goto();
     await homePage.verifyLoaded();
 
-    // Step 4: Add a product to the cart from the products page
+    // Step 4: Add products to the cart from the Products page
     await homePage.clickProducts();
     await productsPage.verifyLoaded();
     await productsPage.hoverAndAddToCart(0);
-    await productsPage.clickViewCart();
+    await productsPage.continueShopping();
 
-    // Step 5-6: Verify cart page is displayed
-    await cartPage.verifyLoaded();
-    await expect(page).toHaveURL(/\/view_cart/);
-
-    // Step 7: Click 'Proceed To Checkout' on the cart page
-    await cartPage.proceedToCheckout();
-
-    // Step 8: Click 'Register / Login' button in the checkout modal
-    await checkoutPage.clickRegisterLogin();
-
-    // Step 9: Fill in signup details and create account
-    const username = randomName();
-    const email = randomEmail();
-    const password = randomPassword();
-    await checkoutPage.signup(username, email, password);
-
-    // Step 10: Verify 'ACCOUNT CREATED!' message and click Continue
-    await checkoutPage.verifyAccountCreated();
-    await checkoutPage.clickContinueAfterAccountCreation();
-
-    // Step 11: Verify 'Logged in as username' appears in the navbar
-    await checkoutPage.verifyLoggedIn(username);
-
-    // Step 12: Navigate to the cart page
+    // Step 5-6: Click Cart in the nav and verify the cart page is displayed
     await page.goto('/view_cart');
     await cartPage.verifyLoaded();
 
-    // Step 13: Click 'Proceed To Checkout'
+    // Step 7: Click Proceed To Checkout — expect the login/register modal or redirect
     await cartPage.proceedToCheckout();
 
-    // Step 14: Verify Address Details and Review Your Order sections are visible
-    await expect(page.locator('[data-qa="checkout-info"]')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Review Your Order' })).toBeVisible();
+    // Step 8: Click 'Register / Login' button from the checkout modal
+    await cartPage.clickRegisterLogin();
+    await page.waitForLoadState('load');
 
-    // Step 15: Enter comment and place order
-    await checkoutPage.fillComment('Automated test order — please ignore');
-    await checkoutPage.clickPlaceOrder();
+    // Step 9: Fill all details in Signup form and create account
+    const name = randomName();
+    const email = randomEmail();
+    const password = randomPassword();
+    await loginPage.signupWithNameAndEmail(name, email);
+    await page.waitForLoadState('load');
+    await accountPage.fillAccountDetails({
+      password,
+      firstName: name,
+      lastName: 'Test',
+      address: '123 Test Street',
+      country: 'United States',
+      state: 'California',
+      city: 'Los Angeles',
+      zipcode: '90001',
+      mobileNumber: '5551234567',
+    });
+    await accountPage.createAccount();
+
+    // Step 10: Verify 'ACCOUNT CREATED!' and click 'Continue' button
+    await expect(accountPage.accountCreatedMessage).toBeVisible();
+    await accountPage.clickContinue();
+
+    // Step 11: Verify 'Logged in as username' at top
+    await expect(homePage.loggedInAs).toContainText(name);
+
+    // Step 12: Click 'Cart' button
+    await page.goto('/view_cart', { waitUntil: 'domcontentloaded' });
+    await cartPage.verifyLoaded();
+
+    // Step 13: Click 'Proceed To Checkout' button
+    await cartPage.proceedToCheckout();
+    await page.waitForLoadState('load');
+
+    // Step 14: Verify Address Details and Review Your Order sections are visible
+    await checkoutPage.verifyLoaded();
+
+    // Step 15: Enter description in comment text area and click 'Place Order'
+    await checkoutPage.enterComment('Please handle with care.');
+    await checkoutPage.placeOrder();
 
     // Step 16: Enter payment details
-    await checkoutPage.enterPaymentDetails(
-      username,
+    await checkoutPage.fillPaymentDetails(
+      name,
       '4111111111111111',
       '123',
       '12',
-      '2028'
+      '2027'
     );
 
-    // Step 17: Click 'Pay and Confirm Order'
-    await checkoutPage.clickPayAndConfirmOrder();
+    // Step 17-18: Click 'Pay and Confirm Order' and verify success message
+    await checkoutPage.payAndConfirm();
+    await expect(checkoutPage.orderPlacedMessage).toBeVisible();
 
-    // Step 18: Verify success message 'Your order has been placed successfully!'
-    await checkoutPage.verifyOrderPlaced();
-
-    // Step 19: Click 'Delete Account'
-    await page.getByRole('link', { name: 'Delete Account' }).click();
-    await page.waitForLoadState('load');
-
-    // Step 20: Verify 'ACCOUNT DELETED!' and click Continue
-    await expect(page.locator('[data-qa="account-deleted"]')).toBeVisible();
-    await page.locator('[data-qa="continue-button"]').click();
-    await page.waitForLoadState('load');
+    // Step 19-20: Click 'Delete Account' and verify 'ACCOUNT DELETED!'
+    await checkoutPage.deleteAccount();
+    await expect(checkoutPage.accountDeletedMessage).toBeVisible();
   });
 });

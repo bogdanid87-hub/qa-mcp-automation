@@ -55,3 +55,14 @@
 | Spec | Describe | Test | Root cause | Actual behaviour |
 |------|----------|------|------------|-----------------|
 | tests/cart.spec.ts | Place Order: Add Products in Cart | should update total correctly when product quantity is changed in cart | The automationexercise.com cart page does not have an editable quantity input field (`.cart_quantity input`). The cart quantity is displayed as a static button/text element, not an `<input>` element. The locator `.cart_quantity input` never resolves because no such input exists in the DOM. | The cart page renders quantity as a read-only button element (`.cart_quantity button`) rather than an editable `<input>`. There is no inline quantity editor on the cart page — the site does not support updating quantity directly from the cart view. The `setQuantity` method times out waiting for an input element that does not exist. |
+
+---
+
+## ❌ Broken Tests
+
+> Fix manually or run: `npm run fix -- --pattern <spec>`
+
+| Spec | Describe | Test | Root cause |
+|------|----------|------|------------|
+| tests/placeOrderRegisterWhileCheckout.spec.ts | Place Order: Register while Checkout | should register during checkout, place order, and delete account | The test calls `cartPage.verifyLoaded()` but the `CartPage` class does not have a `verifyLoaded()` method defined. The method exists on other page objects (like `ProductsPage`) but was never added to `CartPage`. |
+| tests/placeOrderRegisterWhileCheckout.spec.ts |  | tests/placeOrderRegisterWhileCheckout.spec.ts | BasePage.ts exports the class as a named export (`export class BasePage`) but CheckoutPage.ts imports it as a default import (`import BasePage from './BasePage'`). This import resolves to `undefined`, causing the 'Class extends value undefined' error. |

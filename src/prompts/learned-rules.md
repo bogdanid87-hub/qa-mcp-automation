@@ -27,4 +27,12 @@ Each rule is injected into the system prompt automatically.
 ## Rule 006 — Tests that assert negative behavior (e
 **Problem class**: Tests that assert negative behavior (e.g. duplicate rejection) against a third-party site without first verifying the site actually enforces that constraint will fail when the site's real behavior differs from the assumption.
 **Rule**: Before writing a test that asserts a site rejects or blocks a particular input (e.g. duplicate emails, invalid states), manually verify the site actually enforces that constraint; if it does not, write the test to document the real behavior instead of the assumed ideal behavior.
+
+## Rule 007 — Calling a method on a POM class that does not define it causes a runtime TypeError
+**Problem class**: Calling a method on a POM class that does not define it causes a runtime TypeError.
+**Rule**: Before calling any POM method in a test, verify the method is actually defined in the corresponding page class. When adding new test scenarios that rely on shared page objects, ensure all required methods (e.g. verifyLoaded, proceedToCheckout) are present in the POM class.
+
+## Rule 008 — Mismatched import style (default vs named export) causes the imported value to be undefined, breaking class inheritance
+**Problem class**: Mismatched import style (default vs named export) causes the imported value to be undefined, breaking class inheritance.
+**Rule**: Always match the import style to the export style: use `import { BasePage } from './BasePage'` for named exports and `import BasePage from './BasePage'` only for default exports. When BasePage uses a named export, all page classes must use the named import form.
 <!-- rules-end -->
