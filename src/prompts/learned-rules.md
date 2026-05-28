@@ -35,4 +35,12 @@ Each rule is injected into the system prompt automatically.
 ## Rule 008 — Mismatched import style (default vs named export) causes the imported value to be undefined, breaking class inheritance
 **Problem class**: Mismatched import style (default vs named export) causes the imported value to be undefined, breaking class inheritance.
 **Rule**: Always match the import style to the export style: use `import { BasePage } from './BasePage'` for named exports and `import BasePage from './BasePage'` only for default exports. When BasePage uses a named export, all page classes must use the named import form.
+
+## Rule 009 — waitForLoadState('load') consistently times out on automationexercise.com
+**Problem class**: automationexercise.com serves third-party analytics and ad scripts that are not fully blocked by the ad-blocker fixture. The browser `load` event therefore never fires within Playwright's 30-second timeout, causing any `waitForLoadState('load')` or `page.goto(url)` without `waitUntil` to time out even when the page is fully interactive.
+**Rule**: On automationexercise.com, use `'domcontentloaded'` instead of `'load'` in all `waitForLoadState()` calls inside POM methods, and pass `{ waitUntil: 'domcontentloaded' }` to any direct `page.goto()` call inside spec files. Rule 001 (always wait for a load state after navigation) still applies — only the event name changes for this site.
+
+## Rule 010 — test.describe() name must be the feature area, not the test scenario
+**Problem class**: When test_name was used as a hint for both the filename and the describe block, describe names became scenario-specific (e.g. "Place Order: Register while Checkout") and could not accommodate additional related tests without creating misleading groupings.
+**Rule**: Name `test.describe()` with the broad feature area or user goal — "Place Order", "Cart", "Authentication" — not with the specific scenario being tested. The specific scenario belongs in the `test()` name. This allows multiple variants to share the same describe block and keeps the test hierarchy meaningful as the suite grows.
 <!-- rules-end -->
