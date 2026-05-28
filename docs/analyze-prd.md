@@ -169,7 +169,9 @@ Each block looks like this:
 
 ```
 # test_name: checkout-guest-happy-path
+# spec_file: tests/e2e/place-order.spec.ts
 # page_paths: /view_cart, /checkout, /payment
+# source: direct
 # risk: critical
 # reason: End-to-end purchase path for guest users — failure here means lost revenue.
 
@@ -185,8 +187,21 @@ Test that a guest user can complete a full purchase.
 9. Verify the order placed confirmation
 ```
 
-The `# risk:` and `# reason:` lines are informational — they are treated as
-comments by the generate tool and do not affect test generation.
+The `# source:`, `# risk:`, and `# reason:` lines are informational — they are treated
+as comments by the generate tool and do not affect test generation.
+
+**`# source: direct`** — maps to a specific named feature or endpoint in the source.
+Omitting this test leaves a documented requirement uncovered.
+
+**`# source: suggested`** — Claude's addition: a negative case, boundary condition, or
+complementary scenario not explicitly mentioned in the source. Review before generating.
+
+**Ordering in the output file:**
+
+1. All `direct` tests come first, then all `suggested` tests.
+2. Within `direct`: if the source has numbered items (API 1, API 2, Test Case 3…),
+   that order is preserved exactly. If not, tests are ordered critical → high → medium → low.
+3. Within `suggested`: always ordered critical → high → medium → low.
 
 ### Custom output file
 

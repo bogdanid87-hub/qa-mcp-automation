@@ -36,11 +36,18 @@ Each block must follow this exact structure:
 # test_name: kebab-case-descriptive-name
 # spec_file: tests/ui/feature.spec.ts
 # page_paths: /path1, /path2
+# source: direct|suggested
 # risk: critical|high|medium|low
 # reason: One sentence explaining why this risk level applies.
 
 Plain description or numbered steps of what the test does and asserts.
 Be specific enough that a developer can implement it without reading the PRD.
+
+source field:
+- direct    — maps to a specific named feature, endpoint, or requirement in the source.
+              Omitting this test would leave a documented requirement uncovered.
+- suggested — Claude's addition: a negative case, boundary condition, or complementary
+              scenario not explicitly mentioned. Valuable but requires human judgement.
 
 spec_file rules:
 - tests/api/  for direct API tests (HTTP requests, status codes, response validation — no browser)
@@ -51,12 +58,24 @@ spec_file rules:
 
 ---
 
-## Rules
+## Ordering rules — follow exactly
+
+1. Output all direct blocks first, then all suggested blocks.
+
+2. Within the direct group:
+   - If the source document contains numbered items (e.g. "API 1:", "API 2:", "Test Case 3:",
+     "US-01:"), preserve that numbering order exactly. Do NOT re-sort by risk.
+   - If the source has no inherent numbering, order by risk: critical → high → medium → low.
+
+3. Within the suggested group: always order by risk: critical → high → medium → low.
+   Suggested tests never follow source numbering because they are not derived from a
+   specific numbered item.
+
+## Other rules
 - test_name must be unique, lowercase, hyphen-separated
 - page_paths should list every page the test navigates to on automationexercise.com
 - Generate the happy path AND the most important negative/edge cases as separate blocks
 - Do NOT suggest tests already in the covered list — only genuinely new scenarios
-- Order output: critical first, then high, medium, low
 - For each feature generate 2–4 blocks (happy path + key failure cases), not just one
 - Keep descriptions concrete: what action, what assertion, what data
 `;
