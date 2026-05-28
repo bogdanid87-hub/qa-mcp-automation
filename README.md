@@ -11,7 +11,7 @@ Describe a test scenario in plain English. The server uses **Claude Sonnet 4.6**
 ## What this project demonstrates
 
 ### MCP server architecture
-A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes seven AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
+A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes eight AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
 
 ### Dual-model routing with local LLM fallback
 The project uses two AI models for different tasks based on what each does best and what it costs:
@@ -103,13 +103,14 @@ NO_LOCAL_LLM=1 npm run generate -- --file my-test.txt   # same via env var
 
 ## Tools
 
-Seven tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
+Eight tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
 
 | Tool | One-liner | Guide |
 |------|-----------|-------|
 | `analyze_prd` | Turn a PRD into a risk-prioritised test backlog (`prd-tests.txt`) | [docs/analyze-prd.md](docs/analyze-prd.md) |
 | `generate_pom` | Inspect a live page, write a locator-only POM — run before `generate_test` for new pages | [docs/generate-pom.md](docs/generate-pom.md) |
-| `generate_test` | Generate a complete test: POM + spec + auto-run + auto-fix + registry | [docs/generate-test.md](docs/generate-test.md) |
+| `generate_api_test` | Generate an API test (request fixture, no browser) — local LLM first, records to `TEST_API.md` | — |
+| `generate_test` | Generate a complete UI/E2E test: POM + spec + auto-run + auto-fix + registry | [docs/generate-test.md](docs/generate-test.md) |
 | `inspect_page` | See real DOM elements and locators on a page | [docs/inspect-page.md](docs/inspect-page.md) |
 | `investigate_and_fix` | Diagnose a failure (code bug vs app bug), patch, learn, re-run | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
 | `run_tests` | Run the test suite and return output | [docs/run-tests.md](docs/run-tests.md) |
@@ -182,7 +183,7 @@ Separate multiple tests with `---` for batch mode (non-interactive, all run in s
 qa-mcp-automation/
 │
 ├── src/                          ← MCP server + CLIs
-│   ├── index.ts                  ← MCP server entry point — 7 tools registered
+│   ├── index.ts                  ← MCP server entry point — 8 tools registered
 │   ├── cli.ts                    ← npm run generate
 │   ├── fix-cli.ts                ← npm run fix
 │   ├── analyze-prd-cli.ts        ← npm run analyze-prd

@@ -26,7 +26,7 @@ npm run mcp                               # start MCP server manually
 
 ```
 src/
-  index.ts              — MCP server entry point, 7 tools registered
+  index.ts              — MCP server entry point, 8 tools registered
   cli.ts                — npm run generate (interactive, budget-controlled)
   fix-cli.ts            — npm run fix
   analyze-prd-cli.ts    — npm run analyze-prd
@@ -94,6 +94,7 @@ fixtures/index.ts       — custom test + expect (ad-blocking + popup handling)
 | Spec generation | Claude API always |
 | Failure investigation and fix | Claude API always (uses screenshots + DOM vision) |
 | PRD risk analysis | Claude API always |
+| API test generation | Local LLM (qwen2.5-coder:14b) → Claude fallback |
 | Similarity check (before generate) | Claude API (cached test list) |
 
 Local LLM: `qwen2.5-coder:14b` via Ollama (`http://localhost:11434`).

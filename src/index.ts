@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 
 import { generateTestTool } from './tools/generate-test.js';
+import { generateApiTestTool } from './tools/generate-api-test.js';
 import { generatePomTool } from './tools/generate-pom.js';
 import { analyzePrdTool } from './tools/analyze-prd.js';
 import { runTestsTool } from './tools/run-tests.js';
@@ -26,6 +27,23 @@ server.registerTool(
     },
   },
   (args) => generateTestTool({ ...args, spec_file: (args as { spec_file?: string }).spec_file }),
+);
+
+server.registerTool(
+  'generate_api_test',
+  {
+    description:
+      'Generate a Playwright API test (no browser — uses the request fixture) for automationexercise.com. ' +
+      'Uses the local LLM (Ollama) when available for zero API cost; falls back to Claude automatically. ' +
+      'Tests are written to tests/api/ and results are recorded in TEST_API.md. ' +
+      'Describe the endpoint to test; the tool writes the spec, runs it, and attempts auto-fix on failure.',
+    inputSchema: {
+      description: z.string().describe('What API endpoint or scenario to test. Include the endpoint URL, HTTP method, expected status code, and key response fields to validate.'),
+      test_name: z.string().optional().describe('Hint for naming the test() and describe() blocks.'),
+      spec_file: z.string().optional().describe('Target spec file, e.g. "tests/api/products.spec.ts". Inferred from the description if omitted.'),
+    },
+  },
+  (args) => generateApiTestTool(args),
 );
 
 server.registerTool(
