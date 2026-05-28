@@ -40,7 +40,7 @@ src/
     inspect-page.ts     — headless DOM extraction
     list-resources.ts   — lists existing files (recursive, covers ui/ and e2e/)
     run-tests.ts        — shells out to Playwright
-    test-registry.ts    — shared read/write logic for TEST_CASES.md
+    test-registry.ts    — shared read/write logic for TEST_CASES.md and TEST_API.md
     local-llm.ts        — Ollama client (qwen2.5-coder:14b, falls back to Claude)
     annotations.ts      — writes /* ⚠️ APP BUG */ and /* ⚠️ BROKEN */ into specs
     budget.ts           — token cost tracking per session
@@ -78,7 +78,8 @@ fixtures/index.ts       — custom test + expect (ad-blocking + popup handling)
 
 | File | Managed by |
 |------|-----------|
-| `TEST_CASES.md` | `generate_test`, `sync-registry`, `update-registry` |
+| `TEST_CASES.md` | `generate_test`, `sync-registry`, `update-registry` — UI and E2E tests |
+| `TEST_API.md` | same tools — API tests (`tests/api/`) only |
 | `src/prompts/learned-rules.md` | `investigate_and_fix` (auto-appends after every fix) |
 | `test-data/.auth/guest.json` | `global.setup.ts` (Playwright setup) |
 

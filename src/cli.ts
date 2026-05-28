@@ -4,7 +4,7 @@ import { join } from 'path';
 import * as readline from 'readline';
 import { generateTestTool } from './tools/generate-test.js';
 import { runTests } from './tools/run-tests.js';
-import { readTestCases, type TestEntry } from './tools/test-registry.js';
+import { readTestCases, TEST_API_PATH, type TestEntry } from './tools/test-registry.js';
 import { autoFixFailure } from './tools/investigate-fix.js';
 import { TokenBudget } from './tools/budget.js';
 
@@ -12,7 +12,7 @@ const DEFAULT_BUDGET_USD = 0.30;
 
 const ROOT = process.cwd();
 const TRACKED_DIRS = ['pages', 'tests', 'fixtures'];
-const TRACKED_EXTRAS = ['TEST_CASES.md', 'src/prompts/learned-rules.md'];
+const TRACKED_EXTRAS = ['TEST_CASES.md', 'TEST_API.md', 'src/prompts/learned-rules.md'];
 
 // ---------------------------------------------------------------------------
 // API key — read from environment or fall back to .claude/settings.local.json
@@ -443,7 +443,8 @@ async function main(): Promise<void> {
   }
 
   // ── Step 0: Similarity check ──────────────────────────────────────────────
-  const allTests = await readTestCases();
+  const [uiTests, apiTests] = await Promise.all([readTestCases(), readTestCases(TEST_API_PATH)]);
+  const allTests = [...uiTests, ...apiTests];
   if (allTests.length > 0) {
     process.stdout.write('  Checking for existing coverage...\r');
     const similar = await claudeSimilarityCheck(description, allTests);
@@ -610,7 +611,8 @@ async function main(): Promise<void> {
   }
 
   // ── Step 2: Offer additional tests ────────────────────────────────────────
-  const allTestsAfter = await readTestCases();
+  const [uiTestsAfter, apiTestsAfter] = await Promise.all([readTestCases(), readTestCases(TEST_API_PATH)]);
+  const allTestsAfter = [...uiTestsAfter, ...apiTestsAfter];
   const existingNames = new Set(allTestsAfter.map(t => t.name.toLowerCase()));
 
   const rawProposals = parseProposedNegatives(output);

@@ -9,6 +9,9 @@ import {
   parseFailingTestsFromOutput,
   normalizeTestName,
   demoteTobroken,
+  registryForSpec,
+  TEST_CASES_PATH,
+  TEST_API_PATH,
   type BrokenEntry,
   type FailingTestResult,
 } from './tools/test-registry.js';
@@ -29,11 +32,20 @@ async function main(): Promise<void> {
     return;
   }
 
-  const recordedPassing = await readTestCases();
-  const recordedBroken = await readBrokenTests();
+  // Load both registries — the routing for writes is handled by registryForSpec()
+  const [recordedPassing, recordedPassingApi] = await Promise.all([
+    readTestCases(TEST_CASES_PATH),
+    readTestCases(TEST_API_PATH),
+  ]);
+  const [recordedBroken, recordedBrokenApi] = await Promise.all([
+    readBrokenTests(TEST_CASES_PATH),
+    readBrokenTests(TEST_API_PATH),
+  ]);
+  const allRecordedPassing = [...recordedPassing, ...recordedPassingApi];
+  const allRecordedBroken  = [...recordedBroken,  ...recordedBrokenApi];
 
-  const passingKeys = new Set(recordedPassing.map(e => `${e.spec}::${e.name}`));
-  const brokenKeys = new Set(recordedBroken.map(e => `${e.spec}::${e.name}`));
+  const passingKeys = new Set(allRecordedPassing.map(e => `${e.spec}::${e.name}`));
+  const brokenKeys  = new Set(allRecordedBroken.map(e => `${e.spec}::${e.name}`));
 
   const passingResultKeys = new Set(
     passingResults.map(p => {
@@ -55,7 +67,7 @@ async function main(): Promise<void> {
   // ── 2. Broken/app-bug tests that now pass → promote ───────────────────────
   // Use both exact key match and normalised name match so minor wording drift
   // (e.g. "place order" vs "place an order") doesn't leave stale broken entries.
-  const toPromote = recordedBroken.filter(e => {
+  const toPromote = allRecordedBroken.filter(e => {
     if (passingResultKeys.has(`${e.spec}::${e.name}`)) return true;
     const normBroken = normalizeTestName(e.name);
     return passingResults.some(p => {
@@ -125,7 +137,7 @@ async function main(): Promise<void> {
         kind,
         rootCause: annotation?.rootCause ?? 'Failing but never recorded — run `npm run fix` to investigate.',
         actualBehavior: annotation?.actualBehavior,
-      });
+      }, registryForSpec(f.spec));
     }
     changed += toAddBroken.length;
     console.log('');
@@ -138,7 +150,14 @@ async function main(): Promise<void> {
       const name = sep === -1 ? t.title : t.title.substring(sep + 3);
       console.log(`   + ${t.spec} › ${name}`);
     }
-    await recordPassingTests(toAdd);
+    // Group by registry and write to each
+    const addByRegistry = new Map<string, typeof toAdd>();
+    for (const t of toAdd) {
+      const reg = registryForSpec(t.spec);
+      if (!addByRegistry.has(reg)) addByRegistry.set(reg, []);
+      addByRegistry.get(reg)!.push(t);
+    }
+    for (const [reg, tests] of addByRegistry) await recordPassingTests(tests, reg);
     changed += toAdd.length;
     console.log('');
   }
@@ -146,8 +165,22 @@ async function main(): Promise<void> {
   if (toPromote.length > 0) {
     console.log(`✅ Promoting ${toPromote.length} resolved broken/app-bug test(s):`);
     const promotedAsPassingTests = toPromote.map(e => ({ spec: e.spec, title: `${e.describe} › ${e.name}` }));
-    await recordPassingTests(promotedAsPassingTests);
-    await removeResolvedBrokenTests(new Set(toPromote.map(e => `${e.spec}::${e.name}`)));
+    // Route promotions to the right registry
+    const promoteByRegistry = new Map<string, typeof promotedAsPassingTests>();
+    for (const t of promotedAsPassingTests) {
+      const reg = registryForSpec(t.spec);
+      if (!promoteByRegistry.has(reg)) promoteByRegistry.set(reg, []);
+      promoteByRegistry.get(reg)!.push(t);
+    }
+    for (const [reg, tests] of promoteByRegistry) await recordPassingTests(tests, reg);
+    // Remove from broken in each registry
+    const promoteByBrokenRegistry = new Map<string, Set<string>>();
+    for (const e of toPromote) {
+      const reg = registryForSpec(e.spec);
+      if (!promoteByBrokenRegistry.has(reg)) promoteByBrokenRegistry.set(reg, new Set());
+      promoteByBrokenRegistry.get(reg)!.add(`${e.spec}::${e.name}`);
+    }
+    for (const [reg, keys] of promoteByBrokenRegistry) await removeResolvedBrokenTests(keys, reg);
     for (const e of toPromote) {
       const label = e.kind === 'app_bug' ? '⚠️  App bug resolved' : '❌ Broken test resolved';
       console.log(`   ✅ ${label}: ${e.spec} › ${e.name}`);
@@ -177,7 +210,14 @@ async function main(): Promise<void> {
         };
       }),
     );
-    await demoteTobroken(flagEntries);
+    // Route regressions to the right registry
+    const demoteByRegistry = new Map<string, BrokenEntry[]>();
+    for (const e of flagEntries) {
+      const reg = registryForSpec(e.spec);
+      if (!demoteByRegistry.has(reg)) demoteByRegistry.set(reg, []);
+      demoteByRegistry.get(reg)!.push(e);
+    }
+    for (const [reg, entries] of demoteByRegistry) await demoteTobroken(entries, reg);
     for (const entry of flagEntries) {
       const label = entry.kind === 'app_bug' ? '⚠️  APP BUG' : '❌ Regression';
       console.log(`   ${label}: ${entry.spec} › ${entry.name}`);
@@ -187,9 +227,9 @@ async function main(): Promise<void> {
   }
 
   if (changed === 0) {
-    console.log('✅ TEST_CASES.md is already in sync — nothing to update.\n');
+    console.log('✅ TEST_CASES.md and TEST_API.md are already in sync — nothing to update.\n');
   } else {
-    console.log(`✅ TEST_CASES.md updated (${changed} change${changed === 1 ? '' : 's'}).\n`);
+    console.log(`✅ Registries updated (${changed} change${changed === 1 ? '' : 's'}).\n`);
   }
 }
 

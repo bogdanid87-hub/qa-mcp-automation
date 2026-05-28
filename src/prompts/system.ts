@@ -69,7 +69,9 @@ Tests live under one of these subdirectories:
                 Examples: place-order.spec.ts (all checkout variants), account.spec.ts
                 Naming: user goal (place-order), NOT scenario name (placeOrderRegisterWhileCheckout)
 
-  tests/api/  — direct API tests with no browser (future)
+  tests/api/  — direct API tests; Playwright request fixture, no browser
+                Name by resource: products.spec.ts, auth.spec.ts
+                Results are recorded in TEST_API.md (not TEST_CASES.md)
 
 Rules:
 - If a "Spec file hint" is provided, write to EXACTLY that path

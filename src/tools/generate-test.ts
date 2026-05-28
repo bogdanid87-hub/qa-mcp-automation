@@ -6,7 +6,7 @@ import { isLocalLlmAvailable, callLocalLlm, LOCAL_MODEL } from './local-llm.js';
 import { readFocusedContextForFeature, pomExistsForFeature } from './list-resources.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { runTests } from './run-tests.js';
-import { parsePassingTests, recordPassingTests } from './test-registry.js';
+import { parsePassingTests, recordPassingTests, registryForSpec } from './test-registry.js';
 import { autoFixFailure } from './investigate-fix.js';
 import { writeTestAnnotation } from './annotations.js';
 
@@ -395,10 +395,12 @@ Respond with the standard JSON:
     const passed = (testOutput.match(/✓/g) ?? []).length;
     const hasFailed = testOutput.includes('failed') || (testOutput.match(/✗/g) ?? []).length > 0;
 
-    if (passed > 0) await recordPassingTests(parsePassingTests(testOutput));
+    const registry = registryForSpec(specFile.path);
+    if (passed > 0) await recordPassingTests(parsePassingTests(testOutput), registry);
 
+    const registryName = specFile.path.startsWith('tests/api/') ? 'TEST_API.md' : 'TEST_CASES.md';
     if (passed > 0 && !hasFailed) {
-      testRunNote = `✅ ${passed} test${passed === 1 ? '' : 's'} passed — recorded in TEST_CASES.md`;
+      testRunNote = `✅ ${passed} test${passed === 1 ? '' : 's'} passed — recorded in ${registryName}`;
     } else {
       passing = false;
       lastFailureOutput = testOutput;

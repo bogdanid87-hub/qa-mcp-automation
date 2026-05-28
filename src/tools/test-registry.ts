@@ -2,7 +2,13 @@ import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 
 const ROOT = process.cwd();
-const TEST_CASES_PATH = join(ROOT, 'TEST_CASES.md');
+export const TEST_CASES_PATH = join(ROOT, 'TEST_CASES.md');
+export const TEST_API_PATH   = join(ROOT, 'TEST_API.md');
+
+/** Returns the correct registry file for a given spec path. */
+export function registryForSpec(specPath: string): string {
+  return specPath.startsWith('tests/api/') ? TEST_API_PATH : TEST_CASES_PATH;
+}
 
 const STOPWORDS = new Set([
   // Generic English
@@ -252,11 +258,14 @@ export function parseFailingTestsFromOutput(output: string): FailingTestResult[]
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export async function recordPassingTests(passing: PassingTest[]): Promise<void> {
+export async function recordPassingTests(
+  passing: PassingTest[],
+  registryPath = TEST_CASES_PATH,
+): Promise<void> {
   if (passing.length === 0) return;
 
   let content = '';
-  try { content = await readFile(TEST_CASES_PATH, 'utf-8'); } catch { /* new file */ }
+  try { content = await readFile(registryPath, 'utf-8'); } catch { /* new file */ }
 
   const existing = parseTestCases(content);
   const broken = parseBrokenTests(content);
@@ -277,13 +286,16 @@ export async function recordPassingTests(passing: PassingTest[]): Promise<void> 
     }
   }
 
-  if (changed) await writeFile(TEST_CASES_PATH, buildContent(existing, broken), 'utf-8');
+  if (changed) await writeFile(registryPath, buildContent(existing, broken), 'utf-8');
 }
 
-/** Add a broken or app-bug test to TEST_CASES.md. Skips if already recorded. */
-export async function recordBrokenTest(entry: BrokenEntry): Promise<void> {
+/** Add a broken or app-bug test to the appropriate registry. Skips if already recorded. */
+export async function recordBrokenTest(
+  entry: BrokenEntry,
+  registryPath = TEST_CASES_PATH,
+): Promise<void> {
   let content = '';
-  try { content = await readFile(TEST_CASES_PATH, 'utf-8'); } catch { /* new file */ }
+  try { content = await readFile(registryPath, 'utf-8'); } catch { /* new file */ }
 
   const passing = parseTestCases(content);
   const broken = parseBrokenTests(content);
@@ -292,32 +304,37 @@ export async function recordBrokenTest(entry: BrokenEntry): Promise<void> {
   if (broken.some(e => `${e.spec}::${e.name}` === key)) return;
 
   broken.push(entry);
-  await writeFile(TEST_CASES_PATH, buildContent(passing, broken), 'utf-8');
+  await writeFile(registryPath, buildContent(passing, broken), 'utf-8');
 }
 
-/** Remove entries whose tests now pass. Called by the update-registry CLI. */
-export async function removeResolvedBrokenTests(resolvedKeys: Set<string>): Promise<void> {
+/** Remove entries whose tests now pass. */
+export async function removeResolvedBrokenTests(
+  resolvedKeys: Set<string>,
+  registryPath = TEST_CASES_PATH,
+): Promise<void> {
   let content = '';
-  try { content = await readFile(TEST_CASES_PATH, 'utf-8'); } catch { return; }
+  try { content = await readFile(registryPath, 'utf-8'); } catch { return; }
 
   const passing = parseTestCases(content);
   const broken = parseBrokenTests(content);
   const updated = broken.filter(e => !resolvedKeys.has(`${e.spec}::${e.name}`));
 
   if (updated.length !== broken.length) {
-    await writeFile(TEST_CASES_PATH, buildContent(passing, updated), 'utf-8');
+    await writeFile(registryPath, buildContent(passing, updated), 'utf-8');
   }
 }
 
 /**
  * Move passing tests that have become regressions into the ❌ Broken section.
- * Removes them from the passing table and appends to broken (skips duplicates).
  */
-export async function demoteTobroken(entries: BrokenEntry[]): Promise<void> {
+export async function demoteTobroken(
+  entries: BrokenEntry[],
+  registryPath = TEST_CASES_PATH,
+): Promise<void> {
   if (entries.length === 0) return;
 
   let content = '';
-  try { content = await readFile(TEST_CASES_PATH, 'utf-8'); } catch { return; }
+  try { content = await readFile(registryPath, 'utf-8'); } catch { return; }
 
   const passing = parseTestCases(content);
   const broken = parseBrokenTests(content);
@@ -325,10 +342,8 @@ export async function demoteTobroken(entries: BrokenEntry[]): Promise<void> {
   const demoteKeys = new Set(entries.map(e => `${e.spec}::${e.name}`));
   const brokenKeys = new Set(broken.map(e => `${e.spec}::${e.name}`));
 
-  // Remove regressions from passing
   const updatedPassing = passing.filter(e => !demoteKeys.has(`${e.spec}::${e.name}`));
 
-  // Add to broken, filling in describe from the passing entry if available
   for (const entry of entries) {
     const key = `${entry.spec}::${entry.name}`;
     if (brokenKeys.has(key)) continue;
@@ -344,22 +359,22 @@ export async function demoteTobroken(entries: BrokenEntry[]): Promise<void> {
     brokenKeys.add(key);
   }
 
-  await writeFile(TEST_CASES_PATH, buildContent(updatedPassing, broken), 'utf-8');
+  await writeFile(registryPath, buildContent(updatedPassing, broken), 'utf-8');
 }
 
-/** Read all broken/app-bug entries from TEST_CASES.md. */
-export async function readBrokenTests(): Promise<BrokenEntry[]> {
+/** Read all broken/app-bug entries from the given registry (defaults to TEST_CASES.md). */
+export async function readBrokenTests(registryPath = TEST_CASES_PATH): Promise<BrokenEntry[]> {
   try {
-    return parseBrokenTests(await readFile(TEST_CASES_PATH, 'utf-8'));
+    return parseBrokenTests(await readFile(registryPath, 'utf-8'));
   } catch {
     return [];
   }
 }
 
-/** Read all recorded passing test cases from TEST_CASES.md. */
-export async function readTestCases(): Promise<TestEntry[]> {
+/** Read all recorded passing test cases from the given registry (defaults to TEST_CASES.md). */
+export async function readTestCases(registryPath = TEST_CASES_PATH): Promise<TestEntry[]> {
   try {
-    return parseTestCases(await readFile(TEST_CASES_PATH, 'utf-8'));
+    return parseTestCases(await readFile(registryPath, 'utf-8'));
   } catch {
     return [];
   }

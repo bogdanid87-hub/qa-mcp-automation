@@ -7,6 +7,9 @@ import {
   recordPassingTests,
   removeResolvedBrokenTests,
   normalizeTestName,
+  registryForSpec,
+  TEST_CASES_PATH,
+  TEST_API_PATH,
 } from './tools/test-registry.js';
 
 const ROOT = process.cwd();
@@ -23,20 +26,24 @@ async function ensureApiKey(): Promise<void> {
 async function main(): Promise<void> {
   await ensureApiKey();
 
-  const broken = await readBrokenTests();
+  const [broken, brokenApi] = await Promise.all([
+    readBrokenTests(TEST_CASES_PATH),
+    readBrokenTests(TEST_API_PATH),
+  ]);
+  const allBroken = [...broken, ...brokenApi];
 
-  if (broken.length === 0) {
-    console.log('\n✅ No broken or app-bug tests recorded in TEST_CASES.md.\n');
+  if (allBroken.length === 0) {
+    console.log('\n✅ No broken or app-bug tests recorded in TEST_CASES.md or TEST_API.md.\n');
     return;
   }
 
-  const appBugCount = broken.filter(e => e.kind === 'app_bug').length;
-  const brokenCount = broken.filter(e => e.kind === 'broken').length;
-  console.log(`\n▶ Checking ${broken.length} recorded issue(s): ${appBugCount} app bug(s), ${brokenCount} broken test(s)\n`);
+  const appBugCount = allBroken.filter(e => e.kind === 'app_bug').length;
+  const brokenCount = allBroken.filter(e => e.kind === 'broken').length;
+  console.log(`\n▶ Checking ${allBroken.length} recorded issue(s): ${appBugCount} app bug(s), ${brokenCount} broken test(s)\n`);
 
   // Group by spec to avoid running the same file more than once
-  const bySpec = new Map<string, typeof broken>();
-  for (const entry of broken) {
+  const bySpec = new Map<string, typeof allBroken>();
+  for (const entry of allBroken) {
     if (!bySpec.has(entry.spec)) bySpec.set(entry.spec, []);
     bySpec.get(entry.spec)!.push(entry);
   }
@@ -48,8 +55,9 @@ async function main(): Promise<void> {
     const output = await runTests(spec);
     const passing = parsePassingTests(output);
 
-    // Move newly passing tests into the passing section
-    await recordPassingTests(passing);
+    // Move newly passing tests into the appropriate registry
+    const reg = registryForSpec(spec);
+    await recordPassingTests(passing, reg);
 
     // Determine which broken entries resolved
     const passingNames = new Set(
@@ -75,11 +83,19 @@ async function main(): Promise<void> {
   }
 
   if (resolvedKeys.size > 0) {
-    await removeResolvedBrokenTests(resolvedKeys);
-    console.log(`✅ Moved ${resolvedKeys.size} resolved test(s) to the passing section in TEST_CASES.md.`);
+    // Route removals to the correct registry per spec path
+    const resolvedByRegistry = new Map<string, Set<string>>();
+    for (const key of resolvedKeys) {
+      const spec = key.split('::')[0];
+      const reg = registryForSpec(spec);
+      if (!resolvedByRegistry.has(reg)) resolvedByRegistry.set(reg, new Set());
+      resolvedByRegistry.get(reg)!.add(key);
+    }
+    for (const [reg, keys] of resolvedByRegistry) await removeResolvedBrokenTests(keys, reg);
+    console.log(`✅ Moved ${resolvedKeys.size} resolved test(s) to the passing section.`);
     console.log('   ⚠️  BROKEN / ⚠️  APP BUG comments in spec files were not removed — clean those up manually.\n');
   } else {
-    console.log('No tests resolved — TEST_CASES.md unchanged.\n');
+    console.log('No tests resolved — registries unchanged.\n');
   }
 }
 

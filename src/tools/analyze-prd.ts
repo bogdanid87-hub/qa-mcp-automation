@@ -43,9 +43,11 @@ Plain description or numbered steps of what the test does and asserts.
 Be specific enough that a developer can implement it without reading the PRD.
 
 spec_file rules:
+- tests/api/  for direct API tests (HTTP requests, status codes, response validation — no browser)
+              Name by resource: tests/api/products.spec.ts, tests/api/auth.spec.ts
 - tests/e2e/  for multi-page journeys (checkout, registration flows, full purchase)
-- tests/ui/   for single-feature tests (cart, auth, search, forms)
-- Group related tests in the same file (all cart tests → tests/ui/cart.spec.ts)
+- tests/ui/   for single-feature browser tests (cart, search, forms)
+- Group related tests in the same file (all product API tests → tests/api/products.spec.ts)
 
 ---
 

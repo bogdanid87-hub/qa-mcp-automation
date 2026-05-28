@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
-import { recordBrokenTest } from './test-registry.js';
+import { recordBrokenTest, registryForSpec } from './test-registry.js';
 
 const ROOT = process.cwd();
 
@@ -122,13 +122,14 @@ export async function writeTestAnnotation(
     await writeFile(abs, updated, 'utf-8');
   }
 
-  // Record each failing test in TEST_CASES.md
+  // Record each failing test in the appropriate registry
+  const registry = registryForSpec(specPath);
   for (const t of failingTests) {
-    await recordBrokenTest({ ...t, kind, rootCause, actualBehavior });
+    await recordBrokenTest({ ...t, kind, rootCause, actualBehavior }, registry);
   }
 
   // Fallback: if the output didn't contain parseable test names, record using specPath alone
   if (failingTests.length === 0) {
-    await recordBrokenTest({ spec: specPath, describe: '', name: specPath, kind, rootCause, actualBehavior });
+    await recordBrokenTest({ spec: specPath, describe: '', name: specPath, kind, rootCause, actualBehavior }, registry);
   }
 }
