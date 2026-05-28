@@ -1,0 +1,82 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# GETTING STARTED
+#   1. Copy this file:  cp prd.md.example prd.md
+#   2. Replace the example content below with your own PRD
+#   3. Run:   npm run analyze-prd -- --file prd.md
+#   4. Review prd-tests.txt, delete suggestions you don't want
+#   5. Run:   npm run generate -- --file prd-tests.txt
+#
+# prd.md is gitignored — it is your local working file and will not be committed.
+#
+# SUPPORTED INPUT FORMATS
+#   Text / Markdown  (.md .txt)
+#     npm run analyze-prd -- --file prd.md
+#
+#   PDF  (.pdf)  — Claude reads it natively, layout and tables preserved
+#     npm run analyze-prd -- --file spec.pdf
+#
+#   Image  (.png .jpg .jpeg .gif .webp)  — wireframe, mockup, or screenshot
+#     npm run analyze-prd -- --file wireframe.png
+#
+#   Text + supplementary images
+#     npm run analyze-prd -- --file prd.md --images wireframe.png,mockup.jpg
+#
+#   PowerPoint / Excel / Word
+#     Export to PDF first, then: npm run analyze-prd -- --file spec.pdf
+#
+# WHAT THE TOOL DOES
+#   • Classifies every feature by risk: critical → high → medium → low
+#   • Generates happy-path AND negative/edge-case test suggestions for each
+#   • Filters out tests already recorded in TEST_CASES.md (genuine gap list only)
+#   • Writes prd-tests.txt in the same batch format as my-test.txt so you can
+#     run `npm run generate -- --file prd-tests.txt` with no reformatting
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Example PRD — Shopping Cart
+
+## Overview
+
+Users can add products to a shopping cart, update quantities, and proceed to
+checkout. Cart contents are visible across page navigations within the same session.
+
+---
+
+## User Stories
+
+### US-01 — Add product to cart
+
+As a shopper, I want to add products to my cart so I can buy multiple items in one order.
+
+**Acceptance criteria:**
+- Clicking "Add to Cart" on a product adds one unit
+- The cart icon in the nav reflects the updated item count
+- Adding the same product again increments its quantity rather than creating a
+  duplicate entry
+- A modal or confirmation confirms the item was added
+
+### US-02 — View cart contents
+
+As a shopper, I want to review my cart before purchasing.
+
+**Acceptance criteria:**
+- Cart page shows: product image, name, unit price, quantity, and line total
+- Total amount equals the sum of all line totals
+- An empty cart shows a friendly empty-state message, not a blank page
+
+### US-03 — Remove an item from cart
+
+As a shopper, I want to remove items I've changed my mind about.
+
+**Acceptance criteria:**
+- Each item has a delete/remove action
+- Removing the last item shows the empty cart state
+- Total updates immediately after removal without a page refresh
+
+### US-04 — Proceed to checkout
+
+As a shopper, I want to move from the cart to checkout when I'm ready to pay.
+
+**Acceptance criteria:**
+- "Proceed To Checkout" button navigates registered users to the checkout page
+- Guest users see a modal prompting them to Register or Login before continuing
+- The button is not shown when the cart is empty
