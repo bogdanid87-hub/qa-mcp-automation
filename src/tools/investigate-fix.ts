@@ -1,14 +1,70 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { writeFile, mkdir } from 'fs/promises';
+import { readFile, writeFile, mkdir } from 'fs/promises';
 import { dirname, join } from 'path';
 import { getSystemBlocks, appendLearnedRule } from '../prompts/system.js';
 import { readFocusedContextForFailure } from './list-resources.js';
+import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { runTests, runTestsTool } from './run-tests.js';
 import { parsePassingTests, recordPassingTests } from './test-registry.js';
 import { TokenBudget } from './budget.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
+
+// ── Screenshot helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Parse screenshot paths out of Playwright failure output.
+ * Playwright prints: "attachment #N: screenshot (image/png) ───\n  test-results/..."
+ */
+function findFailureScreenshots(output: string): string[] {
+  const paths: string[] = [];
+  const re = /attachment #\d+: screenshot \(image\/png\)[^\n]*\n\s*(test-results\/[^\n]+\.png)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(output)) !== null) {
+    paths.push(join(ROOT, m[1].trim()));
+  }
+  return paths;
+}
+
+async function readScreenshotAsBase64(absPath: string): Promise<string | null> {
+  try {
+    const buf = await readFile(absPath);
+    return buf.toString('base64');
+  } catch {
+    return null;
+  }
+}
+
+// ── DOM inspection helpers ─────────────────────────────────────────────────────
+
+/** True when the failure looks like a locator/element timeout — not an import or type error. */
+function isLocatorFailure(output: string): boolean {
+  return /locator\.\w+:.*timeout|waiting for locator\(|element\(s\) not found|toBeVisible.*failed/i.test(output);
+}
+
+/** Extract the spec file path from Playwright failure output. */
+function extractSpecPath(output: string): string | null {
+  const m = output.match(/›\s+(tests\/[^\s:]+\.spec\.ts)/);
+  return m ? m[1] : null;
+}
+
+/**
+ * Read a spec file and return every unique URL path used in page.goto() or
+ * BasePage.navigate() calls, capped at 4 to keep context manageable.
+ */
+async function extractUrlsFromSpec(specPath: string): Promise<string[]> {
+  try {
+    const src = await readFile(join(ROOT, specPath), 'utf-8');
+    const urls = new Set<string>();
+    const re = /(?:page\.goto|this\.navigate|\.navigate)\s*\(\s*['"`](\/[^'"`\s,)]+)/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src)) !== null) urls.add(m[1]);
+    return [...urls].slice(0, 4);
+  } catch {
+    return [];
+  }
+}
 
 interface InvestigateResponse {
   verdict: 'code_bug' | 'app_bug' | 'unclear';
@@ -53,6 +109,27 @@ export async function autoFixFailure(
   const existingContext = await readFocusedContextForFailure(failureOutput);
   const client = new Anthropic({ apiKey });
 
+  // ── Screenshot collection ──────────────────────────────────────────────────
+  const screenshotPaths = findFailureScreenshots(failureOutput);
+  const screenshotBlocks: Anthropic.ImageBlockParam[] = (
+    await Promise.all(screenshotPaths.slice(0, 2).map(readScreenshotAsBase64))
+  )
+    .filter((d): d is string => d !== null)
+    .map((data) => ({ type: 'image' as const, source: { type: 'base64' as const, media_type: 'image/png' as const, data } }));
+
+  // ── DOM inspection for locator failures ───────────────────────────────────
+  let domContext = '';
+  if (isLocatorFailure(failureOutput)) {
+    const specPath = extractSpecPath(failureOutput);
+    const urls = specPath ? await extractUrlsFromSpec(specPath) : [];
+    if (urls.length > 0) {
+      try {
+        const snapshots = await inspectPages(urls);
+        domContext = formatSnapshots(snapshots);
+      } catch { /* proceed without DOM snapshot */ }
+    }
+  }
+
   const TASK_PROMPT = `\
 First, decide what kind of failure this is:
 
@@ -91,16 +168,25 @@ If no files need changing for a code_bug, return an empty array for "files".
 If the failure is not reproducible or the cause is unclear, set "lesson" to null.
 `;
 
-  const userBlocks = [
+  const domSection = domContext
+    ? `## Live DOM snapshot (real elements on the failing page — use these for correct locators)\n\n${domContext}\n\n---\n\n`
+    : '';
+
+  const screenshotNote = screenshotBlocks.length > 0
+    ? `\n\n(${screenshotBlocks.length} screenshot${screenshotBlocks.length > 1 ? 's' : ''} of the page at point of failure attached below)`
+    : '';
+
+  const userBlocks: Anthropic.MessageParam['content'] = [
     {
-      type: 'text' as const,
+      type: 'text',
       text: `## Current codebase\n\n${existingContext}`,
-      cache_control: { type: 'ephemeral' as const },
+      cache_control: { type: 'ephemeral' },
     },
     {
-      type: 'text' as const,
-      text: `## Failing test output\n\n\`\`\`\n${failureOutput}\n\`\`\`\n\n---\n\n## Your task\n\n${TASK_PROMPT}`,
+      type: 'text',
+      text: `${domSection}## Failing test output${screenshotNote}\n\n\`\`\`\n${failureOutput}\n\`\`\`\n\n---\n\n## Your task\n\n${TASK_PROMPT}`,
     },
+    ...screenshotBlocks,
   ];
 
   let raw: string;
@@ -127,7 +213,13 @@ If the failure is not reproducible or the cause is unclear, set "lesson" to null
 
   let parsed: InvestigateResponse;
   try {
-    const jsonStr = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
+    const stripped = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
+    let jsonStr = stripped;
+    try { JSON.parse(stripped); } catch {
+      const start = stripped.indexOf('{');
+      const end = stripped.lastIndexOf('}');
+      if (start !== -1 && end > start) jsonStr = stripped.slice(start, end + 1);
+    }
     parsed = JSON.parse(jsonStr);
   } catch {
     return { fixed: false, verdict: 'unclear', rootCause: 'Claude returned invalid JSON', fixedFiles: [], lesson: null, verifyOutput: '', budgetExceeded: false };
