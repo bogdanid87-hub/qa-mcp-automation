@@ -1,6 +1,6 @@
 # Test Cases
 
-**Total: 8 tests** | **Latest:** #8 — Place Order: Add Products in Cart › should remove a product from the cart and update the cart
+**Total: 9 tests** | **Latest:** #9 — Place Order: Register while Checkout › should register during checkout, place an order, and delete the account
 
 ---
 
@@ -44,7 +44,17 @@
 |---|------|
 | 6 | should add two products to cart and verify prices, quantity and total |
 | 7 | should show empty cart when no products have been added |
-| 8 | should remove a product from the cart and update the cart ← latest |
+| 8 | should remove a product from the cart and update the cart |
+
+---
+
+## tests/placeOrderRegisterWhileCheckout.spec.ts
+
+### Place Order: Register while Checkout
+
+| # | Test |
+|---|------|
+| 9 | should register during checkout, place an order, and delete the account ← latest |
 
 ---
 
@@ -58,11 +68,3 @@
 
 ---
 
-## ❌ Broken Tests
-
-> Fix manually or run: `npm run fix -- --pattern <spec>`
-
-| Spec | Describe | Test | Root cause |
-|------|----------|------|------------|
-| tests/placeOrderRegisterWhileCheckout.spec.ts | Place Order: Register while Checkout | should register during checkout, place order, and delete account | The test calls `cartPage.verifyLoaded()` but the `CartPage` class does not have a `verifyLoaded()` method defined. The method exists on other page objects (like `ProductsPage`) but was never added to `CartPage`. |
-| tests/placeOrderRegisterWhileCheckout.spec.ts |  | tests/placeOrderRegisterWhileCheckout.spec.ts | BasePage.ts exports the class as a named export (`export class BasePage`) but CheckoutPage.ts imports it as a default import (`import BasePage from './BasePage'`). This import resolves to `undefined`, causing the 'Class extends value undefined' error. |

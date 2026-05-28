@@ -6,6 +6,7 @@ import {
   parsePassingTests,
   recordPassingTests,
   removeResolvedBrokenTests,
+  normalizeTestName,
 } from './tools/test-registry.js';
 
 const ROOT = process.cwd();
@@ -57,10 +58,11 @@ async function main(): Promise<void> {
         return sep === -1 ? p.title : p.title.substring(sep + 3);
       })
     );
+    const passingNamesNorm = new Set([...passingNames].map(normalizeTestName));
 
     for (const entry of entries) {
       const key = `${entry.spec}::${entry.name}`;
-      if (passingNames.has(entry.name)) {
+      if (passingNames.has(entry.name) || passingNamesNorm.has(normalizeTestName(entry.name))) {
         resolvedKeys.add(key);
         const label = entry.kind === 'app_bug' ? '⚠️  App bug resolved' : '❌ Broken test resolved';
         console.log(`  ✅ ${label}: ${entry.describe} › ${entry.name}`);

@@ -198,6 +198,22 @@ function buildContent(entries: TestEntry[], broken: BrokenEntry[] = []): string 
   return lines.join('\n');
 }
 
+// ─── Name normalisation ───────────────────────────────────────────────────────
+
+/**
+ * Normalise a test name for fuzzy comparison.
+ * Strips English articles, lowercases, collapses punctuation and whitespace so
+ * that "should place an order" and "should place order" compare as equal.
+ */
+export function normalizeTestName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\b(a|an|the)\b/g, '')
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // ─── Output parsers ───────────────────────────────────────────────────────────
 
 export interface FailingTestResult {

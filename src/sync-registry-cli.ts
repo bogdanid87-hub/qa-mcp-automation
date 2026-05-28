@@ -7,6 +7,7 @@ import {
   removeResolvedBrokenTests,
   parsePassingTests,
   parseFailingTestsFromOutput,
+  normalizeTestName,
   demoteTobroken,
   type BrokenEntry,
   type FailingTestResult,
@@ -52,7 +53,17 @@ async function main(): Promise<void> {
   });
 
   // ── 2. Broken/app-bug tests that now pass → promote ───────────────────────
-  const toPromote = recordedBroken.filter(e => passingResultKeys.has(`${e.spec}::${e.name}`));
+  // Use both exact key match and normalised name match so minor wording drift
+  // (e.g. "place order" vs "place an order") doesn't leave stale broken entries.
+  const toPromote = recordedBroken.filter(e => {
+    if (passingResultKeys.has(`${e.spec}::${e.name}`)) return true;
+    const normBroken = normalizeTestName(e.name);
+    return passingResults.some(p => {
+      const sep = p.title.indexOf(' › ');
+      const name = sep === -1 ? p.title : p.title.substring(sep + 3);
+      return p.spec === e.spec && normalizeTestName(name) === normBroken;
+    });
+  });
 
   // ── 3. Failing tests with no entry anywhere in TEST_CASES.md ─────────────
   // These were never recorded — written manually, via Claude Code, or from an
