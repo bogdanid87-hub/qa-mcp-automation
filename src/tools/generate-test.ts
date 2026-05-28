@@ -126,7 +126,11 @@ export async function generateTestTool(args: {
 
   if (doPomSpecSplit) {
     // ── Call 1: POM only — prefer local LLM, fall back to Claude API ──────────
-    const useLocal = await isLocalLlmAvailable();
+    // Only use the local model for simple flows (≤ 2 page paths). Complex multi-page
+    // tests require Claude's reasoning to identify which POMs are needed and how to
+    // split responsibilities across page objects.
+    const complexFlow = (args.page_paths?.length ?? 0) > 2;
+    const useLocal = !complexFlow && await isLocalLlmAvailable();
 
     let pomRaw: string;
     if (useLocal) {
@@ -163,6 +167,25 @@ export async function generateTestTool(args: {
     for (const file of pomParsed.files ?? []) {
       if (!file.path.startsWith('pages/')) continue;
       const abs = join(ROOT, file.path);
+
+      // Guard: if the local LLM is writing to a file that already exists, verify it
+      // hasn't silently dropped any existing method signatures (a common failure mode
+      // for smaller models that rewrite files from scratch instead of extending them).
+      if (useLocal) {
+        try {
+          const existing = await import('fs/promises').then(m => m.readFile(abs, 'utf-8'));
+          const existingMethods = [...existing.matchAll(/async (\w+)\s*\(/g)].map(m => m[1]);
+          const missingMethods = existingMethods.filter(name => !file.content.includes(`async ${name}(`));
+          if (missingMethods.length > 0) {
+            // Local model dropped methods — skip this file; spec step will see the real POM
+            pomGeneratedByLocal = false;
+            continue;
+          }
+        } catch {
+          // File doesn't exist yet — new file, no guard needed
+        }
+      }
+
       await mkdir(dirname(abs), { recursive: true });
       await writeFile(abs, file.content, 'utf-8');
       written.push(file.path);
