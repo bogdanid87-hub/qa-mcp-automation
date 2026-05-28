@@ -25,6 +25,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 | Command | What it does | Doc |
 |---------|-------------|-----|
 | `npm run analyze_prd` | CLI version of `analyze_prd` — supports PDF and image inputs | [docs/analyze-prd.md](docs/analyze-prd.md) |
+| `npm run generate_api` | CLI version of `generate_api_test` — inline description or file | [docs/generate-api-test.md](docs/generate-api-test.md) |
 | `npm run generate` | Generate a test from `my-test.txt` (or any batch `.txt` file) | [docs/generate-test.md](docs/generate-test.md) |
 | `npm run fix` | Interactive fix loop for failing tests | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
 | `npm run sync_registry` | Full reconciliation of `TEST_CASES.md` against actual test results | [docs/test-registry.md](docs/test-registry.md) |

@@ -11,7 +11,8 @@ See [TOOLS.md](TOOLS.md) for a quick index and [docs/](docs/) for per-tool guide
 ## Key commands
 
 ```bash
-npm run generate -- --file my-test.txt   # generate a test from description
+npm run generate -- --file my-test.txt   # generate a UI/E2E test from description
+npm run generate_api -- --description "..." # generate an API test (local LLM first)
 npm run analyze_prd -- --file prd.md     # generate test backlog from a PRD
 npm run fix                               # investigate and fix failing tests
 npm run sync_registry                     # reconcile TEST_CASES.md with reality

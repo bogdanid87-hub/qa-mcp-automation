@@ -77,6 +77,19 @@ test.describe('Products API', () => {
 
 ## Usage
 
+### From the terminal
+
+```bash
+# Inline description
+npm run generate_api -- --description "Test the GET /api/productsList endpoint. Assert status 200, responseCode 200, and that products is a non-empty array."
+
+# With explicit target file
+npm run generate_api -- --description "Test GET /api/productsList" --spec_file tests/api/products.spec.ts
+
+# From a file (same format as my-test.txt — # test_name and # spec_file directives supported)
+npm run generate_api -- --file my-api-test.txt
+```
+
 ### From Claude Code
 
 ```
@@ -87,11 +100,12 @@ Generate API tests for the brands list API
 
 ### Parameters
 
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `description` | yes | Endpoint URL, HTTP method, expected status, fields to validate |
-| `test_name` | no | Names the `test()` and `describe()` blocks |
-| `spec_file` | no | Target file, e.g. `"tests/api/products.spec.ts"`. Inferred if omitted. |
+| Parameter | CLI flag | MCP param | Description |
+|-----------|----------|-----------|-------------|
+| Description | `--description` | `description` | Endpoint URL, HTTP method, expected status, fields to validate |
+| Test name | `--test_name` | `test_name` | Names the `test()` and `describe()` blocks |
+| Spec file | `--spec_file` | `spec_file` | Target file, e.g. `"tests/api/products.spec.ts"`. Inferred if omitted. |
+| File | `--file` | — | Read description from a file (CLI only) |
 
 ---
 
@@ -114,9 +128,14 @@ npm run analyze_prd -- --url https://automationexercise.com/api_list
 # 2. Review prd-tests.txt — spec_file: tests/api/... is already set
 #    Delete the blocks you don't want
 
-# 3. From Claude Code, for each block you kept:
-#    "Generate API tests for <endpoint description>"
-#    → local LLM generates, runs, records in TEST_API.md (zero API cost)
+# 3. Generate tests — terminal or Claude Code
+
+# Terminal: pass each description inline
+npm run generate_api -- --description "Test GET /api/productsList" --spec_file tests/api/products.spec.ts
+npm run generate_api -- --description "Test POST /api/verifyLogin" --spec_file tests/api/auth.spec.ts
+
+# Claude Code: type naturally
+# "Generate API tests for the GET /api/productsList endpoint"
 
 # 4. Keep TEST_API.md in sync after any manual changes
 npm run sync_registry

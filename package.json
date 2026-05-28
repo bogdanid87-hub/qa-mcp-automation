@@ -9,6 +9,7 @@
     "update_registry": "tsx src/update-registry-cli.ts",
     "sync_registry": "tsx src/sync-registry-cli.ts",
     "analyze_prd": "tsx src/analyze-prd-cli.ts",
+    "generate_api": "tsx src/generate-api-test-cli.ts",
     "mcp": "tsx src/index.ts",
     "test": "playwright test",
     "test:headed": "playwright test --headed",

@@ -31,6 +31,7 @@ keep short, intuitive names:
 | CLI command | Why not renamed |
 |-------------|----------------|
 | `npm run generate` | Wraps `generate_test` + batch mode; `generate_test` would be misleading |
+| `npm run generate_api` | CLI for `generate_api_test` — shortened to `generate_api` since `generate_api_test` is long for a daily command |
 | `npm run fix` | Short for `investigate_and_fix`; the full name would be verbose in daily use |
 | `npm run mcp` | Meta-command to start the server; no MCP tool equivalent |
 | `npm test`, `npm run test:headed` etc. | Playwright conventions; no MCP equivalent |
