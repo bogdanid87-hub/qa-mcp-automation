@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { writeFile, mkdir } from 'fs/promises';
+import { readFile, writeFile, mkdir } from 'fs/promises';
 import { dirname, join } from 'path';
 import { getSystemBlocks, getSystemPrompt, buildUserBlocks, buildUserPrompt } from '../prompts/system.js';
 import { isLocalLlmAvailable, callLocalLlm, LOCAL_MODEL } from './local-llm.js';
@@ -30,6 +30,59 @@ interface GenerateResponse {
   fixture_additions?: string | null;
   instructions?: string | null;
   proposed_negative_tests?: ProposedNegativeTest[];
+}
+
+// ── Orchestrator-worker types (complex multi-page flows) ──────────────────────
+
+interface PomPlan {
+  file: string;
+  is_new: boolean;
+  methods: string[];
+  page_url?: string;
+}
+
+// Planning prompt: Claude outputs a list of POMs + methods, no code.
+// Cheap call — output is ~200–500 tokens regardless of flow complexity.
+const PLAN_ONLY_HINT = `
+
+IMPORTANT — PLANNING STEP: Do NOT write any TypeScript code. Analyse the test \
+description and the DOM snapshots, then list every POM file that must be created \
+or updated and which methods each needs.
+
+Respond with ONLY this JSON (no TypeScript, no explanation):
+{
+  "poms": [
+    {
+      "file": "pages/SomePage.ts",
+      "is_new": true,
+      "methods": ["methodOne", "methodTwo"],
+      "page_url": "/some-path"
+    }
+  ]
+}
+
+Rules:
+- Only include pages/ files
+- is_new: false means the file exists — list only the NEW methods to add, not existing ones
+- is_new: true means create from scratch — list every method the test needs
+- page_url should match one of the provided page_paths (used to pick the right DOM snapshot)`;
+
+// Per-POM build prompt: local LLM receives one focused task per file.
+function buildPomBuildHint(plan: PomPlan): string {
+  const task = plan.is_new
+    ? `This is a NEW file — create it from scratch following all POM rules.`
+    : `This file ALREADY EXISTS (shown in the codebase context above). ADD these new methods without removing any existing ones: ${plan.methods.join(', ')}`;
+  return `
+
+IMPORTANT — POM BUILD STEP: Generate ONLY the complete TypeScript for ${plan.file}.
+${task}
+${plan.page_url ? `Focus on the DOM snapshot for ${plan.page_url} when choosing locators.` : ''}
+
+Respond with this exact JSON:
+{
+  "summary": "one-sentence description",
+  "files": [{ "path": "${plan.file}", "content": "full TypeScript file content" }]
+}`;
 }
 
 const POM_ONLY_HINT = `
@@ -125,73 +178,121 @@ export async function generateTestTool(args: {
   let pomGeneratedByLocal = false;
 
   if (doPomSpecSplit) {
-    // ── Call 1: POM only — prefer local LLM, fall back to Claude API ──────────
-    // Only use the local model for simple flows (≤ 2 page paths). Complex multi-page
-    // tests require Claude's reasoning to identify which POMs are needed and how to
-    // split responsibilities across page objects.
+    const localAvailable = await isLocalLlmAvailable();
     const complexFlow = (args.page_paths?.length ?? 0) > 2;
-    const useLocal = !complexFlow && await isLocalLlmAvailable();
+    let usedOrchestratedFlow = false;
 
-    let pomRaw: string;
-    if (useLocal) {
-      const sysPrompt = await getSystemPrompt();
-      const userPrompt = buildUserPrompt({ description: description + POM_ONLY_HINT, existingContext, domContext });
+    if (complexFlow && localAvailable) {
+      // ── Orchestrated: Claude plans (cheap), local LLM builds all POMs in parallel ──
+      let plan: { poms: PomPlan[] } | null = null;
       try {
-        pomRaw = await callLocalLlm(sysPrompt, userPrompt);
-        pomGeneratedByLocal = true;
-      } catch (err: any) {
-        // Local model failed — fall back to Claude API silently
-        pomRaw = '';
+        const planRaw = await callClaude(buildUserBlocks({
+          description: description + PLAN_ONLY_HINT,
+          existingContext,
+          domContext,
+        }));
+        plan = JSON.parse(planRaw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim());
+      } catch {
+        // Planning failed — fall through to Claude doing the full POM step
+      }
+
+      if (plan && plan.poms.length > 0) {
+        const sysPrompt = await getSystemPrompt();
+
+        // Fire all POM builds at once — Ollama queues them; M5 + OLLAMA_NUM_PARALLEL=4
+        // processes them concurrently so total time ≈ one call instead of N calls.
+        const pomResults = await Promise.all(
+          plan.poms.map(async (pomPlan): Promise<GeneratedFile | null> => {
+            try {
+              const raw = await callLocalLlm(sysPrompt, buildUserPrompt({
+                description: description + buildPomBuildHint(pomPlan),
+                existingContext,
+                domContext,
+              }));
+              const parsed = parseJson(raw);
+              return (parsed.files ?? []).find(f => f.path === pomPlan.file) ?? null;
+            } catch {
+              return null;
+            }
+          }),
+        );
+
+        for (const file of pomResults) {
+          if (!file || !file.path.startsWith('pages/')) continue;
+          const abs = join(ROOT, file.path);
+          // Guard: reject if local model silently dropped existing methods
+          try {
+            const existing = await readFile(abs, 'utf-8');
+            const missing = [...existing.matchAll(/async (\w+)\s*\(/g)]
+              .map(m => m[1])
+              .filter(name => !file.content.includes(`async ${name}(`));
+            if (missing.length > 0) continue;
+          } catch { /* new file — no guard needed */ }
+          await mkdir(dirname(abs), { recursive: true });
+          await writeFile(abs, file.content, 'utf-8');
+          written.push(file.path);
+        }
+
+        pomGeneratedByLocal = written.some(p => p.startsWith('pages/'));
+        usedOrchestratedFlow = true;
+      }
+    }
+
+    if (!usedOrchestratedFlow) {
+      // ── Standard: single POM call — local for simple flows, Claude otherwise ──
+      const useLocal = !complexFlow && localAvailable;
+
+      let pomRaw: string;
+      if (useLocal) {
+        const sysPrompt = await getSystemPrompt();
+        try {
+          pomRaw = await callLocalLlm(sysPrompt, buildUserPrompt({
+            description: description + POM_ONLY_HINT,
+            existingContext,
+            domContext,
+          }));
+          pomGeneratedByLocal = true;
+        } catch (err: any) {
+          try {
+            pomRaw = await callClaude(buildUserBlocks({ description: description + POM_ONLY_HINT, existingContext, domContext }));
+          } catch (apiErr: any) {
+            return { content: [{ type: 'text', text: `POM step failed (local: ${err.message}, API: ${apiErr.message})` }] };
+          }
+        }
+      } else {
         try {
           pomRaw = await callClaude(buildUserBlocks({ description: description + POM_ONLY_HINT, existingContext, domContext }));
-        } catch (apiErr: any) {
-          return { content: [{ type: 'text', text: `POM step failed (local: ${err.message}, API fallback: ${apiErr.message})` }] };
+        } catch (err: any) {
+          return { content: [{ type: 'text', text: `Claude API error (POM step): ${err.message}` }] };
         }
       }
-    } else {
-      const pomBlocks = buildUserBlocks({ description: description + POM_ONLY_HINT, existingContext, domContext });
+
+      let pomParsed: GenerateResponse;
       try {
-        pomRaw = await callClaude(pomBlocks);
-      } catch (err: any) {
-        return { content: [{ type: 'text', text: `Claude API error (POM step): ${err.message}` }] };
+        pomParsed = parseJson(pomRaw);
+      } catch {
+        return { content: [{ type: 'text', text: `${useLocal ? LOCAL_MODEL : 'Claude'} returned invalid JSON in POM step.\n\n${pomRaw}` }] };
       }
-    }
 
-    let pomParsed: GenerateResponse;
-    try {
-      pomParsed = parseJson(pomRaw);
-    } catch {
-      return { content: [{ type: 'text', text: `${useLocal ? LOCAL_MODEL : 'Claude'} returned invalid JSON in POM step.\n\n${pomRaw}` }] };
-    }
-
-    for (const file of pomParsed.files ?? []) {
-      if (!file.path.startsWith('pages/')) continue;
-      const abs = join(ROOT, file.path);
-
-      // Guard: if the local LLM is writing to a file that already exists, verify it
-      // hasn't silently dropped any existing method signatures (a common failure mode
-      // for smaller models that rewrite files from scratch instead of extending them).
-      if (useLocal) {
-        try {
-          const existing = await import('fs/promises').then(m => m.readFile(abs, 'utf-8'));
-          const existingMethods = [...existing.matchAll(/async (\w+)\s*\(/g)].map(m => m[1]);
-          const missingMethods = existingMethods.filter(name => !file.content.includes(`async ${name}(`));
-          if (missingMethods.length > 0) {
-            // Local model dropped methods — skip this file; spec step will see the real POM
-            pomGeneratedByLocal = false;
-            continue;
-          }
-        } catch {
-          // File doesn't exist yet — new file, no guard needed
+      for (const file of pomParsed.files ?? []) {
+        if (!file.path.startsWith('pages/')) continue;
+        const abs = join(ROOT, file.path);
+        if (useLocal) {
+          try {
+            const existing = await readFile(abs, 'utf-8');
+            const missing = [...existing.matchAll(/async (\w+)\s*\(/g)]
+              .map(m => m[1])
+              .filter(name => !file.content.includes(`async ${name}(`));
+            if (missing.length > 0) { pomGeneratedByLocal = false; continue; }
+          } catch { /* new file */ }
         }
+        await mkdir(dirname(abs), { recursive: true });
+        await writeFile(abs, file.content, 'utf-8');
+        written.push(file.path);
       }
-
-      await mkdir(dirname(abs), { recursive: true });
-      await writeFile(abs, file.content, 'utf-8');
-      written.push(file.path);
     }
 
-    // Re-read context so the spec call sees the real POM on disk
+    // Re-read context so the spec call sees the committed POMs on disk
     existingContext = await readFocusedContextForFeature(featureKeywords);
   }
 
@@ -294,8 +395,8 @@ export async function generateTestTool(args: {
 
   if (doPomSpecSplit && written.some((p) => p.startsWith('pages/'))) {
     const pomNote = pomGeneratedByLocal
-      ? `POM generated by ${LOCAL_MODEL} (local), spec generated by Claude API`
-      : 'POM generated first, spec generated using the committed POM';
+      ? `POMs planned by Claude API, built in parallel by ${LOCAL_MODEL} (local)`
+      : 'POMs generated first, spec generated using the committed POMs';
     lines.push('', `_(${pomNote} — method names are guaranteed consistent)_`);
   }
 

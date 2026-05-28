@@ -5,6 +5,10 @@ const TIMEOUT_MS = 300_000; // 5 min — 14B model can be slow on first token
 /**
  * Returns true if Ollama is reachable and the configured model is downloaded.
  * Used to decide whether to route POM generation through the local model.
+ *
+ * For parallel POM builds, Ollama must be started with OLLAMA_NUM_PARALLEL=4
+ * (or higher). Without it, concurrent requests are queued sequentially.
+ * Set via: launchctl setenv OLLAMA_NUM_PARALLEL 4 && killall ollama
  */
 export async function isLocalLlmAvailable(): Promise<boolean> {
   try {
