@@ -1,7 +1,7 @@
 # Tool Reference
 
 Quick index of all available tools. New here? Start with [docs/getting-started.md](docs/getting-started.md).
-Detailed per-tool guides are in the `docs/` folder.
+Detailed per-tool guides are in the `docs/` folder. Project naming and architecture decisions: [docs/conventions.md](docs/conventions.md).
 
 ---
 
@@ -24,11 +24,11 @@ Detailed per-tool guides are in the `docs/` folder.
 
 | Command | What it does | Doc |
 |---------|-------------|-----|
-| `npm run analyze-prd` | CLI version of `analyze_prd` — supports PDF and image inputs | [docs/analyze-prd.md](docs/analyze-prd.md) |
+| `npm run analyze_prd` | CLI version of `analyze_prd` — supports PDF and image inputs | [docs/analyze-prd.md](docs/analyze-prd.md) |
 | `npm run generate` | Generate a test from `my-test.txt` (or any batch `.txt` file) | [docs/generate-test.md](docs/generate-test.md) |
 | `npm run fix` | Interactive fix loop for failing tests | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
-| `npm run sync-registry` | Full reconciliation of `TEST_CASES.md` against actual test results | [docs/test-registry.md](docs/test-registry.md) |
-| `npm run update-registry` | Re-check only recorded broken/app-bug entries | [docs/test-registry.md](docs/test-registry.md) |
+| `npm run sync_registry` | Full reconciliation of `TEST_CASES.md` against actual test results | [docs/test-registry.md](docs/test-registry.md) |
+| `npm run update_registry` | Re-check only recorded broken/app-bug entries | [docs/test-registry.md](docs/test-registry.md) |
 | `npm test` | Run all tests headless | [docs/run-tests.md](docs/run-tests.md) |
 | `npm run test:headed` | Run with browser visible | [docs/run-tests.md](docs/run-tests.md) |
 | `npm run test:report` | Open the HTML test report | [docs/run-tests.md](docs/run-tests.md) |
@@ -39,7 +39,7 @@ Detailed per-tool guides are in the `docs/` folder.
 
 ```
 From a PRD:
-  analyze_prd / npm run analyze-prd → review prd-tests.txt → npm run generate --file prd-tests.txt
+  analyze_prd / npm run analyze_prd → review prd-tests.txt → npm run generate --file prd-tests.txt
 
 New page, no POM yet:
   generate_pom → generate_test
@@ -51,5 +51,5 @@ Something failed:
   investigate_and_fix / npm run fix
 
 Registry out of sync:
-  npm run sync-registry
+  npm run sync_registry
 ```

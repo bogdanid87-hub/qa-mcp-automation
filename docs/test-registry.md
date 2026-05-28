@@ -44,19 +44,19 @@ The file has three sections:
 | `generate_test` / `generate_api_test` detects an app bug | Added to Application Bugs | Based on spec path |
 | `generate_test` / `generate_api_test` cannot fix a failure | Added to Broken Tests | Based on spec path |
 | `investigate_and_fix` resolves a failure | Entry moved from Broken to passing | Based on spec path |
-| `sync-registry` runs | Full reconciliation of both registries | Both |
+| `sync_registry` runs | Full reconciliation of both registries | Both |
 
 Running `npm test` manually **never** touches either registry.
 
 ---
 
-## sync-registry
+## sync_registry
 
 Use this when the registry may be out of sync — after a server crash mid-generation,
 after adding tests manually, or after fixing a broken test outside of the MCP tools.
 
 ```bash
-npm run sync-registry
+npm run sync_registry
 ```
 
 What it does in one pass:
@@ -73,13 +73,13 @@ What it does in one pass:
 
 ---
 
-## update-registry
+## update_registry
 
-A faster, narrower version of `sync-registry`. Only re-runs specs that already have
+A faster, narrower version of `sync_registry`. Only re-runs specs that already have
 entries in the Broken or Application Bugs sections — skips the full suite.
 
 ```bash
-npm run update-registry
+npm run update_registry
 ```
 
 Use this when you've fixed a broken test or the site has been patched for a known
@@ -87,9 +87,9 @@ app bug and you want to check if the entries can be promoted to passing.
 
 ---
 
-## sync-registry vs update-registry
+## sync_registry vs update_registry
 
-| | sync-registry | update-registry |
+| | sync_registry | update_registry |
 |--|---------------|-----------------|
 | Runs the full suite | ✓ | ✗ (only affected specs) |
 | Handles both TEST_CASES.md and TEST_API.md | ✓ | ✓ |
@@ -98,7 +98,7 @@ app bug and you want to check if the entries can be promoted to passing.
 | Promotes resolved broken/app-bug entries | ✓ | ✓ |
 | Speed | Slower (full suite) | Fast |
 
-**Rule of thumb:** use `update-registry` after a targeted fix; use `sync-registry`
+**Rule of thumb:** use `update_registry` after a targeted fix; use `sync_registry`
 after bulk changes, a period of inactivity, or if you're unsure about the state.
 
 ---
@@ -117,6 +117,6 @@ broken entries from being promoted.
 
 ## Manual cleanup after annotation
 
-When a broken or app-bug test is fixed and `sync-registry` promotes it, the
+When a broken or app-bug test is fixed and `sync_registry` promotes it, the
 `/* ⚠️ BROKEN */` or `/* ⚠️ APP BUG */` comment in the spec file is **not**
 removed automatically. Remove it manually after the entry leaves the broken section.

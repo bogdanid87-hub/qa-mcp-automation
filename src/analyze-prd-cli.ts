@@ -71,14 +71,14 @@ async function main(): Promise<void> {
   if (!filePath && !pageUrl) {
     console.error(
       '\nUsage:\n' +
-      '  npm run analyze-prd -- --file prd.md\n' +
-      '  npm run analyze-prd -- --file spec.pdf\n' +
-      '  npm run analyze-prd -- --file wireframe.png\n' +
-      '  npm run analyze-prd -- --url https://example.com/api-docs\n' +
-      '  npm run analyze-prd -- --file prd.md --images wireframe.png,mockup.jpg\n' +
-      '  npm run analyze-prd -- --file prd.md --output sprint-tests.txt\n' +
-      '  npm run analyze-prd -- --file prd.md --tier critical,high\n' +
-      '  npm run analyze-prd -- --file prd.md --focus checkout,authentication\n' +
+      '  npm run analyze_prd -- --file prd.md\n' +
+      '  npm run analyze_prd -- --file spec.pdf\n' +
+      '  npm run analyze_prd -- --file wireframe.png\n' +
+      '  npm run analyze_prd -- --url https://example.com/api-docs\n' +
+      '  npm run analyze_prd -- --file prd.md --images wireframe.png,mockup.jpg\n' +
+      '  npm run analyze_prd -- --file prd.md --output sprint-tests.txt\n' +
+      '  npm run analyze_prd -- --file prd.md --tier critical,high\n' +
+      '  npm run analyze_prd -- --file prd.md --focus checkout,authentication\n' +
       '\nSupported inputs:\n' +
       '  --file prd.md          Text/Markdown — read as plain text\n' +
       '  --file spec.pdf        PDF — passed to Claude natively (preserves layout)\n' +

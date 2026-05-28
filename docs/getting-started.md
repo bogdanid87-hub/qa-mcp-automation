@@ -226,8 +226,8 @@ cp prd.md.example prd.md
 Or point directly at an existing file — PDF, image, or text:
 
 ```bash
-npm run analyze-prd -- --file ~/Downloads/feature-spec.pdf
-npm run analyze-prd -- --file prd.md --images wireframe.png
+npm run analyze_prd -- --file ~/Downloads/feature-spec.pdf
+npm run analyze_prd -- --file prd.md --images wireframe.png
 ```
 
 ### 2. Review the output
@@ -256,8 +256,8 @@ npm run generate -- --file prd-tests.txt
 Use `--tier` or `--focus` to scope the analysis before writing the file:
 
 ```bash
-npm run analyze-prd -- --file prd.md --tier critical,high
-npm run analyze-prd -- --file prd.md --focus checkout,authentication
+npm run analyze_prd -- --file prd.md --tier critical,high
+npm run analyze_prd -- --file prd.md --focus checkout,authentication
 ```
 
 See [docs/analyze-prd.md](analyze-prd.md) for full details.
@@ -277,7 +277,7 @@ Generate API tests for the login endpoint — spec_file: tests/api/auth.spec.ts
 Or generate a whole backlog from an API docs page:
 
 ```bash
-npm run analyze-prd -- --url https://automationexercise.com/api_list
+npm run analyze_prd -- --url https://automationexercise.com/api_list
 # review prd-tests.txt, then for each test use generate_api_test from Claude Code
 ```
 
@@ -292,7 +292,7 @@ If you've added tests manually, fixed tests outside the MCP tools, or had a serv
 error mid-generation, run:
 
 ```bash
-npm run sync-registry
+npm run sync_registry
 ```
 
 This runs the full suite, adds missing passing tests, promotes resolved broken entries,
@@ -301,7 +301,7 @@ and flags regressions — but only after a second run to rule out transient fail
 For a faster check (only re-runs known broken/app-bug entries):
 
 ```bash
-npm run update-registry
+npm run update_registry
 ```
 
 The same commands handle both `TEST_CASES.md` (UI/E2E tests) and `TEST_API.md` (API

@@ -12,10 +12,10 @@ See [TOOLS.md](TOOLS.md) for a quick index and [docs/](docs/) for per-tool guide
 
 ```bash
 npm run generate -- --file my-test.txt   # generate a test from description
-npm run analyze-prd -- --file prd.md     # generate test backlog from a PRD
+npm run analyze_prd -- --file prd.md     # generate test backlog from a PRD
 npm run fix                               # investigate and fix failing tests
-npm run sync-registry                     # reconcile TEST_CASES.md with reality
-npm run update-registry                   # re-check known broken/app-bug entries
+npm run sync_registry                     # reconcile TEST_CASES.md with reality
+npm run update_registry                   # re-check known broken/app-bug entries
 npm test                                  # run all tests headless
 npm run mcp                               # start MCP server manually
 ```
@@ -29,8 +29,8 @@ src/
   index.ts              — MCP server entry point, 8 tools registered
   cli.ts                — npm run generate (interactive, budget-controlled)
   fix-cli.ts            — npm run fix
-  analyze-prd-cli.ts    — npm run analyze-prd
-  sync-registry-cli.ts  — npm run sync-registry
+  analyze-prd-cli.ts    — npm run analyze_prd
+  sync-registry-cli.ts  — npm run sync_registry
   update-registry-cli.ts
   tools/
     generate-test.ts    — core test generation (Claude for spec, local LLM for POM)
@@ -78,7 +78,7 @@ fixtures/index.ts       — custom test + expect (ad-blocking + popup handling)
 
 | File | Managed by |
 |------|-----------|
-| `TEST_CASES.md` | `generate_test` tool, `npm run sync-registry`, `npm run update-registry` — UI and E2E tests |
+| `TEST_CASES.md` | `generate_test` tool, `npm run sync_registry`, `npm run update_registry` — UI and E2E tests |
 | `TEST_API.md` | same — API tests (`tests/api/`) only |
 | `src/prompts/learned-rules.md` | `investigate_and_fix` (auto-appends after every fix) |
 | `test-data/.auth/guest.json` | `global.setup.ts` (Playwright setup) |

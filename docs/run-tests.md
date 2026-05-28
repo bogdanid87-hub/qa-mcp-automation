@@ -63,7 +63,7 @@ Running tests manually never touches `TEST_CASES.md` or `TEST_API.md`. If you wa
 the registries updated after a manual run, use:
 
 ```bash
-npm run sync-registry    # reconcile TEST_CASES.md with actual results
+npm run sync_registry    # reconcile TEST_CASES.md with actual results
 ```
 
 See [docs/test-registry.md](test-registry.md) for details.

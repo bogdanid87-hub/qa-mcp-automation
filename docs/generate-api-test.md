@@ -10,7 +10,7 @@ to the Claude API automatically. Writes to `tests/api/` and records results in
 ## When to use it
 
 - Testing an HTTP endpoint directly (status code, response body, error handling)
-- After running `npm run analyze-prd -- --url <api-docs-page>` — the generated `prd-tests.txt`
+- After running `npm run analyze_prd -- --url <api-docs-page>` — the generated `prd-tests.txt`
   already has `# spec_file: tests/api/...` set; call this tool for each suggested block
 - When you want API test coverage without spending Claude API tokens on generation
 
@@ -109,7 +109,7 @@ After writing the spec, the tool:
 
 ```bash
 # 1. Fetch the API documentation page and generate a test backlog
-npm run analyze-prd -- --url https://automationexercise.com/api_list
+npm run analyze_prd -- --url https://automationexercise.com/api_list
 
 # 2. Review prd-tests.txt — spec_file: tests/api/... is already set
 #    Delete the blocks you don't want
@@ -119,7 +119,7 @@ npm run analyze-prd -- --url https://automationexercise.com/api_list
 #    → local LLM generates, runs, records in TEST_API.md (zero API cost)
 
 # 4. Keep TEST_API.md in sync after any manual changes
-npm run sync-registry
+npm run sync_registry
 ```
 
 ---
@@ -129,6 +129,6 @@ npm run sync-registry
 API tests are tracked separately from UI/E2E tests:
 - Passing tests → `TEST_API.md` (passing table)
 - App bugs / broken tests → `TEST_API.md` (separate sections)
-- `npm run sync-registry` handles both `TEST_CASES.md` and `TEST_API.md`
+- `npm run sync_registry` handles both `TEST_CASES.md` and `TEST_API.md`
 
 See [docs/test-registry.md](test-registry.md) for full details.

@@ -35,9 +35,9 @@ Every test suggestion is classified into one of four tiers:
 Point directly at any URL — API documentation, a wiki page, a Confluence spec, a feature changelog. The tool navigates headlessly via Playwright, extracts the fully-rendered text, and passes it to Claude as the PRD. Handles JS-rendered content.
 
 ```bash
-npm run analyze-prd -- --url https://automationexercise.com/api_list
-npm run analyze-prd -- --url https://example.com/api-docs --tier high,critical
-npm run analyze-prd -- --url https://wiki.internal/feature-spec --focus checkout
+npm run analyze_prd -- --url https://automationexercise.com/api_list
+npm run analyze_prd -- --url https://example.com/api-docs --tier high,critical
+npm run analyze_prd -- --url https://wiki.internal/feature-spec --focus checkout
 ```
 
 This is the recommended input for API test generation — point at the API docs page and get a test backlog without any copy-pasting.
@@ -50,7 +50,7 @@ Paste any content into `prd.md`: user stories, acceptance criteria, feature list
 plain prose, mixed formats. The tool extracts structure from whatever you give it.
 
 ```bash
-npm run analyze-prd -- --file prd.md
+npm run analyze_prd -- --file prd.md
 ```
 
 Copy the example template to get started:
@@ -66,7 +66,7 @@ PDF is the recommended format when you have a polished spec from Word, PowerPoin
 Confluence, Notion, or Google Docs. Export directly to PDF — no copy-pasting needed.
 
 ```bash
-npm run analyze-prd -- --file ~/Downloads/checkout-spec.pdf
+npm run analyze_prd -- --file ~/Downloads/checkout-spec.pdf
 ```
 
 **Why PDF over copy-paste:**
@@ -89,13 +89,13 @@ factors them into the test suggestions — you don't need to pass them separatel
 Pass a single image as the main input:
 
 ```bash
-npm run analyze-prd -- --file wireframe.png
+npm run analyze_prd -- --file wireframe.png
 ```
 
 Or add images alongside a text description with `--images`:
 
 ```bash
-npm run analyze-prd -- --file prd.md --images wireframe.png,flow-diagram.jpg
+npm run analyze_prd -- --file prd.md --images wireframe.png,flow-diagram.jpg
 ```
 
 Claude analyses the visual content — button labels, form fields, navigation
@@ -117,7 +117,7 @@ These binary formats are not read directly. Export to PDF first:
 
 Then:
 ```bash
-npm run analyze-prd -- --file ~/Downloads/your-spec.pdf
+npm run analyze_prd -- --file ~/Downloads/your-spec.pdf
 ```
 
 ---
@@ -131,27 +131,27 @@ Use filters when you want to scope the output to a specific sprint or priority.
 
 ```bash
 # Only critical tests
-npm run analyze-prd -- --file prd.md --tier critical
+npm run analyze_prd -- --file prd.md --tier critical
 
 # Critical and high only (most common — skip medium/low noise)
-npm run analyze-prd -- --file prd.md --tier critical,high
+npm run analyze_prd -- --file prd.md --tier critical,high
 ```
 
 ### By feature area
 
 ```bash
 # Only checkout-related tests
-npm run analyze-prd -- --file prd.md --focus checkout
+npm run analyze_prd -- --file prd.md --focus checkout
 
 # Multiple areas
-npm run analyze-prd -- --file prd.md --focus checkout,authentication,cart
+npm run analyze_prd -- --file prd.md --focus checkout,authentication,cart
 ```
 
 ### Combining filters
 
 ```bash
 # High-priority checkout tests only — useful for a targeted sprint
-npm run analyze-prd -- --file prd.md --tier critical,high --focus checkout
+npm run analyze_prd -- --file prd.md --tier critical,high --focus checkout
 ```
 
 When filters are active they are noted in the header of `prd-tests.txt` so you
@@ -191,7 +191,7 @@ comments by the generate tool and do not affect test generation.
 ### Custom output file
 
 ```bash
-npm run analyze-prd -- --file prd.md --output sprint-14-tests.txt
+npm run analyze_prd -- --file prd.md --output sprint-14-tests.txt
 ```
 
 ---
@@ -204,7 +204,7 @@ cp prd.md.example prd.md
 # ... edit prd.md with your content ...
 
 # 2. Generate the gap list
-npm run analyze-prd -- --file prd.md --tier critical,high
+npm run analyze_prd -- --file prd.md --tier critical,high
 
 # 3. Review prd-tests.txt
 #    Delete the blocks you don't want, or reorder them

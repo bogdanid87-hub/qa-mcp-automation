@@ -122,7 +122,7 @@ Eight tools are available in Claude Code chat and (most) from the terminal. See 
 
 ```
 From a PRD:
-  npm run analyze-prd -- --file prd.md   →  review prd-tests.txt
+  npm run analyze_prd -- --file prd.md   →  review prd-tests.txt
   npm run generate -- --file prd-tests.txt
 
 New page, no POM yet:
@@ -135,7 +135,7 @@ Something failed:
   investigate_and_fix  /  npm run fix -- --pattern tests/ui/auth.spec.ts
 
 Registry out of sync:
-  npm run sync-registry
+  npm run sync_registry
 ```
 
 ---
@@ -144,10 +144,10 @@ Registry out of sync:
 
 ```bash
 npm run generate -- --file my-test.txt   # generate from description
-npm run analyze-prd -- --file prd.md     # generate test backlog from PRD
+npm run analyze_prd -- --file prd.md     # generate test backlog from PRD
 npm run fix                               # investigate and fix failing tests
-npm run sync-registry                     # reconcile TEST_CASES.md with reality
-npm run update-registry                   # re-check only known broken/app-bug entries
+npm run sync_registry                     # reconcile TEST_CASES.md with reality
+npm run update_registry                   # re-check only known broken/app-bug entries
 npm test                                  # run all tests headless
 npm run test:headed                       # browser visible
 npm run test:debug                        # Playwright inspector
@@ -186,9 +186,9 @@ qa-mcp-automation/
 │   ├── index.ts                  ← MCP server entry point — 8 tools registered
 │   ├── cli.ts                    ← npm run generate
 │   ├── fix-cli.ts                ← npm run fix
-│   ├── analyze-prd-cli.ts        ← npm run analyze-prd
-│   ├── sync-registry-cli.ts      ← npm run sync-registry
-│   ├── update-registry-cli.ts    ← npm run update-registry
+│   ├── analyze-prd-cli.ts        ← npm run analyze_prd
+│   ├── sync-registry-cli.ts      ← npm run sync_registry
+│   ├── update-registry-cli.ts    ← npm run update_registry
 │   └── tools/
 │       ├── generate-test.ts      ← Claude for spec; local LLM for POM
 │       ├── generate-pom.ts       ← locator-only POM scaffolding

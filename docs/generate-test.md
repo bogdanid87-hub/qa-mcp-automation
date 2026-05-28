@@ -165,4 +165,4 @@ Results are written to the correct registry automatically based on the spec path
 | Could not fix | Added to the `❌ Broken Tests` section with root cause |
 
 If `TEST_CASES.md` gets out of sync (server crash, manual edits), run
-`npm run sync-registry` to reconcile it — see [docs/test-registry.md](test-registry.md).
+`npm run sync_registry` to reconcile it — see [docs/test-registry.md](test-registry.md).
