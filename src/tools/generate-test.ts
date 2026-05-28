@@ -103,9 +103,19 @@ and is shown in the codebase context above. Generate ONLY the test spec file (te
 fixture additions if needed. Use the exact class name, constructor signature, and method \
 names from the POM as it appears in the context. Do NOT output any pages/ files.`;
 
+function extractJson(raw: string): string {
+  // Strip markdown fences if present
+  const stripped = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
+  // Try direct parse; if Claude added preamble text, find the outermost { }
+  try { JSON.parse(stripped); return stripped; } catch { /* fall through */ }
+  const start = stripped.indexOf('{');
+  const end = stripped.lastIndexOf('}');
+  if (start !== -1 && end > start) return stripped.slice(start, end + 1);
+  throw new Error('No JSON object found in response');
+}
+
 function parseJson(raw: string): GenerateResponse {
-  const jsonStr = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
-  return JSON.parse(jsonStr);
+  return JSON.parse(extractJson(raw));
 }
 
 export async function generateTestTool(args: {
@@ -191,7 +201,7 @@ export async function generateTestTool(args: {
           existingContext,
           domContext,
         }));
-        plan = JSON.parse(planRaw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim());
+        plan = JSON.parse(extractJson(planRaw));
       } catch {
         // Planning failed — fall through to Claude doing the full POM step
       }
