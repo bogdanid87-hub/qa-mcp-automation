@@ -65,13 +65,23 @@ function buildCoverageList(
   return `Already covered — do NOT suggest tests for these:\n${all.map(n => `- ${n}`).join('\n')}`;
 }
 
+export interface PrdFile {
+  data: string;           // base64-encoded content
+  mediaType: string;      // 'application/pdf' | 'image/png' | 'image/jpeg' | etc.
+}
+
 export async function analyzePrdTool(args: {
-  prdContent: string;
+  prdContent?: string;    // plain text / markdown (optional when prdFile is provided)
+  prdFile?: PrdFile;      // PDF passed directly to Claude
+  images?: PrdFile[];     // wireframes, mockups, screenshots
   outputFile?: string;
 }): Promise<{ content: { type: 'text'; text: string }[] }> {
   const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
   if (!apiKey) {
     return { content: [{ type: 'text', text: 'Error: ANTHROPIC_API_KEY is not set.' }] };
+  }
+  if (!args.prdContent && !args.prdFile) {
+    return { content: [{ type: 'text', text: 'Error: provide either prdContent (text) or prdFile (PDF/image).' }] };
   }
 
   // Load existing coverage so the tool only suggests what's missing
@@ -83,17 +93,52 @@ export async function analyzePrdTool(args: {
 
   const client = new Anthropic({ apiKey });
 
+  // Build the user message content — text first, then document (PDF), then images.
+  // Claude reads all provided media before generating suggestions.
+  const userContent: Anthropic.MessageParam['content'] = [
+    {
+      type: 'text',
+      text: coverageList + '\n\n---\n\n## PRD to analyse' +
+        (args.prdContent ? '\n\n' + args.prdContent : '\n\n(see attached file)'),
+    },
+  ];
+
+  if (args.prdFile) {
+    userContent.push({
+      type: 'document',
+      source: {
+        type: 'base64',
+        media_type: args.prdFile.mediaType as 'application/pdf',
+        data: args.prdFile.data,
+      },
+    } as unknown as Anthropic.TextBlockParam); // SDK types vary by version; cast is safe
+  }
+
+  for (const img of (args.images ?? [])) {
+    userContent.push({
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: img.mediaType as 'image/png',
+        data: img.data,
+      },
+    });
+  }
+
+  const hasPdf = !!args.prdFile && args.prdFile.mediaType === 'application/pdf';
+
   let raw: string;
   try {
-    const message = await client.messages.create({
-      model: MODEL,
-      max_tokens: 8192,
-      system: SYSTEM_PROMPT,
-      messages: [{
-        role: 'user',
-        content: `${coverageList}\n\n---\n\n## PRD to analyse\n\n${args.prdContent}`,
-      }],
-    });
+    const message = await client.messages.create(
+      {
+        model: MODEL,
+        max_tokens: 8192,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userContent }],
+      },
+      // PDF support requires the beta header on some SDK versions
+      hasPdf ? { headers: { 'anthropic-beta': 'pdfs-2024-09-25' } } : {},
+    );
     raw = message.content
       .filter(b => b.type === 'text')
       .map(b => (b as { type: 'text'; text: string }).text)

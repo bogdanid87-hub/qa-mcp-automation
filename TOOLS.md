@@ -19,7 +19,7 @@ Analyze this PRD and suggest test cases:
 
 | Parameter | Required | Example |
 |-----------|----------|---------|
-| `prd_content` | yes | full PRD text or a feature section |
+| `prd_content` | yes (MCP) | full PRD text, user stories, or feature description |
 | `output_file` | no | `"sprint-12-tests.txt"` (default: `prd-tests.txt`) |
 
 The output file uses the same format as `my-test.txt`, so you can feed it directly
@@ -140,10 +140,27 @@ List existing resources
 description. **`prd-tests.txt`** is the generated output (also gitignored).
 
 ```bash
-npm run analyze-prd -- --file prd.md               # write to prd-tests.txt (default)
+# Text / Markdown
+npm run analyze-prd -- --file prd.md
+
+# PDF — Claude reads it natively, layout and tables preserved
+npm run analyze-prd -- --file spec.pdf
+
+# Image — wireframe, mockup, or screenshot
+npm run analyze-prd -- --file wireframe.png
+
+# Text + supplementary images
+npm run analyze-prd -- --file prd.md --images wireframe.png,mockup.jpg
+
+# Custom output file
 npm run analyze-prd -- --file prd.md --output sprint-12-tests.txt
-npm run generate -- --file prd-tests.txt           # generate all suggested tests
+
+# Generate all suggested tests
+npm run generate -- --file prd-tests.txt
 ```
+
+**PowerPoint / Excel / Word** — export to PDF first, then use `--file spec.pdf`.
+Claude reads the PDF natively including any embedded diagrams.
 
 The output contains one test block per suggestion, separated by `---`, with
 `# risk:` and `# reason:` annotations for context. Delete the blocks you don't

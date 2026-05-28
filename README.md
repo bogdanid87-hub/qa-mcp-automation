@@ -359,9 +359,13 @@ Risk tiers: **critical** (revenue) → **high** (trust/data) → **medium** (con
 
 From the terminal:
 ```bash
-npm run analyze-prd -- --file prd.md
-npm run generate -- --file prd-tests.txt
+npm run analyze-prd -- --file prd.md                          # Markdown/text
+npm run analyze-prd -- --file spec.pdf                        # PDF (native, no conversion)
+npm run analyze-prd -- --file prd.md --images wireframe.png   # text + wireframes
+npm run generate -- --file prd-tests.txt                      # generate selected tests
 ```
+
+**PowerPoint / Excel / Word:** export to PDF first, then use `--file spec.pdf`.
 
 ---
 
