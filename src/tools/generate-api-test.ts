@@ -95,6 +95,12 @@ expect() returns void, not boolean. To assert "A or B", use a boolean expression
   CORRECT: expect(a.includes('top') || b.includes('top')).toBe(true);
   WRONG:   expect(a).toContain('top') || expect(b).toContain('top');  // TS error: void || void
 
+### automationexercise.com data shapes — known tricky fields
+- product.category is a NESTED OBJECT: { usertype: { usertype: "Women" }, category: "Tops" }
+  Never call .toLowerCase() directly on it. To read the category string: product.category.category
+- Duplicate email registration returns responseCode 400, message: "Email already exists!" (with the s)
+- getUserDetailByEmail response uses field name birth_day (not birth_date)
+
 ### Asserting message strings — use exact values
 When the test description specifies a message string, use toBe() with the exact string,
 never toContain() or a paraphrased alternative:

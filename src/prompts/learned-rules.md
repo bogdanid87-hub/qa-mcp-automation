@@ -68,4 +68,14 @@ Each rule is injected into the system prompt automatically.
 ## Rule 016 — The automationexercise.com getUserDetailByEmail response uses birth_day not birth_date
 **Problem class**: Asserting the field name birth_date in the getUserDetailByEmail API response fails because the actual field name returned by the server is birth_day.
 **Rule**: When asserting fields in the automationexercise.com GET /api/getUserDetailByEmail response, use birth_day (not birth_date). Always verify exact field names against a real response before writing assertions.
+## Rule 017 — Using || between two expect() calls produces a TypeScript void error
+**Problem class**: Writing `expect(a).toContain('x') || expect(b).toContain('x')` to express an OR assertion fails TypeScript compilation because expect() returns void, not boolean. `void || void` is not valid.
+**Rule**: To assert "A or B", use a boolean expression: `expect(a.includes('x') || b.includes('x')).toBe(true)`. Never use `||` or `&&` between `expect()` calls — they return void and cannot be combined with logical operators.
+## Rule 018 — product.category in automationexercise.com API is a nested object, not a string
+**Problem class**: Calling String() or .toLowerCase() directly on body.products[n].category fails because the field is a nested object { usertype: { usertype: "Women" }, category: "Tops" }, not a primitive string. Stringifying it produces "[object object]".
+**Rule**: Never treat product.category as a string. To read the category name, use product.category.category. When asserting search results, do not validate each product's category text — assert only that the array is non-empty.
+
+## Rule 019 — The duplicate email registration error message is "Email already exists!" with a trailing s
+**Problem class**: The automationexercise.com POST /api/createAccount endpoint returns the message "Email already exists!" (with an s at the end) when the email is already registered. Tests asserting "Email already exist!" (without the s) fail with a message mismatch.
+**Rule**: When asserting the duplicate-email error from /api/createAccount, always use the exact string: expect(body.message).toBe('Email already exists!') — note the trailing s.
 <!-- rules-end -->

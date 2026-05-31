@@ -353,9 +353,6 @@ test.describe('Auth API', () => {
   });
 
   // api-11-register-user-with-existing-email
-  /* ⚠️  BROKEN — failed and could not be auto-fixed.
-   * Root cause: Failed on first run — run `npm run fix` to investigate
-   * Fix manually or run: npm run fix */
   test('should return 400 when registering with an already existing email', async ({ request }) => {
     const body = await parseApiResponse(
       await request.post(CREATE_ACCOUNT_ENDPOINT, {
@@ -381,7 +378,7 @@ test.describe('Auth API', () => {
       })
     );
     expect(body.responseCode).toBe(400);
-    expect(body.message).toBe('Email already exist!');
+    expect(body.message).toBe('Email already exists!');
   });
 
   // api-7-verify-login-missing-password-parameter
