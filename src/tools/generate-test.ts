@@ -7,6 +7,8 @@ import { readFocusedContextForFeature, pomExistsForFeature } from './list-resour
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { runTests } from './run-tests.js';
 import { parsePassingTests, recordPassingTests, registryForSpec } from './test-registry.js';
+import { tagSpecAfterRecording } from './tag-tests.js';
+import { markBacklogEntriesCovered } from './analyze-coverage.js';
 import { autoFixFailure } from './investigate-fix.js';
 import { writeTestAnnotation } from './annotations.js';
 
@@ -396,7 +398,13 @@ Respond with the standard JSON:
     const hasFailed = testOutput.includes('failed') || (testOutput.match(/✗/g) ?? []).length > 0;
 
     const registry = registryForSpec(specFile.path);
-    if (passed > 0) await recordPassingTests(parsePassingTests(testOutput), registry);
+    if (passed > 0) {
+      const passingTests = parsePassingTests(testOutput);
+      await recordPassingTests(passingTests, registry);
+      await tagSpecAfterRecording(specFile.path).catch(() => { /* non-fatal */ });
+      const passingNames = passingTests.map(t => { const s = t.title.indexOf(' › '); return s === -1 ? t.title : t.title.substring(s + 3); });
+      await markBacklogEntriesCovered(passingNames).catch(() => { /* non-fatal */ });
+    }
 
     const registryName = specFile.path.startsWith('tests/api/') ? 'TEST_API.md' : 'TEST_CASES.md';
     if (passed > 0 && !hasFailed) {

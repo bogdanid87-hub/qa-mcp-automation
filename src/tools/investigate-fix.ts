@@ -6,6 +6,7 @@ import { readFocusedContextForFailure } from './list-resources.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { runTests, runTestsTool } from './run-tests.js';
 import { parsePassingTests, recordPassingTests, registryForSpec } from './test-registry.js';
+import { markBacklogEntriesCovered } from './analyze-coverage.js';
 import { TokenBudget } from './budget.js';
 
 const ROOT = process.cwd();
@@ -261,7 +262,10 @@ If the failure is not reproducible or the cause is unclear, set "lesson" to null
   if (fixedFiles.length > 0) {
     verifyOutput = await runTests(pattern);
     const registry = pattern ? registryForSpec(pattern) : undefined;
-    await recordPassingTests(parsePassingTests(verifyOutput), registry);
+    const passingTests = parsePassingTests(verifyOutput);
+    await recordPassingTests(passingTests, registry);
+    const passingNames = passingTests.map(t => { const s = t.title.indexOf(' › '); return s === -1 ? t.title : t.title.substring(s + 3); });
+    await markBacklogEntriesCovered(passingNames).catch(() => { /* non-fatal */ });
   }
 
   const failed = verifyOutput.includes('failed') || verifyOutput.includes('Error');

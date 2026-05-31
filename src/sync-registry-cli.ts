@@ -236,7 +236,10 @@ async function main(): Promise<void> {
       ...toAdd.map(t => { const s = t.title.indexOf(' › '); return s === -1 ? t.title : t.title.substring(s + 3); }),
       ...toPromote.map(e => e.name),
     ];
-    await markBacklogEntriesCovered(nowPassing).catch(() => { /* non-fatal */ });
+    const backlogClosed = await markBacklogEntriesCovered(nowPassing).catch(() => 0);
+    if (backlogClosed > 0) {
+      console.log(`📋 ${backlogClosed} gap${backlogClosed === 1 ? '' : 's'} marked ✅ in GAPS_BACKLOG.md\n`);
+    }
   }
 
   if (changed === 0) {

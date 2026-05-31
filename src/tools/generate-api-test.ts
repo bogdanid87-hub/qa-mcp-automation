@@ -5,6 +5,8 @@ import { TokenBudget } from './budget.js';
 import { isLocalLlmAvailable, callLocalLlm, LOCAL_MODEL } from './local-llm.js';
 import { runTests } from './run-tests.js';
 import { parsePassingTests, recordPassingTests, TESTS_API_PATH } from './test-registry.js';
+import { tagSpecAfterRecording } from './tag-tests.js';
+import { markBacklogEntriesCovered } from './analyze-coverage.js';
 import { autoFixFailure } from './investigate-fix.js';
 import { writeTestAnnotation } from './annotations.js';
 
@@ -259,7 +261,13 @@ export async function generateApiTestTool(args: {
     const passed = (testOutput.match(/✓/g) ?? []).length;
     const hasFailed = testOutput.includes('failed') || (testOutput.match(/✗/g) ?? []).length > 0;
 
-    if (passed > 0) await recordPassingTests(parsePassingTests(testOutput), TESTS_API_PATH);
+    if (passed > 0) {
+      const passingTests = parsePassingTests(testOutput);
+      await recordPassingTests(passingTests, TESTS_API_PATH);
+      await tagSpecAfterRecording(specFile.path).catch(() => { /* non-fatal */ });
+      const passingNames = passingTests.map(t => { const s = t.title.indexOf(' › '); return s === -1 ? t.title : t.title.substring(s + 3); });
+      await markBacklogEntriesCovered(passingNames).catch(() => { /* non-fatal */ });
+    }
 
     if (passed > 0 && !hasFailed) {
       testRunNote = `✅ ${passed} test${passed === 1 ? '' : 's'} passed — recorded in TEST_API.md`;

@@ -354,9 +354,9 @@ async function appendToGapsBacklog(gaps: Gap[], contextLabel: string, date: stri
  * names match the sentence-case test names recorded in the registry.
  * Exported so sync_registry can call it after recording passing tests.
  */
-export async function markBacklogEntriesCovered(passingTestNames: string[]): Promise<void> {
+export async function markBacklogEntriesCovered(passingTestNames: string[]): Promise<number> {
   let content: string;
-  try { content = await readFile(BACKLOG_PATH, 'utf-8'); } catch { return; }
+  try { content = await readFile(BACKLOG_PATH, 'utf-8'); } catch { return 0; }
 
   const norm = (s: string) => s.toLowerCase().replace(/[-\s\W]+/g, '');
   const covered = new Set(passingTestNames.map(norm));
@@ -374,6 +374,7 @@ export async function markBacklogEntriesCovered(passingTestNames: string[]): Pro
   );
 
   if (updated !== content) await writeFile(BACKLOG_PATH, updated, 'utf-8');
+  return (updated.match(/✅/g) ?? []).length - (content.match(/✅/g) ?? []).length;
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
