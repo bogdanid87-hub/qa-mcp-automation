@@ -22,8 +22,8 @@ test.describe('Contact Us Form', () => {
     const message = `Automated test message ${randomString(12)}`;
     await contactUsPage.fillForm(name, email, subject, message);
 
-    // Step 7: Upload a file
-    const filePath = path.resolve(__dirname, '../test-data/sample-upload.txt');
+    // Step 7: Upload a file — path is relative to project root test-data directory
+    const filePath = path.resolve(__dirname, '../../test-data/sample-upload.txt');
     await contactUsPage.uploadFile(filePath);
 
     // Step 8-9: Submit (accepts the JS confirm dialog automatically via dialog handler)

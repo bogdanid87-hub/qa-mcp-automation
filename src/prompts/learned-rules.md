@@ -78,4 +78,8 @@ Each rule is injected into the system prompt automatically.
 ## Rule 019 — The duplicate email registration error message is "Email already exists!" with a trailing s
 **Problem class**: The automationexercise.com POST /api/createAccount endpoint returns the message "Email already exists!" (with an s at the end) when the email is already registered. Tests asserting "Email already exist!" (without the s) fail with a message mismatch.
 **Rule**: When asserting the duplicate-email error from /api/createAccount, always use the exact string: expect(body.message).toBe('Email already exists!') — note the trailing s.
+
+## Rule 020 — Wrong relative path from test file to shared test-data directory causes ENOENT at runtime
+**Problem class**: Wrong relative path from test file to shared test-data directory causes ENOENT at runtime.
+**Rule**: When resolving paths to shared test fixtures (uploads, test data files), always count the directory depth from the spec file to the project root correctly. Spec files in `tests/ui/` are two levels deep, so the path to `test-data/` at the project root requires `../../test-data/`, not `../test-data/`.
 <!-- rules-end -->

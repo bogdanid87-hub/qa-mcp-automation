@@ -112,6 +112,15 @@ async function main(): Promise<void> {
     const bar = '─'.repeat(48);
     console.log(`\n${bar}`);
 
+    if (fix.verdict === 'flaky') {
+      console.log('  Verdict: 🌀 Flaky / transient failure');
+      console.log(`\n  ${fix.rootCause}`);
+      console.log(`\n  The test was NOT modified. Re-run to confirm or add retries to playwright.config.ts.`);
+      console.log(`\n  Budget used: ${budget.summary}`);
+      console.log(`${bar}`);
+      break;
+    }
+
     if (fix.verdict === 'app_bug') {
       console.log('  Verdict: ⚠️  Application bug');
       console.log(`\n  The test is correct — the application has a defect.`);

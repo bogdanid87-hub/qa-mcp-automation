@@ -292,33 +292,44 @@ export function parseFailingTestsFromOutput(output: string): FailingTestResult[]
 
 export async function recordPassingTests(
   passing: PassingTest[],
-  registryPath = TESTS_UI_PATH,
+  _registryPath = TESTS_UI_PATH, // kept for caller compatibility — routing uses registryForSpec(spec)
 ): Promise<void> {
   if (passing.length === 0) return;
 
-  let content = '';
-  try { content = await readFile(registryPath, 'utf-8'); } catch { /* new file */ }
-
-  const existing = parseTestCases(content);
-  const broken = parseBrokenTests(content);
-  const existingKeys = new Set(existing.map((e) => `${e.spec}::${e.name}`));
-  let nextNum = existing.length + 1; // position-based; display is per-section so max() would give wrong results
-  let changed = false;
-
+  // Group by the registry each test actually belongs in, so a broad run (no --pattern)
+  // never contaminates TESTS_UI.md with API or E2E entries.
+  const byRegistry = new Map<string, PassingTest[]>();
   for (const t of passing) {
-    const sep = t.title.indexOf(' › ');
-    if (sep === -1) continue;
-    const describe = t.title.substring(0, sep);
-    const name = t.title.substring(sep + 3);
-    const key = `${t.spec}::${name}`;
-    if (!existingKeys.has(key)) {
-      existing.push({ num: nextNum++, spec: t.spec, describe, name });
-      existingKeys.add(key);
-      changed = true;
-    }
+    const reg = registryForSpec(t.spec);
+    if (!byRegistry.has(reg)) byRegistry.set(reg, []);
+    byRegistry.get(reg)!.push(t);
   }
 
-  if (changed) await writeFile(registryPath, buildContent(existing, broken), 'utf-8');
+  for (const [reg, tests] of byRegistry) {
+    let content = '';
+    try { content = await readFile(reg, 'utf-8'); } catch { /* new file */ }
+
+    const existing = parseTestCases(content);
+    const broken = parseBrokenTests(content);
+    const existingKeys = new Set(existing.map((e) => `${e.spec}::${e.name}`));
+    let nextNum = existing.length + 1;
+    let changed = false;
+
+    for (const t of tests) {
+      const sep = t.title.indexOf(' › ');
+      if (sep === -1) continue;
+      const describe = t.title.substring(0, sep);
+      const name = t.title.substring(sep + 3);
+      const key = `${t.spec}::${name}`;
+      if (!existingKeys.has(key)) {
+        existing.push({ num: nextNum++, spec: t.spec, describe, name });
+        existingKeys.add(key);
+        changed = true;
+      }
+    }
+
+    if (changed) await writeFile(reg, buildContent(existing, broken), 'utf-8');
+  }
 }
 
 /** Add a broken or app-bug test to the appropriate registry. Skips if already recorded. */

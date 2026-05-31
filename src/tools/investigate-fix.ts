@@ -5,7 +5,7 @@ import { getSystemBlocks, appendLearnedRule } from '../prompts/system.js';
 import { readFocusedContextForFailure } from './list-resources.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { runTests, runTestsTool } from './run-tests.js';
-import { parsePassingTests, recordPassingTests, registryForSpec } from './test-registry.js';
+import { parsePassingTests, recordPassingTests, registryForSpec, parseFailingTestsFromOutput } from './test-registry.js';
 import { markBacklogEntriesCovered } from './analyze-coverage.js';
 import { TokenBudget } from './budget.js';
 
@@ -80,7 +80,7 @@ interface InvestigateResponse {
 
 export interface AutoFixResult {
   fixed: boolean;
-  verdict: 'code_bug' | 'app_bug' | 'unclear';
+  verdict: 'code_bug' | 'app_bug' | 'unclear' | 'flaky';
   rootCause: string;
   /** Only present when verdict is 'app_bug' — describes what the app actually does. */
   actualBehavior?: string;
@@ -104,6 +104,25 @@ export async function autoFixFailure(
 ): Promise<AutoFixResult> {
   if (budget?.exceeded) {
     return { fixed: false, verdict: 'unclear', rootCause: '', fixedFiles: [], lesson: null, verifyOutput: '', budgetExceeded: true };
+  }
+
+  // Flakiness pre-check: re-run the failing test(s) once before spending any tokens.
+  // If they pass on retry, the failure was transient (network, app load, race condition).
+  const failingSpecs = [...new Set(parseFailingTestsFromOutput(failureOutput).map(f => f.spec))];
+  const retryPattern = failingSpecs.length === 1 ? failingSpecs[0] : pattern;
+  if (retryPattern) {
+    const retryOutput = await runTests(retryPattern);
+    if (!retryOutput.includes('failed') && !retryOutput.includes('Error')) {
+      return {
+        fixed: false,
+        verdict: 'flaky',
+        rootCause: 'Test(s) passed on a re-run — failure appears transient (network timeout, app overload, or race condition). No code changes made.',
+        fixedFiles: [],
+        lesson: null,
+        verifyOutput: retryOutput,
+        budgetExceeded: false,
+      };
+    }
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
@@ -300,7 +319,8 @@ export async function investigateFixTool(args: {
 
   const { verdict, rootCause, actualBehavior, fixedFiles, lesson } = await autoFixFailure(failureOutput, args.pattern);
 
-  const lines: string[] = [`## Verdict\n${verdict === 'app_bug' ? '⚠️  Application bug' : verdict === 'code_bug' ? '🔧 Code bug' : '❓ Unclear'}`, `\n## Root cause\n${rootCause}`];
+  const verdictLabel = verdict === 'app_bug' ? '⚠️  Application bug' : verdict === 'code_bug' ? '🔧 Code bug' : verdict === 'flaky' ? '🌀 Flaky / transient failure' : '❓ Unclear';
+  const lines: string[] = [`## Verdict\n${verdictLabel}`, `\n## Root cause\n${rootCause}`];
 
   if (verdict === 'app_bug') {
     lines.push(
