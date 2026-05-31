@@ -109,7 +109,9 @@ function extractJson(raw: string): string {
   const stripped = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
   // Try direct parse; if Claude added preamble text, find the outermost { }
   try { JSON.parse(stripped); return stripped; } catch { /* fall through */ }
-  const start = stripped.indexOf('{');
+  // Find the first { that starts at a line boundary to skip inline { in prose
+  const lineStart = stripped.search(/(?:^|\n)\s*\{/);
+  const start = lineStart !== -1 ? stripped.indexOf('{', lineStart) : stripped.indexOf('{');
   const end = stripped.lastIndexOf('}');
   if (start !== -1 && end > start) return stripped.slice(start, end + 1);
   throw new Error('No JSON object found in response');

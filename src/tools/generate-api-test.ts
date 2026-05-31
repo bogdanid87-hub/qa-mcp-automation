@@ -157,7 +157,8 @@ Respond with raw JSON only (no markdown fences):
 function extractJson(raw: string): string {
   const stripped = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
   try { JSON.parse(stripped); return stripped; } catch { /* */ }
-  const start = stripped.indexOf('{');
+  const lineStart = stripped.search(/(?:^|\n)\s*\{/);
+  const start = lineStart !== -1 ? stripped.indexOf('{', lineStart) : stripped.indexOf('{');
   const end = stripped.lastIndexOf('}');
   if (start !== -1 && end > start) return stripped.slice(start, end + 1);
   throw new Error('No JSON object found');

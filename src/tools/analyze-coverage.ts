@@ -475,7 +475,9 @@ export async function analyzeCoverageTool(args: {
     const stripped = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
     const jsonStr = (() => {
       try { JSON.parse(stripped); return stripped; } catch { /* */ }
-      const s = stripped.indexOf('{'); const e = stripped.lastIndexOf('}');
+      const lineStart = stripped.search(/(?:^|\n)\s*\{/);
+      const s = lineStart !== -1 ? stripped.indexOf('{', lineStart) : stripped.indexOf('{');
+      const e = stripped.lastIndexOf('}');
       if (s !== -1 && e > s) return stripped.slice(s, e + 1);
       throw new Error('No JSON found');
     })();
