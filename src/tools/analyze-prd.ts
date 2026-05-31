@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { writeFile } from 'fs/promises';
+import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { readTestCases, readBrokenTests } from './test-registry.js';
 
@@ -243,9 +243,32 @@ export async function analyzePrdTool(args: {
 
   await writeFile(outputPath, header + raw.trim() + '\n', 'utf-8');
 
+  // Append to persistent gap backlog so identified gaps survive between sessions
+  const BACKLOG_PATH = join(ROOT, 'GAPS_BACKLOG.md');
+  const BACKLOG_HEADER = '# Gaps Backlog\n\nGaps identified by analyze_coverage and analyze_prd that have not yet been generated.\nDelete rows or mark ✅ when addressed.\n\n';
+  const date = new Date().toISOString().slice(0, 10);
+  const sourceLabel = args.prdContent
+    ? args.prdContent.slice(0, 60).replace(/\n/g, ' ').trim() + '…'
+    : 'file/url input';
+  const backlogSection = [
+    `## ${date} — analyze_prd — ${sourceLabel} (${testCount} suggestion${testCount === 1 ? '' : 's'})`,
+    '',
+    `${criticalCount} critical · ${highCount} high · ${testCount - criticalCount - highCount} medium/low`,
+    `Output: prd-tests.txt`,
+    '',
+    '---',
+    '',
+  ].join('\n');
+  try {
+    let existing = await readFile(BACKLOG_PATH, 'utf-8').catch(() => BACKLOG_HEADER);
+    if (!existing.startsWith('# Gaps Backlog')) existing = BACKLOG_HEADER + existing;
+    await writeFile(BACKLOG_PATH, existing.trimEnd() + '\n\n' + backlogSection, 'utf-8');
+  } catch { /* non-fatal */ }
+
   const lines = [
     `✅ ${testCount} test suggestion${testCount === 1 ? '' : 's'} written to prd-tests.txt`,
     `   ${criticalCount} critical  ${highCount} high  ${testCount - criticalCount - highCount} medium/low`,
+    `   Backlog entry appended to: GAPS_BACKLOG.md`,
     '',
     'Review the file, remove what you don\'t want, then run:',
     '  npm run generate -- --file prd-tests.txt',

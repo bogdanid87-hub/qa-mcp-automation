@@ -90,3 +90,18 @@ test.describe('Place Order: Register while Checkout', () => { ... })
 
 The specific scenario belongs in the `test()` name. `spec_file` controls which
 file a test goes into; `test_name` only names the `test()` and `describe()` blocks.
+
+---
+
+## `source: direct | suggested` — meaning differs by tool
+
+Both `analyze_prd` and `analyze_coverage` use the `source` field but with subtly
+different criteria:
+
+| Tool | `direct` means | `suggested` means |
+|------|---------------|-------------------|
+| `analyze_prd` | Traced to a specific named item in the source document (API 5, US-03, Test Case 12) — omitting it leaves a documented requirement uncovered | Claude's own addition: negative case, edge case, or boundary condition not explicitly in the source |
+| `analyze_coverage` | Corresponds to a path or variant that visibly exists in the spec or app — a real missing test | Gap from testing best practices not directly implied by the existing tests |
+
+In both cases `direct` signals "this gap is non-negotiable" and `suggested`
+signals "this is Claude's professional opinion — review before generating".

@@ -298,6 +298,44 @@ async function analyzeUntestedPaths(specContent: string, apiKey: string): Promis
   return msg.content.filter(b => b.type === 'text').map(b => (b as any).text).join('');
 }
 
+// ── Gaps backlog ───────────────────────────────────────────────────────────────
+
+const BACKLOG_PATH = join(ROOT, 'GAPS_BACKLOG.md');
+
+const BACKLOG_HEADER = `# Gaps Backlog
+
+Gaps identified by analyze_coverage and analyze_prd that have not yet been generated.
+Delete rows or mark ✅ when addressed.
+
+`;
+
+/**
+ * Append a new entry to GAPS_BACKLOG.md so identified gaps persist across sessions.
+ * Creates the file with a header if it doesn't exist yet.
+ */
+async function appendToGapsBacklog(gaps: Gap[], contextLabel: string, date: string): Promise<void> {
+  let existing = '';
+  try { existing = await readFile(BACKLOG_PATH, 'utf-8'); } catch { existing = BACKLOG_HEADER; }
+  if (!existing.startsWith('# Gaps Backlog')) existing = BACKLOG_HEADER + existing;
+
+  const rows = gaps.map(g =>
+    `| ${g.priority ?? g.risk} | ${g.test_name} | \`${g.spec_file}\` | ${g.source} |`
+  ).join('\n');
+
+  const section = [
+    `## ${date} — analyze_coverage — ${contextLabel} (${gaps.length} gap${gaps.length === 1 ? '' : 's'})`,
+    '',
+    '| Priority | Test name | Spec | Source |',
+    '|----------|-----------|------|--------|',
+    rows,
+    '',
+    '---',
+    '',
+  ].join('\n');
+
+  await writeFile(BACKLOG_PATH, existing.trimEnd() + '\n\n' + section, 'utf-8');
+}
+
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 export async function analyzeCoverageTool(args: {
@@ -425,7 +463,9 @@ export async function analyzeCoverageTool(args: {
   if (args.generateGaps && total > 0) {
     const gapsPath = join(outDir, 'coverage-gaps.txt');
     await writeFile(gapsPath, buildGapsFile(result, contextLabel), 'utf-8');
+    await appendToGapsBacklog(result.gaps, contextLabel, new Date().toISOString().slice(0, 10));
     lines.push(`Gaps file written to: coverage-gaps.txt`);
+    lines.push(`Backlog entry appended to: GAPS_BACKLOG.md`);
     lines.push(`Run: npm run generate -- --file coverage-gaps.txt`);
   }
 
