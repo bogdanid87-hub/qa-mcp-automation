@@ -1,3 +1,5 @@
+import { access } from 'fs/promises';
+import { join } from 'path';
 import { runTests } from './tools/run-tests.js';
 import {
   readTestCases,
@@ -47,6 +49,15 @@ async function main(): Promise<void> {
   ]);
   const allRecordedPassing = [...recordedPassing, ...recordedPassingApi, ...recordedPassingE2e];
   const allRecordedBroken  = [...recordedBroken,  ...recordedBrokenApi,  ...recordedBrokenE2e];
+
+  // Warn about spec files referenced in registries that no longer exist on disk
+  const ROOT = process.cwd();
+  const registeredSpecs = new Set([...allRecordedPassing, ...allRecordedBroken].map(e => e.spec));
+  for (const spec of registeredSpecs) {
+    try { await access(join(ROOT, spec)); } catch {
+      console.log(`⚠️  Orphaned registry entry: ${spec} no longer exists on disk. Run sync_registry again after deleting its entries manually.\n`);
+    }
+  }
 
   const passingKeys = new Set(allRecordedPassing.map(e => `${e.spec}::${e.name}`));
   const brokenKeys  = new Set(allRecordedBroken.map(e => `${e.spec}::${e.name}`));

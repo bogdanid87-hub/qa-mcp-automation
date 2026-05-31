@@ -108,9 +108,13 @@ export interface BrokenEntry {
 /** Infer risk level from spec path and describe block name. */
 export function deriveRisk(spec: string, describe: string): 'critical' | 'high' | 'medium' | 'low' {
   const s = (spec + ' ' + describe).toLowerCase();
-  if (/checkout|payment|order|place.order|cart.total|confirm/.test(s)) return 'critical';
-  if (/login|auth|register|account|password|credential|delete.account/.test(s)) return 'high';
-  if (/search|product|filter|brand|navigation|cart(?!.total)/.test(s)) return 'medium';
+  // Critical: revenue-impacting flows — order placement, payment, checkout
+  if (/checkout|payment|place.order|order.confirm|complete.purchase/.test(s)) return 'critical';
+  // High: trust and data integrity — authentication, account lifecycle, data accuracy
+  if (/login|register|account|password|credential|verify.login|create.account|delete.account|auth/.test(s)) return 'high';
+  // Medium: conversion paths — product discovery, cart operations, navigation
+  if (/cart|search|product|filter|brand|navigation/.test(s)) return 'medium';
+  // Low: content and supplementary UX
   return 'low';
 }
 

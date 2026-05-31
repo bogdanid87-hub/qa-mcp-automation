@@ -104,16 +104,44 @@ spec_file rules:
   that string in the description, not "Bad request" or "email parameter is missing".
 `;
 
+/**
+ * Read unresolved test_names from GAPS_BACKLOG.md so we don't re-suggest
+ * gaps that have already been identified (even if not yet generated).
+ */
+async function readBacklogTestNames(): Promise<string[]> {
+  const BACKLOG_PATH = join(ROOT, 'GAPS_BACKLOG.md');
+  try {
+    const content = await readFile(BACKLOG_PATH, 'utf-8');
+    const names: string[] = [];
+    for (const line of content.split('\n')) {
+      if (!line.startsWith('|')) continue;
+      const cells = line.split('|').slice(1, -1).map(c => c.trim());
+      if (cells.length < 4) continue;
+      const [priority, testName] = cells;
+      // Skip resolved entries (marked ✅) and header/separator rows
+      if (!testName || priority === 'Priority' || /^[-: ]+$/.test(priority)) continue;
+      if (priority.includes('✅') || testName.includes('~~')) continue;
+      names.push(testName.trim());
+    }
+    return names;
+  } catch {
+    return [];
+  }
+}
+
 function buildCoverageList(
   passing: Awaited<ReturnType<typeof readTestCases>>,
   broken: Awaited<ReturnType<typeof readBrokenTests>>,
+  backlogNames: string[] = [],
 ): string {
-  const all = [
+  const covered = [
     ...passing.map(t => `${t.describe} › ${t.name}`),
     ...broken.map(t => `${t.describe} › ${t.name}`),
   ];
+  const inBacklog = backlogNames.map(n => `${n} (in gap backlog — already identified, not yet generated)`);
+  const all = [...covered, ...inBacklog];
   if (all.length === 0) return 'No existing test coverage.';
-  return `Already covered — do NOT suggest tests for these:\n${all.map(n => `- ${n}`).join('\n')}`;
+  return `Already covered or queued — do NOT suggest tests for these:\n${all.map(n => `- ${n}`).join('\n')}`;
 }
 
 export interface PrdFile {
@@ -137,11 +165,12 @@ export async function analyzePrdTool(args: {
     return { content: [{ type: 'text', text: 'Error: provide either prdContent (text) or prdFile (PDF/image).' }] };
   }
 
-  // Load existing coverage so the tool only suggests what's missing
+  // Load existing coverage (registry) + backlog so we don't re-suggest known gaps
   let coverageList = 'Could not read existing coverage.';
   try {
     const [passing, broken] = await Promise.all([readTestCases(), readBrokenTests()]);
-    coverageList = buildCoverageList(passing, broken);
+    const backlogNames = await readBacklogTestNames();
+    coverageList = buildCoverageList(passing, broken, backlogNames);
   } catch { /* proceed without coverage */ }
 
   const client = new Anthropic({ apiKey });
