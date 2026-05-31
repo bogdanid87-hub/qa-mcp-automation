@@ -1,6 +1,6 @@
 # Test Cases
 
-**Total: 22 tests**
+**Total: 21 tests**
 
 ---
 
@@ -15,9 +15,8 @@
 | 3 | should return brands list |
 | 4 | should return method not supported for PUT to brands list |
 | 5 | should return bad request for missing search_product parameter |
-| 6 | should return no matching products for non-existent search term |
-| 7 | should return a valid response for non-existent search term |
-| 8 | should return products matching search term |
+| 6 | should return a valid response for non-existent search term |
+| 7 | should return products matching search term |
 
 ---
 
