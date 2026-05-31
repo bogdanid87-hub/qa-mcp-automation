@@ -30,6 +30,8 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 | `npm run generate_api` | CLI version of `generate_api_test` — inline description or file | [docs/generate-api-test.md](docs/generate-api-test.md) |
 | `npm run generate` | Generate a test from `my-test.txt` (or any batch `.txt` file) | [docs/generate-test.md](docs/generate-test.md) |
 | `npm run fix` | Interactive fix loop for failing tests | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
+| `npm run status` | Suite health at a glance: registry counts, tagging ratio, open backlog gaps, spec file counts | — |
+| `npm run tag_tests` | Insert `// [UI/API/E2E Describe #N]` comments before each test() call | — |
 | `npm run sync_registry` | Full reconciliation of `TESTS_UI.md` against actual test results | [docs/test-registry.md](docs/test-registry.md) |
 | `npm run update_registry` | Re-check only recorded broken/app-bug entries | [docs/test-registry.md](docs/test-registry.md) |
 | `npm test` | Run all tests headless | [docs/run-tests.md](docs/run-tests.md) |

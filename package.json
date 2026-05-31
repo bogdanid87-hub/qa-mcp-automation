@@ -11,6 +11,7 @@
     "analyze_prd": "tsx src/analyze-prd-cli.ts",
     "analyze_coverage": "tsx src/analyze-coverage-cli.ts",
     "tag_tests": "tsx src/tag-tests-cli.ts",
+    "status": "tsx src/status-cli.ts",
     "generate_api": "tsx src/generate-api-test-cli.ts",
     "mcp": "tsx src/index.ts",
     "test": "playwright test",

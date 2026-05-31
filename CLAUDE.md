@@ -26,7 +26,9 @@ npm run generate_api -- --description "..." # generate an API test (local LLM fi
 npm run analyze_prd -- --file prd.md     # generate test backlog from a PRD
 npm run analyze_coverage -- --spec tests/ui/contact.spec.ts  # coverage gap analysis
 npm run fix                               # investigate and fix failing tests
-npm run sync_registry                     # reconcile TESTS_UI.md with reality
+npm run status                            # suite health at a glance
+npm run tag_tests                         # tag spec files with registry IDs
+    npm run sync_registry                     # reconcile TESTS_UI.md with reality
 npm run update_registry                   # re-check known broken/app-bug entries
 npm test                                  # run all tests headless
 npm run mcp                               # start MCP server manually
@@ -45,6 +47,7 @@ src/
   analyze-coverage-cli.ts — npm run analyze_coverage
   sync-registry-cli.ts  — npm run sync_registry
   update-registry-cli.ts
+  status-cli.ts             — npm run status
   tools/
     generate-test.ts    — core test generation (Claude for spec, local LLM for POM)
     generate-pom.ts     — locator-only POM scaffolding from live DOM
