@@ -11,7 +11,7 @@ Describe a test scenario in plain English. The server uses **Claude Sonnet 4.6**
 ## What this project demonstrates
 
 ### MCP server architecture
-A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes eight AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
+A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes nine AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
 
 ### Dual-model routing with local LLM fallback
 The project uses two AI models for different tasks based on what each does best and what it costs:
@@ -105,10 +105,11 @@ NO_LOCAL_LLM=1 npm run generate -- --file my-test.txt   # same via env var
 
 ## Tools
 
-Eight tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
+Nine tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
 
 | Tool | One-liner | Guide |
 |------|-----------|-------|
+| `analyze_coverage` | Analyse the existing test suite for coverage gaps and risk areas — scoped or full-suite, with optional URL context | [docs/analyze-coverage.md](docs/analyze-coverage.md) |
 | `analyze_prd` | Turn a PRD into a risk-prioritised test backlog (`prd-tests.txt`) | [docs/analyze-prd.md](docs/analyze-prd.md) |
 | `generate_pom` | Inspect a live page, write a locator-only POM — run before `generate_test` for new pages | [docs/generate-pom.md](docs/generate-pom.md) |
 | `generate_api_test` | Generate an API test (request fixture, no browser) — local LLM first, records to `TESTS_API.md` | [docs/generate-api-test.md](docs/generate-api-test.md) |
@@ -185,20 +186,26 @@ Separate multiple tests with `---` for batch mode (non-interactive, all run in s
 qa-mcp-automation/
 │
 ├── src/                          ← MCP server + CLIs
-│   ├── index.ts                  ← MCP server entry point — 8 tools registered
+│   ├── index.ts                  ← MCP server entry point — 9 tools registered
 │   ├── cli.ts                    ← npm run generate
 │   ├── fix-cli.ts                ← npm run fix
 │   ├── analyze-prd-cli.ts        ← npm run analyze_prd
+│   ├── analyze-coverage-cli.ts   ← npm run analyze_coverage
+│   ├── generate-api-test-cli.ts  ← npm run generate_api
+│   ├── tag-tests-cli.ts          ← npm run tag_tests
 │   ├── sync-registry-cli.ts      ← npm run sync_registry
 │   ├── update-registry-cli.ts    ← npm run update_registry
 │   └── tools/
 │       ├── generate-test.ts      ← Claude for spec; local LLM for POM
 │       ├── generate-pom.ts       ← locator-only POM scaffolding
-│       ├── analyze-prd.ts        ← PRD risk analysis
+│       ├── generate-api-test.ts  ← API test generation (local LLM first)
+│       ├── analyze-prd.ts        ← PRD risk analysis and test backlog
+│       ├── analyze-coverage.ts   ← coverage gap analysis with priority/risk split
 │       ├── investigate-fix.ts    ← failure diagnosis + fix (screenshot + DOM aware)
+│       ├── annotations.ts        ← writes APP BUG / BROKEN comments into specs
 │       ├── local-llm.ts          ← Ollama client with startup prompt
 │       ├── inspect-page.ts       ← headless DOM extraction
-│       ├── test-registry.ts      ← reads/writes TESTS_UI.md
+│       ├── test-registry.ts      ← reads/writes TESTS_UI.md, TESTS_API.md, TESTS_E2E.md
 │       └── budget.ts             ← fix-loop token cost tracking
 │
 ├── docs/                         ← per-tool documentation
@@ -213,12 +220,17 @@ qa-mcp-automation/
 │   │   ├── contact.spec.ts
 │   │   ├── search.spec.ts
 │   │   └── subscription.spec.ts
-│   └── e2e/                      ← full user journeys
-│       └── place-order.spec.ts
+│   ├── e2e/                      ← full user journeys
+│   │   └── place-order.spec.ts
+│   └── api/                      ← direct HTTP tests (no browser)
+│       ├── auth.spec.ts
+│       └── products.spec.ts
 │
 ├── CLAUDE.md                     ← auto-loaded by Claude Code — project context
 ├── TOOLS.md                      ← quick tool index
-├── TESTS_UI.md                 ← auto-updated test registry
+├── TESTS_UI.md                   ← auto-updated registry for UI tests
+├── TESTS_API.md                  ← auto-updated registry for API tests
+├── TESTS_E2E.md                  ← auto-updated registry for E2E tests
 ├── prd.md.example                ← template for PRD analysis (copy to prd.md)
 └── playwright.config.ts          ← Chromium only, baseURL, storageState
 ```

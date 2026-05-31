@@ -6,6 +6,7 @@ import { generateTestTool } from './tools/generate-test.js';
 import { generateApiTestTool } from './tools/generate-api-test.js';
 import { generatePomTool } from './tools/generate-pom.js';
 import { analyzePrdTool } from './tools/analyze-prd.js';
+import { analyzeCoverageTool } from './tools/analyze-coverage.js';
 import { runTestsTool } from './tools/run-tests.js';
 import { listResourcesTool } from './tools/list-resources.js';
 import { investigateFixTool } from './tools/investigate-fix.js';
@@ -44,6 +45,31 @@ server.registerTool(
     },
   },
   (args) => generateApiTestTool(args),
+);
+
+server.registerTool(
+  'analyze_coverage',
+  {
+    description:
+      'Analyse the existing test suite and identify coverage gaps and risk areas. ' +
+      'Scope to a specific spec file, folder, or registry; optionally fetch a page or docs URL for context. ' +
+      'Writes coverage-report.md (always) and optionally coverage-gaps.txt in the prd-tests.txt batch format. ' +
+      'For URLs pointing to automationexercise.com, DOM inspection is used for richer element context.',
+    inputSchema: {
+      spec_path: z.string().optional().describe('Spec file or folder to focus on, e.g. "tests/ui/contact.spec.ts" or "tests/api/"'),
+      registry_path: z.string().optional().describe('Registry file to focus on, e.g. "TESTS_UI.md"'),
+      url: z.string().optional().describe('URL for feature context — site pages use DOM extraction, external docs use plain text'),
+      generate_gaps: z.boolean().optional().describe('Also write coverage-gaps.txt in prd-tests.txt batch format (default: false)'),
+      deep: z.boolean().optional().describe('Run a pre-analysis pass to identify untested paths before the main analysis — improves accuracy but costs an extra Claude call (default: false)'),
+    },
+  },
+  (args) => analyzeCoverageTool({
+    specPath: args.spec_path,
+    registryPath: args.registry_path,
+    url: args.url,
+    generateGaps: args.generate_gaps,
+    deep: args.deep,
+  }),
 );
 
 server.registerTool(

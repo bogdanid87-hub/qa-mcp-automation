@@ -9,6 +9,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 
 | Tool | What it does | Doc |
 |------|-------------|-----|
+| `analyze_coverage` | Analyse the existing test suite for gaps and risk areas; writes `coverage-report.md` and optionally `coverage-gaps.txt` | [docs/analyze-coverage.md](docs/analyze-coverage.md) |
 | `analyze_prd` | Read a PRD or feature description and generate a risk-prioritised test backlog in `prd-tests.txt` | [docs/analyze-prd.md](docs/analyze-prd.md) |
 | `generate_pom` | Inspect a live page and generate a locator-only POM file — run this before `generate_test` when starting on a new page | [docs/generate-pom.md](docs/generate-pom.md) |
 | `generate_api_test` | Generate a Playwright API test (request fixture, no browser) — local LLM first, records to TESTS_API.md | [docs/generate-api-test.md](docs/generate-api-test.md) |
@@ -24,6 +25,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 
 | Command | What it does | Doc |
 |---------|-------------|-----|
+| `npm run analyze_coverage` | CLI version of `analyze_coverage` — scope by spec, folder, or registry; optional URL | [docs/analyze-coverage.md](docs/analyze-coverage.md) |
 | `npm run analyze_prd` | CLI version of `analyze_prd` — supports PDF and image inputs | [docs/analyze-prd.md](docs/analyze-prd.md) |
 | `npm run generate_api` | CLI version of `generate_api_test` — inline description or file | [docs/generate-api-test.md](docs/generate-api-test.md) |
 | `npm run generate` | Generate a test from `my-test.txt` (or any batch `.txt` file) | [docs/generate-test.md](docs/generate-test.md) |

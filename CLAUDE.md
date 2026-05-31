@@ -24,6 +24,7 @@ See [TOOLS.md](TOOLS.md) for a quick index and [docs/](docs/) for per-tool guide
 npm run generate -- --file my-test.txt   # generate a UI/E2E test from description
 npm run generate_api -- --description "..." # generate an API test (local LLM first)
 npm run analyze_prd -- --file prd.md     # generate test backlog from a PRD
+npm run analyze_coverage -- --spec tests/ui/contact.spec.ts  # coverage gap analysis
 npm run fix                               # investigate and fix failing tests
 npm run sync_registry                     # reconcile TESTS_UI.md with reality
 npm run update_registry                   # re-check known broken/app-bug entries
@@ -37,16 +38,18 @@ npm run mcp                               # start MCP server manually
 
 ```
 src/
-  index.ts              — MCP server entry point, 8 tools registered
+  index.ts              — MCP server entry point, 9 tools registered
   cli.ts                — npm run generate (interactive, budget-controlled)
   fix-cli.ts            — npm run fix
   analyze-prd-cli.ts    — npm run analyze_prd
+  analyze-coverage-cli.ts — npm run analyze_coverage
   sync-registry-cli.ts  — npm run sync_registry
   update-registry-cli.ts
   tools/
     generate-test.ts    — core test generation (Claude for spec, local LLM for POM)
     generate-pom.ts     — locator-only POM scaffolding from live DOM
     analyze-prd.ts      — PRD risk analysis and test backlog generation
+    analyze-coverage.ts — coverage gap analysis; scoped or full-suite, URL context, deep mode
     investigate-fix.ts  — failure diagnosis + fix (reads screenshots + live DOM)
     inspect-page.ts     — headless DOM extraction
     list-resources.ts   — lists existing files (recursive, covers ui/ and e2e/)
@@ -105,6 +108,7 @@ fixtures/index.ts       — custom test + expect (ad-blocking + popup handling)
 | POM generation — complex flows (> 2 pages) | Claude plans → Local LLM builds in parallel → Claude fills gaps |
 | Spec generation | Claude API always |
 | Failure investigation and fix | Claude API always (uses screenshots + DOM vision) |
+| Coverage gap analysis | Claude API always |
 | PRD risk analysis | Claude API always |
 | API test generation | Local LLM (qwen2.5-coder:14b) → Claude fallback |
 | Similarity check (before generate) | Claude API (cached test list) |
