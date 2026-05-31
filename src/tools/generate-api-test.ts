@@ -291,6 +291,12 @@ export async function generateApiTestTool(args: {
             `  What the API does: ${fix.actualBehavior ?? fix.rootCause}`,
             '  The test was NOT modified — annotated in the spec with ⚠️ APP BUG.',
           ].join('\n');
+        } else if (fix.verdict === 'flaky' || fix.verdict === 'transient') {
+          passing = true;
+          const retryPassed = parsePassingTests(fix.verifyOutput);
+          await recordPassingTests(retryPassed, TESTS_API_PATH);
+          const icon = fix.verdict === 'transient' ? '⚡' : '🌀';
+          testRunNote += `${icon} ${fix.rootCause}`;
         } else if (fix.fixed) {
           passing = true;
           const fixedPassed = (fix.verifyOutput.match(/✓/g) ?? []).length;
