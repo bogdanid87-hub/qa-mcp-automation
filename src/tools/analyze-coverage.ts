@@ -310,8 +310,10 @@ Delete rows or mark ✅ when addressed.
 `;
 
 /**
- * Append a new entry to GAPS_BACKLOG.md so identified gaps persist across sessions.
- * Creates the file with a header if it doesn't exist yet.
+ * Write or replace an entry in GAPS_BACKLOG.md for the given scope.
+ * If an entry for the same tool + scope already exists, it is replaced in-place
+ * (date is updated, gaps are refreshed). Otherwise a new section is appended.
+ * This prevents duplicate entries when the same scope is analysed multiple times.
  */
 async function appendToGapsBacklog(gaps: Gap[], contextLabel: string, date: string): Promise<void> {
   let existing = '';
@@ -333,7 +335,45 @@ async function appendToGapsBacklog(gaps: Gap[], contextLabel: string, date: stri
     '',
   ].join('\n');
 
-  await writeFile(BACKLOG_PATH, existing.trimEnd() + '\n\n' + section, 'utf-8');
+  // Replace existing entry for same scope, or append if new
+  const escapedLabel = contextLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const existingSection = new RegExp(
+    `## [^\n]+ — analyze_coverage — ${escapedLabel}[^\n]*\n[\\s\\S]*?---\n`,
+  );
+
+  const updated = existingSection.test(existing)
+    ? existing.replace(existingSection, section)
+    : existing.trimEnd() + '\n\n' + section;
+
+  await writeFile(BACKLOG_PATH, updated, 'utf-8');
+}
+
+/**
+ * Mark backlog rows as ✅ when tests with matching names are now passing.
+ * Uses normalised comparison (lowercase, strip punctuation) so kebab-case gap
+ * names match the sentence-case test names recorded in the registry.
+ * Exported so sync_registry can call it after recording passing tests.
+ */
+export async function markBacklogEntriesCovered(passingTestNames: string[]): Promise<void> {
+  let content: string;
+  try { content = await readFile(BACKLOG_PATH, 'utf-8'); } catch { return; }
+
+  const norm = (s: string) => s.toLowerCase().replace(/[-\s\W]+/g, '');
+  const covered = new Set(passingTestNames.map(norm));
+
+  // Match table data rows (not header/separator rows)
+  const updated = content.replace(
+    /^\| ([^|\n]+) \| ([^|\n]+) \| (`[^|\n]+`) \| ([^|\n]+) \|$/gm,
+    (line, priority, testName, spec, source) => {
+      if (testName.includes('✅')) return line; // already marked
+      if (covered.has(norm(testName.trim()))) {
+        return `| ✅ | ~~${testName.trim()}~~ | ${spec.trim()} | ${source.trim()} |`;
+      }
+      return line;
+    },
+  );
+
+  if (updated !== content) await writeFile(BACKLOG_PATH, updated, 'utf-8');
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────

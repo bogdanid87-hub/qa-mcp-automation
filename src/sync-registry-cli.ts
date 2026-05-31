@@ -17,6 +17,7 @@ import {
   type FailingTestResult,
 } from './tools/test-registry.js';
 import { readAnnotationFromSpec } from './tools/annotations.js';
+import { markBacklogEntriesCovered } from './tools/analyze-coverage.js';
 
 async function main(): Promise<void> {
   console.log('\n⏳ Running full test suite...\n');
@@ -227,6 +228,15 @@ async function main(): Promise<void> {
     }
     changed += toFlag.length;
     console.log('\n   ⚠️  BROKEN comments were NOT added to spec files — run `npm run fix -- --pattern <spec>` for each.\n');
+  }
+
+  // Auto-close matching GAPS_BACKLOG.md entries for tests that are now passing
+  if (toAdd.length > 0 || toPromote.length > 0) {
+    const nowPassing = [
+      ...toAdd.map(t => { const s = t.title.indexOf(' › '); return s === -1 ? t.title : t.title.substring(s + 3); }),
+      ...toPromote.map(e => e.name),
+    ];
+    await markBacklogEntriesCovered(nowPassing).catch(() => { /* non-fatal */ });
   }
 
   if (changed === 0) {
