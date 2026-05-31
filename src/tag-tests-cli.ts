@@ -52,7 +52,7 @@ async function main(): Promise<void> {
       }
 
       for (const name of notFound) {
-        warnings.push(`  ⚠️  [${prefix}] ${spec} — test name not found in file: "${name}" (test may have been renamed — run sync_registry)`);
+        warnings.push(`  ⚠️  [${prefix}] ${spec} — test name not found in file: "${name}" (if renamed: update the registry row; if deleted: remove it — sync_registry will not fix this)`);
       }
     }
   }

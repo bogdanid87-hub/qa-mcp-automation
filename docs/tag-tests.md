@@ -57,7 +57,7 @@ left untouched.
 ```
 ⚠️  [API] tests/api/products.spec.ts — test name not found in file:
     "should return no matching products for non-existent search term"
-    (test may have been renamed — run sync_registry)
+    (if renamed: update the registry row; if deleted: remove it — sync_registry will not fix this)
 ```
 
 This means the registry has an entry whose name does not appear verbatim in the spec
