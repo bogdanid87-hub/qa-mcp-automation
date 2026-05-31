@@ -44,6 +44,11 @@ function isLocatorFailure(output: string): boolean {
   return /locator\.\w+:.*timeout|waiting for locator\(|element\(s\) not found|toBeVisible.*failed/i.test(output);
 }
 
+/** True when the failure looks like a connectivity or navigation error — app was unreachable. */
+function isInfraFailure(output: string): boolean {
+  return /net::ERR_|ERR_CONNECTION_REFUSED|ERR_NAME_NOT_RESOLVED|ERR_ABORTED|Navigation failed|Failed to navigate|browser has been closed|Target closed|502|503/i.test(output);
+}
+
 /** Extract the spec file path from Playwright failure output. */
 function extractSpecPath(output: string): string | null {
   const m = output.match(/›\s+(tests\/[^\s:]+\.spec\.ts)/);
@@ -80,7 +85,7 @@ interface InvestigateResponse {
 
 export interface AutoFixResult {
   fixed: boolean;
-  verdict: 'code_bug' | 'app_bug' | 'unclear' | 'flaky';
+  verdict: 'code_bug' | 'app_bug' | 'unclear' | 'flaky' | 'transient';
   rootCause: string;
   /** Only present when verdict is 'app_bug' — describes what the app actually does. */
   actualBehavior?: string;
@@ -106,22 +111,20 @@ export async function autoFixFailure(
     return { fixed: false, verdict: 'unclear', rootCause: '', fixedFiles: [], lesson: null, verifyOutput: '', budgetExceeded: true };
   }
 
-  // Flakiness pre-check: re-run the failing test(s) once before spending any tokens.
-  // If they pass on retry, the failure was transient (network, app load, race condition).
+  // Retry pre-check: re-run the failing test(s) once before spending any tokens.
+  // If they pass on retry, classify by what the original failure looked like:
+  //   - connectivity/navigation error  →  'transient' (app was unavailable, not a test issue)
+  //   - locator/element timeout        →  'flaky'     (timing/race condition in the test)
   const failingSpecs = [...new Set(parseFailingTestsFromOutput(failureOutput).map(f => f.spec))];
   const retryPattern = failingSpecs.length === 1 ? failingSpecs[0] : pattern;
   if (retryPattern) {
     const retryOutput = await runTests(retryPattern);
     if (!retryOutput.includes('failed') && !retryOutput.includes('Error')) {
-      return {
-        fixed: false,
-        verdict: 'flaky',
-        rootCause: 'Test(s) passed on a re-run — failure appears transient (network timeout, app overload, or race condition). No code changes made.',
-        fixedFiles: [],
-        lesson: null,
-        verifyOutput: retryOutput,
-        budgetExceeded: false,
-      };
+      const verdict = isInfraFailure(failureOutput) ? 'transient' : 'flaky';
+      const rootCause = verdict === 'transient'
+        ? 'Test(s) passed on re-run — original failure was a connectivity or navigation error. The app may have been temporarily unavailable. No code changes made.'
+        : 'Test(s) passed on re-run — failure looks like a timing or race condition. Consider adding `retries: 1` in playwright.config.ts or a more resilient wait. No code changes made.';
+      return { fixed: false, verdict, rootCause, fixedFiles: [], lesson: null, verifyOutput: retryOutput, budgetExceeded: false };
     }
   }
 
@@ -319,7 +322,7 @@ export async function investigateFixTool(args: {
 
   const { verdict, rootCause, actualBehavior, fixedFiles, lesson } = await autoFixFailure(failureOutput, args.pattern);
 
-  const verdictLabel = verdict === 'app_bug' ? '⚠️  Application bug' : verdict === 'code_bug' ? '🔧 Code bug' : verdict === 'flaky' ? '🌀 Flaky / transient failure' : '❓ Unclear';
+  const verdictLabel = verdict === 'app_bug' ? '⚠️  Application bug' : verdict === 'code_bug' ? '🔧 Code bug' : verdict === 'flaky' ? '🌀 Flaky test' : verdict === 'transient' ? '⚡ Transient infrastructure failure' : '❓ Unclear';
   const lines: string[] = [`## Verdict\n${verdictLabel}`, `\n## Root cause\n${rootCause}`];
 
   if (verdict === 'app_bug') {
