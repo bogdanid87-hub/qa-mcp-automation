@@ -1,16 +1,6 @@
 # Test Cases
 
-**Total: 8 tests**
-
----
-
-## tests/ui/contact.spec.ts
-
-### Contact Us Form
-
-| # | Test |
-|---|------|
-| 1 | should submit the contact form and show success message |
+**Total: 7 tests**
 
 ---
 
@@ -52,9 +42,10 @@
 
 > These tests are correct — the application has a defect. Do not modify them.
 
-| Spec | Describe | Test | Root cause | Actual behaviour |
-|------|----------|------|------------|-----------------|
-| tests/ui/cart.spec.ts | Place Order: Add Products in Cart | should update total correctly when product quantity is changed in cart | The automationexercise.com cart page does not have an editable quantity input field (`.cart_quantity input`). The cart quantity is displayed as a static button/text element, not an `<input>` element. The locator `.cart_quantity input` never resolves because no such input exists in the DOM. | The cart page renders quantity as a read-only button element (`.cart_quantity button`) rather than an editable `<input>`. There is no inline quantity editor on the cart page — the site does not support updating quantity directly from the cart view. The `setQuantity` method times out waiting for an input element that does not exist. |
+| Risk | Spec | Describe | Test | Root cause | Actual behaviour |
+|------|------|----------|------|------------|-----------------|
+| critical | tests/ui/cart.spec.ts | Place Order: Add Products in Cart | should update total correctly when product quantity is changed in cart | The automationexercise.com cart page does not have an editable quantity input field (`.cart_quantity input`). The cart quantity is displayed as a static button/text element, not an `<input>` element. The locator `.cart_quantity input` never resolves because no such input exists in the DOM. | The cart page renders quantity as a read-only button element (`.cart_quantity button`) rather than an editable `<input>`. There is no inline quantity editor on the cart page — the site does not support updating quantity directly from the cart view. The `setQuantity` method times out waiting for an input element that does not exist. |
+| Risk | Spec | Describe | Test | Root cause | Actual behaviour |
 
 ---
 
@@ -62,5 +53,7 @@
 
 > Fix manually or run: `npm run fix -- --pattern <spec>`
 
-| Spec | Describe | Test | Root cause |
-|------|----------|------|------------|
+| Risk | Spec | Describe | Test | Root cause |
+|------|------|----------|------|------------|
+| Risk | Spec | Describe | Test | Root cause |
+| low | tests/ui/contact.spec.ts | Contact Us Form | should submit the contact form and show success message | Regression — failed on two consecutive runs. Run `npm run fix` to investigate. |

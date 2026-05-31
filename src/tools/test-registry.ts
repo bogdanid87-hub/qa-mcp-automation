@@ -135,7 +135,7 @@ function parseTableRows(section: string): string[][] {
     const cells = line.split('|').slice(1, -1).map(c => c.trim());
     if (cells.length === 0) continue;
     if (cells.every(c => /^[-: ]+$/.test(c))) continue; // separator row
-    if (cells[0] === 'Spec') continue;                   // header row
+    if (cells[0] === 'Spec' || cells[0] === 'Risk' || cells[0] === 'Priority') continue; // header row
     rows.push(cells);
   }
   return rows;
