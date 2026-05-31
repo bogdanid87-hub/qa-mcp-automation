@@ -439,10 +439,15 @@ export async function analyzeCoverageTool(args: {
   // ── Deep mode: pre-analysis pass to identify untested paths (option 4) ───────
   if (args.deep && args.specPath) {
     process.stdout.write('  Running deep path analysis (pre-pass)...\n');
-    const specContent = contextParts.find(p => p.startsWith('## Existing spec'))?.slice(20) ?? '';
+    const section = contextParts.find(p => p.startsWith('## Existing spec'));
+    const specContent = section ? section.slice(section.indexOf('\n') + 1).trim() : '';
     if (specContent) {
-      const untestedPaths = await analyzeUntestedPaths(specContent, apiKey);
-      contextParts.push(`## Pre-analysis: untested paths identified\n\n${untestedPaths}`);
+      try {
+        const untestedPaths = await analyzeUntestedPaths(specContent, apiKey);
+        contextParts.push(`## Pre-analysis: untested paths identified\n\n${untestedPaths}`);
+      } catch (err) {
+        process.stdout.write(`  ⚠️  Deep pre-pass failed (${(err as Error).message}) — continuing with single-pass analysis.\n`);
+      }
     }
   }
 

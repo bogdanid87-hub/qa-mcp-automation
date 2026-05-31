@@ -279,10 +279,12 @@ If the failure is not reproducible or the cause is unclear, set "lesson" to null
     : null;
   if (lesson) await appendLearnedRule({ problemClass: lesson.problemClass, rule: lesson.rule });
 
-  // Re-run to verify, then record passing tests
+  // Re-run to verify — use the detected spec path when no explicit pattern was given,
+  // so we don't run the entire suite just to confirm a single fix.
   let verifyOutput = '';
   if (fixedFiles.length > 0) {
-    verifyOutput = await runTests(pattern);
+    const verifyPattern = pattern ?? (failingSpecs.length === 1 ? failingSpecs[0] : undefined);
+    verifyOutput = await runTests(verifyPattern);
     const passingTests = parsePassingTests(verifyOutput);
     await recordPassingTests(passingTests);
     const passingNames = passingTests.map(t => { const s = t.title.indexOf(' › '); return s === -1 ? t.title : t.title.substring(s + 3); });

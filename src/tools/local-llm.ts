@@ -125,7 +125,15 @@ export async function callLocalLlm(systemPrompt: string, userPrompt: string): Pr
     throw new Error(`Ollama API error ${res.status}: ${body}`);
   }
 
-  const data = await res.json() as { message: { content: string } };
+  let data: { message: { content: string } };
+  try {
+    data = await res.json() as { message: { content: string } };
+  } catch (err) {
+    throw new Error(`Ollama returned unparseable response (${(err as Error).message}) — check model health`);
+  }
+  if (!data?.message?.content) {
+    throw new Error('Ollama response missing message.content — model may have returned an empty or malformed response');
+  }
   return data.message.content;
 }
 

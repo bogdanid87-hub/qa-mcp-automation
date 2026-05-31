@@ -81,7 +81,10 @@ async function generateForSnapshot(opts: {
       const raw = await callLocalLlm(SYSTEM_PROMPT, userPrompt);
       const parsed = JSON.parse(extractJson(raw)) as { file: string; content: string };
       if (parsed.file && parsed.content) return parsed;
-    } catch { /* fall through to Claude */ }
+      process.stderr.write(`[local-llm] POM response missing file/content fields — falling back to Claude API\n`);
+    } catch (err) {
+      process.stderr.write(`[local-llm] POM generation failed (${(err as Error).message}) — falling back to Claude API\n`);
+    }
   }
 
   const client = new Anthropic({ apiKey: opts.apiKey });

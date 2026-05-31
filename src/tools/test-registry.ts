@@ -392,13 +392,15 @@ export async function demoteTobroken(
     const key = `${entry.spec}::${entry.name}`;
     if (brokenKeys.has(key)) continue;
     const passingEntry = passing.find(e => `${e.spec}::${e.name}` === key);
+    const describe = entry.describe || passingEntry?.describe || '';
     broken.push({
       spec: entry.spec,
-      describe: entry.describe || passingEntry?.describe || '',
+      describe,
       name: entry.name,
       kind: entry.kind,
       rootCause: entry.rootCause,
       actualBehavior: entry.actualBehavior,
+      risk: entry.risk ?? deriveRisk(entry.spec, describe),
     });
     brokenKeys.add(key);
   }
