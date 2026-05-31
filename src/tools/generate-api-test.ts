@@ -34,11 +34,12 @@ Every spec file must have three sections at the top before any test.describe():
    const PRODUCTS_ENDPOINT = '/api/productsList';
    const BRANDS_ENDPOINT   = '/api/brandsList';
 
-2. A shared parseApiResponse helper that handles the two mandatory HTTP assertions
-   so they are never duplicated inside individual tests:
-   async function parseApiResponse(response: Awaited<ReturnType<typeof fetch>>) {
+2. A shared parseApiResponse helper — import APIResponse from Playwright and use it
+   as the parameter type (NOT typeof fetch, which is the browser API, NOT Playwright):
+   import type { APIResponse } from '@playwright/test';
+   async function parseApiResponse(response: APIResponse): Promise<any> {
      expect(response.status()).toBe(200);
-     return response.json() as Promise<Record<string, unknown>>;
+     return response.json();
    }
 
 3. test.describe() with all tests inside.
@@ -88,6 +89,11 @@ WRONG assertions (never write these):
 - For unsupported methods: expect(body.responseCode).toBe(405) and check body.message
 - For missing required parameters: expect(body.responseCode).toBe(400) and check body.message
 - For invalid credentials: expect(body.responseCode).toBe(404) and check body.message
+
+### OR assertions — never use || between expect() calls
+expect() returns void, not boolean. To assert "A or B", use a boolean expression:
+  CORRECT: expect(a.includes('top') || b.includes('top')).toBe(true);
+  WRONG:   expect(a).toContain('top') || expect(b).toContain('top');  // TS error: void || void
 
 ### Asserting message strings — use exact values
 When the test description specifies a message string, use toBe() with the exact string,
