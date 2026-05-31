@@ -5,6 +5,7 @@ import { autoFixFailure } from './tools/investigate-fix.js';
 import { runTests } from './tools/run-tests.js';
 import { TokenBudget } from './tools/budget.js';
 import { writeTestAnnotation } from './tools/annotations.js';
+import { parseFailingTestsFromOutput, deriveRisk } from './tools/test-registry.js';
 
 const ROOT = process.cwd();
 const DEFAULT_BUDGET_USD = 0.30;
@@ -63,6 +64,24 @@ async function main(): Promise<void> {
   if (!failureOutput.includes('failed') && !failureOutput.includes('Error')) {
     console.log('\n✅ No failures detected — nothing to fix.\n');
     process.exit(0);
+  }
+
+  // ── Triage: show failing tests sorted by risk before spending any tokens ───
+  const failing = parseFailingTestsFromOutput(failureOutput);
+  if (failing.length > 0) {
+    const RISK_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+    const withRisk = failing
+      .map(f => ({ ...f, risk: deriveRisk(f.spec, f.describe) }))
+      .sort((a, b) => (RISK_ORDER[a.risk] ?? 3) - (RISK_ORDER[b.risk] ?? 3));
+
+    const bar = '─'.repeat(48);
+    console.log(`\n${bar}`);
+    console.log(`  ${failing.length} test${failing.length === 1 ? '' : 's'} failing — by priority:`);
+    console.log('');
+    for (const f of withRisk) {
+      console.log(`  ${f.risk.padEnd(8)}  ${f.spec} › ${f.name}`);
+    }
+    console.log(`${bar}\n`);
   }
 
   let lastRootCause = '';
@@ -124,7 +143,7 @@ async function main(): Promise<void> {
 
     if (fix.fixed) {
       const passed = (fix.verifyOutput.match(/✓/g) ?? []).length;
-      console.log(`\n✅ Fixed — ${passed} test${passed === 1 ? '' : 's'} now passing — recorded in TEST_CASES.md\n`);
+      console.log(`\n✅ Fixed — ${passed} test${passed === 1 ? '' : 's'} now passing — recorded in the registry\n`);
       break;
     }
 
