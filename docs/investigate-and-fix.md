@@ -6,9 +6,18 @@ same mistake doesn't recur, and re-runs to verify.
 
 ---
 
-## Code bug vs app bug
+## Verdicts
 
-This distinction is the core of what the tool does.
+The tool classifies every failure before spending any tokens on investigation.
+
+**Transient pre-check** — before calling Claude, the tool re-runs the failing
+spec(s) once:
+
+| Original failure | Passes on retry | Verdict |
+|---|---|---|
+| Connection/navigation error (`net::ERR_*`, `Navigation failed`, 502/503) | yes | ⚡ **Transient** — app was temporarily unavailable; no code change |
+| Locator/element timeout (`waiting for locator`, `toBeVisible`) | yes | 🌀 **Flaky** — timing or race condition; consider `retries: 1` in playwright.config.ts |
+| Any failure | no | Proceeds to Claude investigation below |
 
 **Code bug** — the test logic is mechanically wrong: bad locator, wrong selector,
 missing wait, incorrect import, wrong URL, timing issue. The test's *intention* is
@@ -19,7 +28,9 @@ correct but the *implementation* is broken.
 application under test behaves differently from what is expected. Example: a test
 asserts that duplicate email registration is rejected, but the site accepts it anyway.
 → The tool does **not** touch the test. It writes a `/* ⚠️ APP BUG */` annotation
-directly before the failing `test()` call and records the defect in `TESTS_UI.md`.
+directly before the failing `test()` call and records the defect in the registry.
+
+**Unclear** — not enough information to decide with confidence. No code is changed.
 
 > A test that documents an application bug is correct and valuable — it proves the
 > bug exists. Never change a test's assertions to make it pass.
@@ -119,8 +130,9 @@ and when the $0.30 budget is reached you're asked whether to continue.
 ## Registry routing
 
 The fix tool writes results to the correct registry based on the spec path:
+- `tests/ui/` specs → `TESTS_UI.md`
 - `tests/api/` specs → `TESTS_API.md`
-- `tests/ui/` and `tests/e2e/` specs → `TESTS_UI.md`
+- `tests/e2e/` specs → `TESTS_E2E.md`
 
 ## When `generate_test` auto-fix isn't enough
 

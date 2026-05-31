@@ -1,37 +1,48 @@
-# Test Registry — TEST\_CASES.md and TEST\_API.md
+# Test Registry — TESTS\_UI.md, TESTS\_API.md, TESTS\_E2E.md
 
-The project uses two registry files, automatically chosen based on the spec path:
+The project uses three registry files, automatically chosen based on the spec path:
 
 | Spec location | Registry |
 |---------------|---------|
-| `tests/ui/` and `tests/e2e/` | `TESTS_UI.md` |
+| `tests/ui/` | `TESTS_UI.md` |
 | `tests/api/` | `TESTS_API.md` |
+| `tests/e2e/` | `TESTS_E2E.md` |
 
-Both files have the same structure and are managed by the same tools. You should
-rarely need to edit either by hand.
+All three files share the same structure and are managed by the same tools. You should
+rarely need to edit them by hand.
 
 ---
 
 ## Structure
 
-The file has three sections:
+Each registry has three sections:
 
-**Passing tests** — numbered table, one row per test:
+**Passing tests** — numbered table, grouped by spec file and describe block:
 ```markdown
+## tests/ui/cart.spec.ts
+
+### Place Order: Add Products in Cart
+
 | # | Test |
 |---|------|
-| 1 | should submit the contact form and show success message |
+| 1 | should add two products to cart and verify prices, quantity and total |
 ```
 
 **Application bugs** — tests that are correct but the site has a defect:
 ```markdown
-| Spec | Describe | Test | Root cause | Actual behaviour |
+| Risk | Spec | Describe | Test | Root cause | Actual behaviour |
+|------|------|----------|------|------------|-----------------|
+| critical | tests/ui/cart.spec.ts | ... | ... | ... | ... |
 ```
 
 **Broken tests** — tests that failed and could not be auto-fixed:
 ```markdown
-| Spec | Describe | Test | Root cause |
+| Risk | Spec | Describe | Test | Root cause |
+|------|------|----------|------|------------|
+| low | tests/ui/contact.spec.ts | ... | ... | ... |
 ```
+
+Risk values: `critical` · `high` · `medium` · `low`
 
 ---
 
@@ -39,14 +50,15 @@ The file has three sections:
 
 | Event | What gets recorded | Registry |
 |-------|-------------------|---------|
-| `generate_test` passes | Test added to passing table | Based on spec path |
-| `generate_api_test` passes | Test added to passing table | `TESTS_API.md` |
-| `generate_test` / `generate_api_test` detects an app bug | Added to Application Bugs | Based on spec path |
-| `generate_test` / `generate_api_test` cannot fix a failure | Added to Broken Tests | Based on spec path |
+| `generate_test` passes | Test added to passing table; spec tagged | Based on spec path |
+| `generate_api_test` passes | Test added to passing table; spec tagged | `TESTS_API.md` |
+| `generate_test` / `generate_api_test` detects app bug | Added to Application Bugs | Based on spec path |
+| `generate_test` / `generate_api_test` cannot fix failure | Added to Broken Tests | Based on spec path |
 | `investigate_and_fix` resolves a failure | Entry moved from Broken to passing | Based on spec path |
-| `sync_registry` runs | Full reconciliation of both registries | Both |
+| `sync_registry` runs | Full reconciliation of all three registries | All three |
+| `npm run tag_tests` | Inserts `// [UI/API/E2E #N]` comments into spec files | — |
 
-Running `npm test` manually **never** touches either registry.
+Running `npm test` manually **never** touches any registry.
 
 ---
 
@@ -92,7 +104,7 @@ app bug and you want to check if the entries can be promoted to passing.
 | | sync_registry | update_registry |
 |--|---------------|-----------------|
 | Runs the full suite | ✓ | ✗ (only affected specs) |
-| Handles both TESTS_UI.md and TESTS_API.md | ✓ | ✓ |
+| Handles all three registries | ✓ | ✓ |
 | Finds undocumented passing tests | ✓ | ✗ |
 | Finds regressions in passing tests | ✓ | ✗ |
 | Promotes resolved broken/app-bug entries | ✓ | ✓ |
