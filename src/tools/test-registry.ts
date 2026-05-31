@@ -102,7 +102,19 @@ export interface BrokenEntry {
   kind: 'broken' | 'app_bug';
   rootCause: string;
   actualBehavior?: string;
+  risk?: 'critical' | 'high' | 'medium' | 'low';
 }
+
+/** Infer risk level from spec path and describe block name. */
+export function deriveRisk(spec: string, describe: string): 'critical' | 'high' | 'medium' | 'low' {
+  const s = (spec + ' ' + describe).toLowerCase();
+  if (/checkout|payment|order|place.order|cart.total|confirm/.test(s)) return 'critical';
+  if (/login|auth|register|account|password|credential|delete.account/.test(s)) return 'high';
+  if (/search|product|filter|brand|navigation|cart(?!.total)/.test(s)) return 'medium';
+  return 'low';
+}
+
+const RISK_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 
 function extractSection(content: string, header: string): string {
   const start = content.indexOf(header);
@@ -129,16 +141,26 @@ function parseBrokenTests(content: string): BrokenEntry[] {
   const entries: BrokenEntry[] = [];
 
   for (const row of parseTableRows(extractSection(content, '## ⚠️ Application Bugs'))) {
-    const [spec, describe, name, rootCause, actualBehavior] = row;
+    // Support both old format (Spec|Describe|Test|Root cause|Actual behaviour)
+    // and new format (Risk|Spec|Describe|Test|Root cause|Actual behaviour)
+    const hasRisk = row.length >= 6;
+    const [a, b, c, d, e, f] = row;
+    const risk = hasRisk ? (a as BrokenEntry['risk']) : undefined;
+    const [spec, describe, name, rootCause, actualBehavior] = hasRisk ? [b, c, d, e, f] : [a, b, c, d, e];
     if (spec && describe && name && rootCause) {
-      entries.push({ spec, describe, name, kind: 'app_bug', rootCause, actualBehavior: actualBehavior || undefined });
+      entries.push({ spec, describe, name, kind: 'app_bug', rootCause, actualBehavior: actualBehavior || undefined, risk });
     }
   }
 
   for (const row of parseTableRows(extractSection(content, '## ❌ Broken Tests'))) {
-    const [spec, describe, name, rootCause] = row;
+    // Support both old format (Spec|Describe|Test|Root cause)
+    // and new format (Risk|Spec|Describe|Test|Root cause)
+    const hasRisk = row.length >= 5;
+    const [a, b, c, d, e] = row;
+    const risk = hasRisk ? (a as BrokenEntry['risk']) : undefined;
+    const [spec, describe, name, rootCause] = hasRisk ? [b, c, d, e] : [a, b, c, d];
     if (spec && describe && name && rootCause) {
-      entries.push({ spec, describe, name, kind: 'broken', rootCause });
+      entries.push({ spec, describe, name, kind: 'broken', rootCause, risk });
     }
   }
 
@@ -178,26 +200,31 @@ function buildContent(entries: TestEntry[], broken: BrokenEntry[] = []): string 
     }
   }
 
-  const appBugs = broken.filter(e => e.kind === 'app_bug');
+  const sortByRisk = (a: BrokenEntry, b: BrokenEntry) =>
+    (RISK_ORDER[a.risk ?? 'low'] ?? 3) - (RISK_ORDER[b.risk ?? 'low'] ?? 3);
+
+  const appBugs = broken.filter(e => e.kind === 'app_bug').sort(sortByRisk);
   if (appBugs.length > 0) {
     lines.push('---', '', '## ⚠️ Application Bugs', '');
     lines.push('> These tests are correct — the application has a defect. Do not modify them.', '');
-    lines.push('| Spec | Describe | Test | Root cause | Actual behaviour |');
-    lines.push('|------|----------|------|------------|-----------------|');
+    lines.push('| Risk | Spec | Describe | Test | Root cause | Actual behaviour |');
+    lines.push('|------|------|----------|------|------------|-----------------|');
     for (const e of appBugs) {
-      lines.push(`| ${e.spec} | ${e.describe} | ${sanitizeCell(e.name)} | ${sanitizeCell(e.rootCause)} | ${sanitizeCell(e.actualBehavior ?? '—')} |`);
+      const risk = e.risk ?? deriveRisk(e.spec, e.describe);
+      lines.push(`| ${risk} | ${e.spec} | ${e.describe} | ${sanitizeCell(e.name)} | ${sanitizeCell(e.rootCause)} | ${sanitizeCell(e.actualBehavior ?? '—')} |`);
     }
     lines.push('');
   }
 
-  const brokenTests = broken.filter(e => e.kind === 'broken');
+  const brokenTests = broken.filter(e => e.kind === 'broken').sort(sortByRisk);
   if (brokenTests.length > 0) {
     lines.push('---', '', '## ❌ Broken Tests', '');
     lines.push('> Fix manually or run: `npm run fix -- --pattern <spec>`', '');
-    lines.push('| Spec | Describe | Test | Root cause |');
-    lines.push('|------|----------|------|------------|');
+    lines.push('| Risk | Spec | Describe | Test | Root cause |');
+    lines.push('|------|------|----------|------|------------|');
     for (const e of brokenTests) {
-      lines.push(`| ${e.spec} | ${e.describe} | ${sanitizeCell(e.name)} | ${sanitizeCell(e.rootCause)} |`);
+      const risk = e.risk ?? deriveRisk(e.spec, e.describe);
+      lines.push(`| ${risk} | ${e.spec} | ${e.describe} | ${sanitizeCell(e.name)} | ${sanitizeCell(e.rootCause)} |`);
     }
     lines.push('');
   }
@@ -304,7 +331,9 @@ export async function recordBrokenTest(
   const key = `${entry.spec}::${entry.name}`;
   if (broken.some(e => `${e.spec}::${e.name}` === key)) return;
 
-  broken.push(entry);
+  // Auto-derive risk if not supplied by the caller
+  const enriched: BrokenEntry = entry.risk ? entry : { ...entry, risk: deriveRisk(entry.spec, entry.describe) };
+  broken.push(enriched);
   await writeFile(registryPath, buildContent(passing, broken), 'utf-8');
 }
 
