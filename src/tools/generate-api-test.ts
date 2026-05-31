@@ -295,11 +295,13 @@ export async function generateApiTestTool(args: {
           passing = true;
           const retryPassed = parsePassingTests(fix.verifyOutput);
           await recordPassingTests(retryPassed);
+          await tagSpecAfterRecording(specFile.path).catch(() => { /* non-fatal */ });
           const icon = fix.verdict === 'transient' ? '⚡' : '🌀';
           testRunNote += `${icon} ${fix.rootCause}`;
         } else if (fix.fixed) {
           passing = true;
           const fixedPassed = (fix.verifyOutput.match(/✓/g) ?? []).length;
+          await tagSpecAfterRecording(specFile.path).catch(() => { /* non-fatal */ });
           testRunNote += `✅ Auto-fix applied — ${fixedPassed} test${fixedPassed === 1 ? '' : 's'} now passing — recorded in TEST_API.md`;
           if (fix.lesson) testRunNote += `\n  Lesson learned: ${fix.lesson.rule}`;
         } else {

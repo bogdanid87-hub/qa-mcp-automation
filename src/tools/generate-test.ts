@@ -436,6 +436,7 @@ Respond with the standard JSON:
       } else if (fix.fixed) {
         passing = true;
         const fixedPassed = (fix.verifyOutput.match(/✓/g) ?? []).length;
+        await tagSpecAfterRecording(specFile.path).catch(() => { /* non-fatal */ });
         const parts = [
           `✅ Auto-fix applied — ${fixedPassed} test${fixedPassed === 1 ? '' : 's'} now passing — recorded in TEST_CASES.md`,
           `  Root cause: ${fix.rootCause}`,
