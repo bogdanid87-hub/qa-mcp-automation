@@ -131,7 +131,7 @@ export async function callLocalLlm(systemPrompt: string, userPrompt: string): Pr
   } catch (err) {
     throw new Error(`Ollama returned unparseable response (${(err as Error).message}) — check model health`);
   }
-  if (!data?.message?.content) {
+  if (data?.message?.content == null) {
     throw new Error('Ollama response missing message.content — model may have returned an empty or malformed response');
   }
   return data.message.content;
