@@ -28,7 +28,7 @@ npm run analyze_coverage -- --spec tests/ui/contact.spec.ts  # coverage gap anal
 npm run fix                               # investigate and fix failing tests
 npm run status                            # suite health at a glance
 npm run tag_tests                         # tag spec files with registry IDs
-    npm run sync_registry                     # reconcile TESTS_UI.md with reality
+npm run sync_registry                     # reconcile all three registries with reality
 npm run update_registry                   # re-check known broken/app-bug entries
 npm test                                  # run all tests headless
 npm run mcp                               # start MCP server manually

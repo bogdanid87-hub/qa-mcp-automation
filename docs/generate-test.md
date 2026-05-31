@@ -155,8 +155,9 @@ Results are written to the correct registry automatically based on the spec path
 
 | Spec location | Registry |
 |---------------|---------|
-| `tests/ui/`, `tests/e2e/` | `TESTS_UI.md` |
+| `tests/ui/` | `TESTS_UI.md` |
 | `tests/api/` | `TESTS_API.md` |
+| `tests/e2e/` | `TESTS_E2E.md` |
 
 | Outcome | What gets recorded |
 |---------|-------------------|
