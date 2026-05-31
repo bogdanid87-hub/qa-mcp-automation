@@ -175,6 +175,7 @@ test.describe('Auth API', () => {
   });
 
   // api-7-post-to-verify-login-with-valid-details
+  // [API Auth API #1]
   test('should verify login with valid credentials', async ({ request }) => {
     const body = await parseApiResponse(
       await request.post(VERIFY_LOGIN_ENDPOINT, {
@@ -189,6 +190,7 @@ test.describe('Auth API', () => {
   });
 
   // api-8-post-to-verify-login-without-email-parameter
+  // [API Auth API #2]
   test('should return 400 when email parameter is missing from verifyLogin', async ({ request }) => {
     const body = await parseApiResponse(
       await request.post(VERIFY_LOGIN_ENDPOINT, {
@@ -202,6 +204,7 @@ test.describe('Auth API', () => {
   });
 
   // api-9-delete-to-verify-login
+  // [API Auth API #3]
   test('should return 405 when DELETE method is used on verifyLogin', async ({ request }) => {
     const body = await parseApiResponse(
       await request.delete(VERIFY_LOGIN_ENDPOINT)
@@ -211,6 +214,7 @@ test.describe('Auth API', () => {
   });
 
   // api-10-post-to-verify-login-with-invalid-details
+  // [API Auth API #4]
   test('should return 404 when verifyLogin is called with invalid credentials', async ({ request }) => {
     const body = await parseApiResponse(
       await request.post(VERIFY_LOGIN_ENDPOINT, {
@@ -225,6 +229,7 @@ test.describe('Auth API', () => {
   });
 
   // api-11-post-to-create-register-user-account
+  // [API Auth API #5]
   test('should create a new user account successfully', async ({ request }) => {
     const newUserEmail = `newuser_${Date.now()}@test.com`;
     const body = await parseApiResponse(
@@ -260,6 +265,7 @@ test.describe('Auth API', () => {
   });
 
   // api-12-delete-method-to-delete-user-account
+  // [API Auth API #6]
   test('should delete a user account and confirm deletion', async ({ request }) => {
     const deleteBody = await parseApiResponse(
       await request.delete(DELETE_ACCOUNT_ENDPOINT, {
@@ -285,6 +291,7 @@ test.describe('Auth API', () => {
   });
 
   // api-13-put-method-to-update-user-account
+  // [API Auth API #7]
   test('should update user account and verify the changes', async ({ request }) => {
     const updateBody = await parseApiResponse(
       await request.put(UPDATE_ACCOUNT_ENDPOINT, {
@@ -323,6 +330,7 @@ test.describe('Auth API', () => {
   });
 
   // api-14-get-user-account-detail-by-email
+  // [API Auth API #8]
   test('should return user account detail by email', async ({ request }) => {
     const body = await parseApiResponse(
       await request.get(GET_USER_DETAIL_ENDPOINT, {
@@ -353,6 +361,7 @@ test.describe('Auth API', () => {
   });
 
   // api-11-register-user-with-existing-email
+  // [API Auth API #14]
   test('should return 400 when registering with an already existing email', async ({ request }) => {
     const body = await parseApiResponse(
       await request.post(CREATE_ACCOUNT_ENDPOINT, {
@@ -382,6 +391,7 @@ test.describe('Auth API', () => {
   });
 
   // api-7-verify-login-missing-password-parameter
+  // [API Auth API #9]
   test('should return 400 when password parameter is missing from verifyLogin', async ({ request }) => {
     const body = await parseApiResponse(
       await request.post(VERIFY_LOGIN_ENDPOINT, {
@@ -395,6 +405,7 @@ test.describe('Auth API', () => {
   });
 
   // api-14-get-user-detail-missing-email-parameter
+  // [API Auth API #10]
   test('should return 400 when email parameter is missing from getUserDetailByEmail', async ({ request }) => {
     const body = await parseApiResponse(
       await request.get(GET_USER_DETAIL_ENDPOINT)
@@ -404,6 +415,7 @@ test.describe('Auth API', () => {
   });
 
   // api-14-get-user-detail-nonexistent-email
+  // [API Auth API #11]
   test('should return 404 when getUserDetailByEmail is called with a nonexistent email', async ({ request }) => {
     const ghostEmail = `ghost_${Date.now()}@nowhere.com`;
     const body = await parseApiResponse(
@@ -416,6 +428,7 @@ test.describe('Auth API', () => {
   });
 
   // api-12-delete-account-invalid-credentials
+  // [API Auth API #12]
   test('should return 404 when deleting account with invalid credentials', async ({ request }) => {
     const body = await parseApiResponse(
       await request.delete(DELETE_ACCOUNT_ENDPOINT, {
@@ -430,6 +443,7 @@ test.describe('Auth API', () => {
   });
 
   // api-13-update-account-nonexistent-user
+  // [API Auth API #13]
   test('should return 404 when updating a nonexistent user account', async ({ request }) => {
     const ghostEmail = `ghost_${Date.now()}@nowhere.com`;
     const body = await parseApiResponse(

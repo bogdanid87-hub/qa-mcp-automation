@@ -35,7 +35,7 @@ async function main(): Promise<void> {
 
       // Missing spec file: all entries returned as notFound with no src read
       if (notFound.length === specEntries.length && tagged === 0 && updated === 0 && correct === 0) {
-        warnings.push(`  ⚠️  [${prefix}] ${spec} — file not found on disk (run sync_registry to clean up)`);
+        warnings.push(`  ⚠️  [${prefix}] ${spec} — file not found on disk (remove its entries from the registry manually; sync_registry will warn but not delete them)`);
         continue;
       }
 

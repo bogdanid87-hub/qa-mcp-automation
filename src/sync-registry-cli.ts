@@ -172,7 +172,7 @@ async function main(): Promise<void> {
       if (!addByRegistry.has(reg)) addByRegistry.set(reg, []);
       addByRegistry.get(reg)!.push(t);
     }
-    for (const [reg, tests] of addByRegistry) await recordPassingTests(tests, reg);
+    for (const [reg, tests] of addByRegistry) await recordPassingTests(tests);
     changed += toAdd.length;
     console.log('');
   }
@@ -187,7 +187,7 @@ async function main(): Promise<void> {
       if (!promoteByRegistry.has(reg)) promoteByRegistry.set(reg, []);
       promoteByRegistry.get(reg)!.push(t);
     }
-    for (const [reg, tests] of promoteByRegistry) await recordPassingTests(tests, reg);
+    for (const [reg, tests] of promoteByRegistry) await recordPassingTests(tests);
     // Remove from broken in each registry
     const promoteByBrokenRegistry = new Map<string, Set<string>>();
     for (const e of toPromote) {

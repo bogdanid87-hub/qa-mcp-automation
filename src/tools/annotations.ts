@@ -1,27 +1,10 @@
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
-import { recordBrokenTest, registryForSpec } from './test-registry.js';
+import { recordBrokenTest, registryForSpec, parseFailingTestsFromOutput } from './test-registry.js';
 
 const ROOT = process.cwd();
 
 export type AnnotationKind = 'broken' | 'app_bug';
-
-interface FailingTest {
-  spec: string;
-  describe: string;
-  name: string;
-}
-
-function parseFailingTests(output: string): FailingTest[] {
-  const results: FailingTest[] = [];
-  const re = /\d+\)\s+\[chromium\]\s+›\s+(tests\/[^\s:]+):\d+:\d+\s+›\s+([^›\n]+?)\s+›\s+(.+)/gm;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(output)) !== null) {
-    results.push({ spec: m[1].trim(), describe: m[2].trim(), name: m[3].trim() });
-  }
-  // Deduplicate by spec::name
-  return [...new Map(results.map(r => [`${r.spec}::${r.name}`, r])).values()];
-}
 
 function buildComment(kind: AnnotationKind, indent: string, rootCause: string, actualBehavior?: string): string {
   if (kind === 'app_bug') {
@@ -104,7 +87,7 @@ export async function writeTestAnnotation(
   let src: string;
   try { src = await readFile(abs, 'utf-8'); } catch { return; }
 
-  const failingTests = parseFailingTests(failureOutput);
+  const failingTests = parseFailingTestsFromOutput(failureOutput);
   const failingNames = failingTests.map(t => t.name);
 
   // Write annotation comments into the spec file

@@ -67,7 +67,7 @@ export async function tagSpec(
           /\/\/\s*\[(?:UI|API|E2E)[\s\w:#-]*#\d+\]/,
           `// [${prefix} ${entry.describe} #${entry.num}]`,
         );
-        src = src.slice(0, prevLineStart) + updatedLine + src.slice(insertAt);
+        src = src.slice(0, prevLineStart) + updatedLine + '\n' + src.slice(insertAt);
         updated++;
       }
     } else {

@@ -4,7 +4,7 @@ import { dirname, join } from 'path';
 import { TokenBudget } from './budget.js';
 import { isLocalLlmAvailable, callLocalLlm, LOCAL_MODEL } from './local-llm.js';
 import { runTests } from './run-tests.js';
-import { parsePassingTests, recordPassingTests, TESTS_API_PATH } from './test-registry.js';
+import { parsePassingTests, recordPassingTests } from './test-registry.js';
 import { tagSpecAfterRecording } from './tag-tests.js';
 import { markBacklogEntriesCovered } from './analyze-coverage.js';
 import { autoFixFailure } from './investigate-fix.js';
@@ -263,7 +263,7 @@ export async function generateApiTestTool(args: {
 
     if (passed > 0) {
       const passingTests = parsePassingTests(testOutput);
-      await recordPassingTests(passingTests, TESTS_API_PATH);
+      await recordPassingTests(passingTests);
       await tagSpecAfterRecording(specFile.path).catch(() => { /* non-fatal */ });
       const passingNames = passingTests.map(t => { const s = t.title.indexOf(' › '); return s === -1 ? t.title : t.title.substring(s + 3); });
       await markBacklogEntriesCovered(passingNames).catch(() => { /* non-fatal */ });
@@ -294,7 +294,7 @@ export async function generateApiTestTool(args: {
         } else if (fix.verdict === 'flaky' || fix.verdict === 'transient') {
           passing = true;
           const retryPassed = parsePassingTests(fix.verifyOutput);
-          await recordPassingTests(retryPassed, TESTS_API_PATH);
+          await recordPassingTests(retryPassed);
           const icon = fix.verdict === 'transient' ? '⚡' : '🌀';
           testRunNote += `${icon} ${fix.rootCause}`;
         } else if (fix.fixed) {

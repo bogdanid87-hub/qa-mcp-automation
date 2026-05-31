@@ -440,8 +440,9 @@ async function claudeSimilarityCheck(
 
     const nums = JSON.parse(raw) as number[];
     return allTests.filter(t => nums.includes(t.num));
-  } catch {
-    return []; // network error, parse failure, etc. — skip silently
+  } catch (err) {
+    console.warn(`\n⚠️  Similarity check failed (${(err as Error).message}) — duplicate detection skipped.\n`);
+    return [];
   }
 }
 

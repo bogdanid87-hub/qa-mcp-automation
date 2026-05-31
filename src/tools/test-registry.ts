@@ -292,7 +292,6 @@ export function parseFailingTestsFromOutput(output: string): FailingTestResult[]
 
 export async function recordPassingTests(
   passing: PassingTest[],
-  _registryPath = TESTS_UI_PATH, // kept for caller compatibility — routing uses registryForSpec(spec)
 ): Promise<void> {
   if (passing.length === 0) return;
 

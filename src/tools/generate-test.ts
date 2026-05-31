@@ -6,7 +6,7 @@ import { isLocalLlmAvailable, callLocalLlm, LOCAL_MODEL } from './local-llm.js';
 import { readFocusedContextForFeature, pomExistsForFeature } from './list-resources.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { runTests } from './run-tests.js';
-import { parsePassingTests, recordPassingTests, registryForSpec } from './test-registry.js';
+import { parsePassingTests, recordPassingTests } from './test-registry.js';
 import { tagSpecAfterRecording } from './tag-tests.js';
 import { markBacklogEntriesCovered } from './analyze-coverage.js';
 import { autoFixFailure } from './investigate-fix.js';
@@ -224,15 +224,20 @@ export async function generateTestTool(args: {
           }),
         );
 
+        // Deduplicate by path — if two plans targeted the same file, last result wins
+        const dedupedPomResults = new Map<string, GeneratedFile>();
         for (const file of pomResults) {
-          if (!file || !file.path.startsWith('pages/')) continue;
+          if (file && file.path.startsWith('pages/')) dedupedPomResults.set(file.path, file);
+        }
+
+        for (const file of dedupedPomResults.values()) {
           const abs = join(ROOT, file.path);
-          // Guard: reject if local model silently dropped existing methods
+          // Guard: reject if local model silently dropped existing async methods
           try {
             const existing = await readFile(abs, 'utf-8');
-            const missing = [...existing.matchAll(/async (\w+)\s*\(/g)]
+            const missing = [...existing.matchAll(/async\s+(\w+)\s*(?:<[^>]*>)?\s*\(/g)]
               .map(m => m[1])
-              .filter(name => !file.content.includes(`async ${name}(`));
+              .filter(name => !new RegExp(`async\\s+${name}[\\s<(]`).test(file.content));
             if (missing.length > 0) continue;
           } catch { /* new file — no guard needed */ }
           await mkdir(dirname(abs), { recursive: true });
@@ -397,10 +402,9 @@ Respond with the standard JSON:
     const passed = (testOutput.match(/✓/g) ?? []).length;
     const hasFailed = testOutput.includes('failed') || (testOutput.match(/✗/g) ?? []).length > 0;
 
-    const registry = registryForSpec(specFile.path);
     if (passed > 0) {
       const passingTests = parsePassingTests(testOutput);
-      await recordPassingTests(passingTests, registry);
+      await recordPassingTests(passingTests);
       await tagSpecAfterRecording(specFile.path).catch(() => { /* non-fatal */ });
       const passingNames = passingTests.map(t => { const s = t.title.indexOf(' › '); return s === -1 ? t.title : t.title.substring(s + 3); });
       await markBacklogEntriesCovered(passingNames).catch(() => { /* non-fatal */ });
@@ -425,7 +429,7 @@ Respond with the standard JSON:
       } else if (fix.verdict === 'flaky' || fix.verdict === 'transient') {
         passing = true;
         const retryPassed = parsePassingTests(fix.verifyOutput);
-        await recordPassingTests(retryPassed, registry);
+        await recordPassingTests(retryPassed);
         await tagSpecAfterRecording(specFile.path).catch(() => { /* non-fatal */ });
         const icon = fix.verdict === 'transient' ? '⚡' : '🌀';
         testRunNote += `${icon} ${fix.rootCause}`;

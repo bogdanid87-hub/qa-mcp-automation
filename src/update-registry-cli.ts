@@ -59,7 +59,7 @@ async function main(): Promise<void> {
 
     // Move newly passing tests into the appropriate registry
     const reg = registryForSpec(spec);
-    await recordPassingTests(passing, reg);
+    await recordPassingTests(passing);
 
     // Determine which broken entries resolved
     const passingNames = new Set(

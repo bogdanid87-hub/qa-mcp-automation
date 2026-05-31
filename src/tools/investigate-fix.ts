@@ -5,7 +5,7 @@ import { getSystemBlocks, appendLearnedRule } from '../prompts/system.js';
 import { readFocusedContextForFailure } from './list-resources.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { runTests, runTestsTool } from './run-tests.js';
-import { parsePassingTests, recordPassingTests, registryForSpec, parseFailingTestsFromOutput } from './test-registry.js';
+import { parsePassingTests, recordPassingTests, parseFailingTestsFromOutput } from './test-registry.js';
 import { markBacklogEntriesCovered } from './analyze-coverage.js';
 import { TokenBudget } from './budget.js';
 
@@ -283,9 +283,8 @@ If the failure is not reproducible or the cause is unclear, set "lesson" to null
   let verifyOutput = '';
   if (fixedFiles.length > 0) {
     verifyOutput = await runTests(pattern);
-    const registry = pattern ? registryForSpec(pattern) : undefined;
     const passingTests = parsePassingTests(verifyOutput);
-    await recordPassingTests(passingTests, registry);
+    await recordPassingTests(passingTests);
     const passingNames = passingTests.map(t => { const s = t.title.indexOf(' › '); return s === -1 ? t.title : t.title.substring(s + 3); });
     await markBacklogEntriesCovered(passingNames).catch(() => { /* non-fatal */ });
   }

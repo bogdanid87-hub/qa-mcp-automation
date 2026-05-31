@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { readFile, readdir, writeFile } from 'fs/promises';
 import { join, extname } from 'path';
-import { readTestCases, readBrokenTests, TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH } from './test-registry.js';
+import { readTestCases, readBrokenTests, TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH, registryForSpec } from './test-registry.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { chromium } from '@playwright/test';
 
@@ -33,13 +33,6 @@ async function readSpecContext(specPath: string): Promise<string> {
       return `(could not read ${specPath})`;
     }
   }
-}
-
-/** Infer registry path from a spec path. */
-function registryForSpecPath(specPath: string): string {
-  if (specPath.startsWith('tests/api')) return TESTS_API_PATH;
-  if (specPath.startsWith('tests/e2e')) return TESTS_E2E_PATH;
-  return TESTS_UI_PATH;
 }
 
 /** Read the full registry file. */
@@ -403,7 +396,7 @@ export async function analyzeCoverageTool(args: {
     const specCtx = await readSpecContext(args.specPath);
     contextParts.push(`## Existing spec files\n\n${specCtx}`);
 
-    const regPath = registryForSpecPath(args.specPath);
+    const regPath = registryForSpec(args.specPath);
     const fullReg = await readRegistryContext(regPath);
 
     // Single spec → extract only its registry section to keep focus tight
