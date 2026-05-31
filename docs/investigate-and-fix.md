@@ -19,7 +19,7 @@ correct but the *implementation* is broken.
 application under test behaves differently from what is expected. Example: a test
 asserts that duplicate email registration is rejected, but the site accepts it anyway.
 → The tool does **not** touch the test. It writes a `/* ⚠️ APP BUG */` annotation
-directly before the failing `test()` call and records the defect in `TEST_CASES.md`.
+directly before the failing `test()` call and records the defect in `TESTS_UI.md`.
 
 > A test that documents an application bug is correct and valuable — it proves the
 > bug exists. Never change a test's assertions to make it pass.
@@ -119,8 +119,8 @@ and when the $0.30 budget is reached you're asked whether to continue.
 ## Registry routing
 
 The fix tool writes results to the correct registry based on the spec path:
-- `tests/api/` specs → `TEST_API.md`
-- `tests/ui/` and `tests/e2e/` specs → `TEST_CASES.md`
+- `tests/api/` specs → `TESTS_API.md`
+- `tests/ui/` and `tests/e2e/` specs → `TESTS_UI.md`
 
 ## When `generate_test` auto-fix isn't enough
 

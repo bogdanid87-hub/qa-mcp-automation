@@ -8,8 +8,9 @@ import {
   removeResolvedBrokenTests,
   normalizeTestName,
   registryForSpec,
-  TEST_CASES_PATH,
-  TEST_API_PATH,
+  TESTS_UI_PATH,
+  TESTS_API_PATH,
+  TESTS_E2E_PATH,
 } from './tools/test-registry.js';
 
 const ROOT = process.cwd();
@@ -26,11 +27,12 @@ async function ensureApiKey(): Promise<void> {
 async function main(): Promise<void> {
   await ensureApiKey();
 
-  const [broken, brokenApi] = await Promise.all([
-    readBrokenTests(TEST_CASES_PATH),
-    readBrokenTests(TEST_API_PATH),
+  const [broken, brokenApi, brokenE2e] = await Promise.all([
+    readBrokenTests(TESTS_UI_PATH),
+    readBrokenTests(TESTS_API_PATH),
+    readBrokenTests(TESTS_E2E_PATH),
   ]);
-  const allBroken = [...broken, ...brokenApi];
+  const allBroken = [...broken, ...brokenApi, ...brokenE2e];
 
   if (allBroken.length === 0) {
     console.log('\n✅ No broken or app-bug tests recorded in TEST_CASES.md or TEST_API.md.\n');

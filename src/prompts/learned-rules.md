@@ -43,4 +43,29 @@ Each rule is injected into the system prompt automatically.
 ## Rule 010 — test.describe() name must be the feature area, not the test scenario
 **Problem class**: When test_name was used as a hint for both the filename and the describe block, describe names became scenario-specific (e.g. "Place Order: Register while Checkout") and could not accommodate additional related tests without creating misleading groupings.
 **Rule**: Name `test.describe()` with the broad feature area or user goal — "Place Order", "Cart", "Authentication" — not with the specific scenario being tested. The specific scenario belongs in the `test()` name. This allows multiple variants to share the same describe block and keeps the test hierarchy meaningful as the suite grows.
+
+
+## Rule 011 — automationexercise.com API always returns HTTP 200 — never assert a non-200 HTTP status code
+**Problem class**: API tests asserting HTTP status codes other than 200 (e.g. expect(response.status()).toBe(405)) fail because automationexercise.com always returns HTTP 200 at the transport level regardless of the outcome. Error codes are embedded in the JSON response body as responseCode.
+**Rule**: For all automationexercise.com API endpoints, always assert expect(response.status()).toBe(200) at the HTTP level, then check the application-level status inside the body: const body = await response.json(); expect(body.responseCode).toBe(405). Never assert response.status() to be 400, 404, 405, or 201 — these values only appear as body.responseCode. The only exception: POST /api/createAccount has body.responseCode 201 but still returns HTTP 200.
+
+## Rule 012 — .toBeOneOf() does not exist in Playwright or Jest
+**Problem class**: Using a non-existent custom matcher (toBeOneOf) that is not part of Playwright's or Jest's built-in assertion library.
+**Rule**: Never use `.toBeOneOf()` — it is not a built-in Playwright/Jest matcher. To assert a value is one of several allowed values, use `expect([...allowedValues]).toContain(actualValue)` instead.
+
+## Rule 013 — test.describe() requires a callback function, not a plain object
+**Problem class**: Passing a plain object instead of a callback function to `test.describe()`, causing a runtime TypeError.
+**Rule**: Always pass a callback function (arrow function or named function) as the second argument to `test.describe()`. Never pass a plain object of test functions — each test must be registered inside the callback via individual `test()` calls.
+
+## Rule 014 — Never include markdown fences in TypeScript source files
+**Problem class**: Markdown code fences (```typescript ... ```) embedded as literal content inside a .ts file cause immediate TypeScript parse errors because they are not valid TypeScript syntax.
+**Rule**: API test files must contain only valid TypeScript — never include markdown fences, prose explanations, or any non-TypeScript content in .ts files.
+
+## Rule 015 — API auth tests must create a real account before testing valid login
+**Problem class**: Using invented or placeholder credentials (e.g. 'adam@adam.com', 'valid@example.com') in a test that calls /api/verifyLogin expecting success causes a 404 response because those accounts do not exist on the live site.
+**Rule**: Any test verifying successful login MUST create a real test account via POST /api/createAccount in test.beforeAll, use those credentials in the test, and delete the account in test.afterAll. Never use hardcoded or invented credentials against a live site.
+
+## Rule 016 — The automationexercise.com getUserDetailByEmail response uses birth_day not birth_date
+**Problem class**: Asserting the field name birth_date in the getUserDetailByEmail API response fails because the actual field name returned by the server is birth_day.
+**Rule**: When asserting fields in the automationexercise.com GET /api/getUserDetailByEmail response, use birth_day (not birth_date). Always verify exact field names against a real response before writing assertions.
 <!-- rules-end -->

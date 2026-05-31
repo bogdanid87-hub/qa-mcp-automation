@@ -1,6 +1,7 @@
 import { test, expect } from '../../fixtures';
 
 test.describe('Place Order: Add Products in Cart', () => {
+  // [UI Place Order: Add Products in Cart #1]
   test('should add two products to cart and verify prices, quantity and total', async ({ homePage, productsPage, cartPage }) => {
     // Step 2-3: Navigate to home page and verify it loaded successfully
     await homePage.goto();
@@ -47,6 +48,7 @@ test.describe('Place Order: Add Products in Cart', () => {
     }
   });
 
+  // [UI Place Order: Add Products in Cart #2]
   test('should show empty cart when no products have been added', async ({ cartPage, page }) => {
     // Navigate directly to the cart page without adding any products
     await cartPage.goto();
@@ -96,6 +98,7 @@ test.describe('Place Order: Add Products in Cart', () => {
     expect(updatedTotal).toBe(unitPrice * 2);
   });
 
+  // [UI Place Order: Add Products in Cart #3]
   test('should remove a product from the cart and update the cart', async ({ homePage, productsPage, cartPage, page }) => {
     // Navigate to products page
     await homePage.goto();

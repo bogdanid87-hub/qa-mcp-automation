@@ -1,6 +1,6 @@
 # Test Cases
 
-**Total: 9 tests** | **Latest:** #9 — Place Order › should register during checkout, place an order, and delete the account
+**Total: 8 tests**
 
 ---
 
@@ -20,7 +20,7 @@
 
 | # | Test |
 |---|------|
-| 2 | should search for a product and verify results match the API |
+| 1 | should search for a product and verify results match the API |
 
 ---
 
@@ -30,9 +30,9 @@
 
 | # | Test |
 |---|------|
-| 3 | should subscribe via the footer subscription form on the home page |
-| 4 | should show an error when subscribing with an invalid email format |
-| 5 | should accept duplicate email subscriptions and show success each time |
+| 1 | should subscribe via the footer subscription form on the home page |
+| 2 | should show an error when subscribing with an invalid email format |
+| 3 | should accept duplicate email subscriptions and show success each time |
 
 ---
 
@@ -42,19 +42,9 @@
 
 | # | Test |
 |---|------|
-| 6 | should add two products to cart and verify prices, quantity and total |
-| 7 | should show empty cart when no products have been added |
-| 8 | should remove a product from the cart and update the cart |
-
----
-
-## tests/e2e/place-order.spec.ts
-
-### Place Order
-
-| # | Test |
-|---|------|
-| 9 | should register during checkout, place an order, and delete the account ← latest |
+| 1 | should add two products to cart and verify prices, quantity and total |
+| 2 | should show empty cart when no products have been added |
+| 3 | should remove a product from the cart and update the cart |
 
 ---
 
@@ -68,3 +58,9 @@
 
 ---
 
+## ❌ Broken Tests
+
+> Fix manually or run: `npm run fix -- --pattern <spec>`
+
+| Spec | Describe | Test | Root cause |
+|------|----------|------|------------|

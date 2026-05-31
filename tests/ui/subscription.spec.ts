@@ -2,6 +2,7 @@ import { test, expect } from '../../fixtures';
 import { randomEmail } from '../../utils/randomData';
 
 test.describe('Subscription', () => {
+  // [UI Subscription #1]
   test('should subscribe via the footer subscription form on the home page', async ({ homePage, page }) => {
     // Step 2-3: Navigate to home page and verify it loaded successfully
     await homePage.goto();
@@ -21,6 +22,7 @@ test.describe('Subscription', () => {
     await homePage.verifySubscriptionSuccess();
   });
 
+  // [UI Subscription #2]
   test('should show an error when subscribing with an invalid email format', async ({ homePage, page }) => {
     // Navigate to home page and verify it loaded successfully
     await homePage.goto();
@@ -48,6 +50,7 @@ test.describe('Subscription', () => {
   // between code bug and app bug and it altered the test so it passed
   // guardrails have been added against this behaviour so it does not occur 
   // in the future, but kept the test case for posterity
+  // [UI Subscription #3]
   test('should accept duplicate email subscriptions and show success each time', async ({ homePage, page }) => {
     // Navigate to home page and verify it loaded successfully
     await homePage.goto();

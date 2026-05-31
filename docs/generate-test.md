@@ -2,27 +2,27 @@
 
 > **For API tests** (HTTP endpoints, request fixture, no browser) use
 > [`generate_api_test`](generate-api-test.md) instead — it uses the local LLM by
-> default (free) and records to `TEST_API.md` automatically.
+> default (free) and records to `TESTS_API.md` automatically.
 
 
 
 Generates a complete Playwright test: creates or updates the Page Object Model,
 writes the spec file, runs it automatically, attempts to fix any failures, and
-records the result in `TEST_CASES.md`. The single most-used tool in the project.
+records the result in `TESTS_UI.md`. The single most-used tool in the project.
 
 ---
 
 ## What happens when you call it
 
 1. **Similarity check** — Claude compares your description against every existing
-   test in `TEST_CASES.md` and warns if the same scenario is already covered
+   test in `TESTS_UI.md` and warns if the same scenario is already covered
 2. **POM step** — if no POM exists for this feature, one is generated first and
    committed to disk before the spec is written (prevents method-name mismatches)
 3. **Spec step** — Claude writes the spec file using the POM already on disk
 4. **Auto-run** — the new spec is executed immediately
 5. **Auto-fix** — if it fails, Claude diagnoses the failure, patches the code,
    saves a learned rule, and re-runs; if it still fails, you're prompted to retry
-6. **Registry** — passing tests are recorded in `TEST_CASES.md`; unresolvable
+6. **Registry** — passing tests are recorded in `TESTS_UI.md`; unresolvable
    failures are annotated in the spec file and recorded as broken or app-bug
 
 ---
@@ -134,7 +134,7 @@ After writing the main test, the tool proposes further scenarios — negative ca
 edge cases, boundary conditions, alternative happy paths — that aren't covered yet.
 No code is generated for these automatically; you choose which ones to implement.
 
-Proposals already recorded in `TEST_CASES.md` are filtered out so you only see
+Proposals already recorded in `TESTS_UI.md` are filtered out so you only see
 genuinely new suggestions.
 
 ---
@@ -155,8 +155,8 @@ Results are written to the correct registry automatically based on the spec path
 
 | Spec location | Registry |
 |---------------|---------|
-| `tests/ui/`, `tests/e2e/` | `TEST_CASES.md` |
-| `tests/api/` | `TEST_API.md` |
+| `tests/ui/`, `tests/e2e/` | `TESTS_UI.md` |
+| `tests/api/` | `TESTS_API.md` |
 
 | Outcome | What gets recorded |
 |---------|-------------------|
@@ -164,5 +164,5 @@ Results are written to the correct registry automatically based on the spec path
 | App bug detected | Added to the `⚠️ Application Bugs` section with root cause and actual behaviour |
 | Could not fix | Added to the `❌ Broken Tests` section with root cause |
 
-If `TEST_CASES.md` gets out of sync (server crash, manual edits), run
+If `TESTS_UI.md` gets out of sync (server crash, manual edits), run
 `npm run sync_registry` to reconcile it — see [docs/test-registry.md](test-registry.md).

@@ -32,10 +32,10 @@ Use page_paths: ["/contact_us"]
 
 Claude will:
 1. Inspect the live `/contact_us` page and extract real DOM locators
-2. Check `TEST_CASES.md` — if a similar test exists it will warn you
+2. Check `TESTS_UI.md` — if a similar test exists it will warn you
 3. Generate `pages/ContactUsPage.ts` (locators + methods) and `tests/ui/contact.spec.ts`
 4. Run the spec automatically
-5. Record the result in `TEST_CASES.md` if it passes
+5. Record the result in `TESTS_UI.md` if it passes
 6. Propose additional test scenarios (negative cases, edge cases) — you pick which to generate
 
 > **Tip:** `page_paths` is optional but strongly recommended. Without it, locators are
@@ -99,7 +99,7 @@ Files written:
 
 _(POMs planned by Claude API, built in parallel by qwen2.5-coder:14b — method names guaranteed consistent)_
 
-✅ 1 test passed — recorded in TEST_CASES.md
+✅ 1 test passed — recorded in TESTS_UI.md
 
 Proposed additional tests:
   1. should show error when email is invalid ...
@@ -137,10 +137,10 @@ npm run generate -- --file my-test.txt
 ### When a test passes
 
 ```
-✅ 1 test passed — recorded in TEST_CASES.md
+✅ 1 test passed — recorded in TESTS_UI.md
 ```
 
-The test is added to the passing section of `TEST_CASES.md`. Done.
+The test is added to the passing section of `TESTS_UI.md`. Done.
 
 ### When a test fails — auto-fix
 
@@ -152,7 +152,7 @@ The tool reads the failure output, the Playwright screenshot, and the live DOM o
 failing page, then asks Claude to diagnose and patch the code. If it works:
 
 ```
-✅ Auto-fix applied — 1 test now passing — recorded in TEST_CASES.md
+✅ Auto-fix applied — 1 test now passing — recorded in TESTS_UI.md
   Root cause: Locator '[data-qa="login-btn"]' not found — correct selector is '[data-qa="login-button"]'
   Lesson learned: Always verify data-qa values against the live DOM before writing locators.
 ```
@@ -168,7 +168,7 @@ future generation call.
 ```
 
 A `/* ⚠️ BROKEN */` comment is written before the failing `test()` call, and the
-entry appears in `TEST_CASES.md` under `❌ Broken Tests`. Run `npm run fix` later
+entry appears in `TESTS_UI.md` under `❌ Broken Tests`. Run `npm run fix` later
 to investigate with a fresh attempt.
 
 ### When it's an application bug
@@ -179,7 +179,7 @@ to investigate with a fresh attempt.
   The test was NOT modified — annotated in the spec with ⚠️ APP BUG.
 ```
 
-The test documents a real defect. It appears in `TEST_CASES.md` under
+The test documents a real defect. It appears in `TESTS_UI.md` under
 `⚠️ Application Bugs`. The test is never changed — it's correct.
 
 ---
@@ -281,12 +281,12 @@ npm run analyze_prd -- --url https://automationexercise.com/api_list
 # review prd-tests.txt, then for each test use generate_api_test from Claude Code
 ```
 
-API tests go to `tests/api/` and are recorded in `TEST_API.md` (separate from
-`TEST_CASES.md`). See [docs/generate-api-test.md](generate-api-test.md) for details.
+API tests go to `tests/api/` and are recorded in `TESTS_API.md` (separate from
+`TESTS_UI.md`). See [docs/generate-api-test.md](generate-api-test.md) for details.
 
 ---
 
-## Keeping TEST_CASES.md in sync
+## Keeping TESTS_UI.md in sync
 
 If you've added tests manually, fixed tests outside the MCP tools, or had a server
 error mid-generation, run:
@@ -304,7 +304,7 @@ For a faster check (only re-runs known broken/app-bug entries):
 npm run update_registry
 ```
 
-The same commands handle both `TEST_CASES.md` (UI/E2E tests) and `TEST_API.md` (API
+The same commands handle both `TESTS_UI.md` (UI/E2E tests) and `TESTS_API.md` (API
 tests) automatically — routing is based on spec path.
 
 See [docs/test-registry.md](test-registry.md) for full details on the registry structure.

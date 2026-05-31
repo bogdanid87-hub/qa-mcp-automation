@@ -3,6 +3,7 @@ import { test, expect } from '../../fixtures';
 import { randomEmail, randomName, randomString } from '../../utils/randomData';
 
 test.describe('Contact Us Form', () => {
+  // [UI Contact Us Form #1]
   test('should submit the contact form and show success message', async ({ page, homePage, contactUsPage }) => {
     // Step 1-3: Navigate to home and verify it loaded
     await homePage.goto();

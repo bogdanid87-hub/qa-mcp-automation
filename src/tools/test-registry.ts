@@ -2,12 +2,15 @@ import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 
 const ROOT = process.cwd();
-export const TEST_CASES_PATH = join(ROOT, 'TEST_CASES.md');
-export const TEST_API_PATH   = join(ROOT, 'TEST_API.md');
+export const TESTS_UI_PATH  = join(ROOT, 'TESTS_UI.md');
+export const TESTS_API_PATH = join(ROOT, 'TESTS_API.md');
+export const TESTS_E2E_PATH = join(ROOT, 'TESTS_E2E.md');
 
 /** Returns the correct registry file for a given spec path. */
 export function registryForSpec(specPath: string): string {
-  return specPath.startsWith('tests/api/') ? TEST_API_PATH : TEST_CASES_PATH;
+  if (specPath.startsWith('tests/api/')) return TESTS_API_PATH;
+  if (specPath.startsWith('tests/e2e/')) return TESTS_E2E_PATH;
+  return TESTS_UI_PATH;
 }
 
 const STOPWORDS = new Set([
@@ -82,12 +85,12 @@ function parseTestCases(content: string): TestEntry[] {
 
     const rowMatch = line.match(/^\|\s*(\d+)\s*\|\s*(.+?)\s*\|$/);
     if (rowMatch && currentSpec && currentDescribe) {
-      const name = rowMatch[2].replace(/\s*←\s*latest\s*$/, '').trim();
+      const name = rowMatch[2].replace(/\s*←\s*latest\s*$/, '').trim(); // handle legacy files
       entries.push({ num: parseInt(rowMatch[1], 10), spec: currentSpec, describe: currentDescribe, name });
     }
   }
 
-  return entries.sort((a, b) => a.num - b.num);
+  return entries; // file order is already spec-grouped; sort by num would scramble per-section numbering
 }
 
 // ─── Broken / app-bug tests ───────────────────────────────────────────────────
@@ -150,9 +153,7 @@ function buildContent(entries: TestEntry[], broken: BrokenEntry[] = []): string 
   if (entries.length === 0) {
     lines.push('**Total: 0 passing tests**', '');
   } else {
-    const latest = entries[entries.length - 1];
-    const latestLabel = `#${latest.num} — ${latest.describe} › ${latest.name}`;
-    lines.push(`**Total: ${entries.length} ${entries.length === 1 ? 'test' : 'tests'}** | **Latest:** ${latestLabel}`, '');
+    lines.push(`**Total: ${entries.length} ${entries.length === 1 ? 'test' : 'tests'}**`, '');
 
     const groups = new Map<string, Map<string, TestEntry[]>>();
     for (const entry of entries) {
@@ -168,9 +169,9 @@ function buildContent(entries: TestEntry[], broken: BrokenEntry[] = []): string 
         lines.push(`### ${describe}`, '');
         lines.push('| # | Test |');
         lines.push('|---|------|');
+        let n = 1;
         for (const t of tests) {
-          const marker = t.num === entries[entries.length - 1].num ? ' ← latest' : '';
-          lines.push(`| ${t.num} | ${t.name}${marker} |`);
+          lines.push(`| ${n++} | ${t.name} |`);
         }
         lines.push('');
       }
@@ -260,7 +261,7 @@ export function parseFailingTestsFromOutput(output: string): FailingTestResult[]
 
 export async function recordPassingTests(
   passing: PassingTest[],
-  registryPath = TEST_CASES_PATH,
+  registryPath = TESTS_UI_PATH,
 ): Promise<void> {
   if (passing.length === 0) return;
 
@@ -270,7 +271,7 @@ export async function recordPassingTests(
   const existing = parseTestCases(content);
   const broken = parseBrokenTests(content);
   const existingKeys = new Set(existing.map((e) => `${e.spec}::${e.name}`));
-  let nextNum = existing.length > 0 ? Math.max(...existing.map((e) => e.num)) + 1 : 1;
+  let nextNum = existing.length + 1; // position-based; display is per-section so max() would give wrong results
   let changed = false;
 
   for (const t of passing) {
@@ -292,7 +293,7 @@ export async function recordPassingTests(
 /** Add a broken or app-bug test to the appropriate registry. Skips if already recorded. */
 export async function recordBrokenTest(
   entry: BrokenEntry,
-  registryPath = TEST_CASES_PATH,
+  registryPath = TESTS_UI_PATH,
 ): Promise<void> {
   let content = '';
   try { content = await readFile(registryPath, 'utf-8'); } catch { /* new file */ }
@@ -310,7 +311,7 @@ export async function recordBrokenTest(
 /** Remove entries whose tests now pass. */
 export async function removeResolvedBrokenTests(
   resolvedKeys: Set<string>,
-  registryPath = TEST_CASES_PATH,
+  registryPath = TESTS_UI_PATH,
 ): Promise<void> {
   let content = '';
   try { content = await readFile(registryPath, 'utf-8'); } catch { return; }
@@ -329,7 +330,7 @@ export async function removeResolvedBrokenTests(
  */
 export async function demoteTobroken(
   entries: BrokenEntry[],
-  registryPath = TEST_CASES_PATH,
+  registryPath = TESTS_UI_PATH,
 ): Promise<void> {
   if (entries.length === 0) return;
 
@@ -363,7 +364,7 @@ export async function demoteTobroken(
 }
 
 /** Read all broken/app-bug entries from the given registry (defaults to TEST_CASES.md). */
-export async function readBrokenTests(registryPath = TEST_CASES_PATH): Promise<BrokenEntry[]> {
+export async function readBrokenTests(registryPath = TESTS_UI_PATH): Promise<BrokenEntry[]> {
   try {
     return parseBrokenTests(await readFile(registryPath, 'utf-8'));
   } catch {
@@ -372,7 +373,7 @@ export async function readBrokenTests(registryPath = TEST_CASES_PATH): Promise<B
 }
 
 /** Read all recorded passing test cases from the given registry (defaults to TEST_CASES.md). */
-export async function readTestCases(registryPath = TEST_CASES_PATH): Promise<TestEntry[]> {
+export async function readTestCases(registryPath = TESTS_UI_PATH): Promise<TestEntry[]> {
   try {
     return parseTestCases(await readFile(registryPath, 'utf-8'));
   } catch {

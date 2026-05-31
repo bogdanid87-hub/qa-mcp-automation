@@ -1,7 +1,7 @@
 # run\_tests
 
 Runs the Playwright test suite and returns the output. This tool only executes and
-reports — it never modifies `TEST_CASES.md` or any source files.
+reports — it never modifies `TESTS_UI.md` or any source files.
 
 ---
 
@@ -59,11 +59,11 @@ error details.
 
 ## Run tests vs sync-registry
 
-Running tests manually never touches `TEST_CASES.md` or `TEST_API.md`. If you want
+Running tests manually never touches `TESTS_UI.md` or `TESTS_API.md`. If you want
 the registries updated after a manual run, use:
 
 ```bash
-npm run sync_registry    # reconcile TEST_CASES.md with actual results
+npm run sync_registry    # reconcile TESTS_UI.md with actual results
 ```
 
 See [docs/test-registry.md](test-registry.md) for details.

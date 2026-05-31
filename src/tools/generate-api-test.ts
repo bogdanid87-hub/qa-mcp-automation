@@ -1,9 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { writeFile, mkdir } from 'fs/promises';
+import { readFile, writeFile, mkdir } from 'fs/promises';
 import { dirname, join } from 'path';
+import { TokenBudget } from './budget.js';
 import { isLocalLlmAvailable, callLocalLlm, LOCAL_MODEL } from './local-llm.js';
 import { runTests } from './run-tests.js';
-import { parsePassingTests, recordPassingTests, TEST_API_PATH } from './test-registry.js';
+import { parsePassingTests, recordPassingTests, TESTS_API_PATH } from './test-registry.js';
 import { autoFixFailure } from './investigate-fix.js';
 import { writeTestAnnotation } from './annotations.js';
 
@@ -26,27 +27,109 @@ request fixture. No browser, no page objects, no DOM — pure API testing.
 - No page or browser fixtures — only the request fixture
 - baseURL: https://automationexercise.com — always use relative paths in request calls
 
+### File structure — always follow this pattern
+Every spec file must have three sections at the top before any test.describe():
+
+1. Endpoint constants — one named const per endpoint used in the file:
+   const PRODUCTS_ENDPOINT = '/api/productsList';
+   const BRANDS_ENDPOINT   = '/api/brandsList';
+
+2. A shared parseApiResponse helper that handles the two mandatory HTTP assertions
+   so they are never duplicated inside individual tests:
+   async function parseApiResponse(response: Awaited<ReturnType<typeof fetch>>) {
+     expect(response.status()).toBe(200);
+     return response.json() as Promise<Record<string, unknown>>;
+   }
+
+3. test.describe() with all tests inside.
+
+Tests then use the helper:
+   test('should return products', async ({ request }) => {
+     const body = await parseApiResponse(await request.get(PRODUCTS_ENDPOINT));
+     expect(body.responseCode).toBe(200);
+     expect(Array.isArray(body.products)).toBe(true);
+   });
+
+Never repeat expect(response.status()).toBe(200) inside individual tests — the
+helper already asserts it.
+
 ### File and naming
 - File: tests/api/<resource>.spec.ts  (e.g. tests/api/products.spec.ts)
 - test.describe() = the API resource area ("Products API", "Auth API")
-- test() = what the test verifies ("should return 200 with a list of products")
+- test() = what the test verifies ("should return products list")
 
-### This site's API response format
-Most endpoints return JSON with a responseCode field:
-  { responseCode: 200, products: [...] }   — success
-  { responseCode: 400, message: "..." }    — error
-Assert BOTH the HTTP status code AND the responseCode in the body.
+### This site's API response format — READ CAREFULLY
+ALL HTTP responses from this API return status 200 at the transport level, even for
+errors. NEVER assert response.status() for anything other than 200.
+The actual result code is always inside the JSON body as "responseCode":
+
+  HTTP 200 + { responseCode: 200, products: [...] }      ← success
+  HTTP 200 + { responseCode: 405, message: "..." }       ← method not allowed
+  HTTP 200 + { responseCode: 400, message: "..." }       ← bad request / missing param
+  HTTP 200 + { responseCode: 404, message: "..." }       ← not found
+  HTTP 200 + { responseCode: 201, message: "User created!" } ← createAccount success
+
+CORRECT assertions (always write this pattern):
+  expect(response.status()).toBe(200);      // HTTP transport is always 200
+  expect(body.responseCode).toBe(405);     // check the actual result in the body
+
+WRONG assertions (never write these):
+  expect(response.status()).toBe(405);     // ✗ HTTP is always 200, never 405
+  expect(response.status()).toBe(400);     // ✗ HTTP is always 200, never 400
+  expect(response.status()).toBe(201);     // ✗ even createAccount returns HTTP 200
 
 ### Assertions (strict order)
-1. expect(response.status()).toBe(<expected HTTP status>)
-2. const body = await response.json()
-3. expect(body.responseCode).toBe(<expected code>)
+1. expect(response.status()).toBe(200);          // always 200 — never anything else
+2. const body = await response.json();
+3. expect(body.responseCode).toBe(<expected code>);
 4. Assert required response fields exist and have correct types
 
 ### Error and negative tests
-- For unsupported methods, assert status 405 or check the body message
-- For missing required parameters, assert status 400 and the body message
-- For invalid credentials, assert status 403/401 and the body message
+- For unsupported methods: expect(body.responseCode).toBe(405) and check body.message
+- For missing required parameters: expect(body.responseCode).toBe(400) and check body.message
+- For invalid credentials: expect(body.responseCode).toBe(404) and check body.message
+
+### Asserting message strings — use exact values
+When the test description specifies a message string, use toBe() with the exact string,
+never toContain() or a paraphrased alternative:
+  CORRECT: expect(body.message).toBe('Bad request, email or password parameter is missing in POST request.')
+  WRONG:   expect(body.message).toContain('Bad request')
+  WRONG:   expect(body.message).toContain('email parameter is missing')
+If the description says "Bad request, email or password parameter is missing in POST request."
+then assert that exact string — do not split it into alternatives.
+
+### Tests that require valid credentials — MANDATORY PATTERN
+Any test that calls /api/verifyLogin or other auth endpoints expecting a SUCCESS response
+(body.responseCode 200) MUST create a real test account in test.beforeAll and delete it
+in test.afterAll. NEVER invent or hardcode credentials — they will not exist on the live site.
+
+Required fields for POST /api/createAccount (all mandatory):
+  name, email, password, title, birth_date, birth_month, birth_year,
+  firstname, lastname, company, address1, address2, country, zipcode, state, city, mobile_number
+
+Template to follow whenever valid credentials are needed:
+
+const testEmail = \`api_test_\${Date.now()}@example.com\`;
+const testPassword = 'TestPass123';
+
+test.describe('Auth API', () => {
+  test.beforeAll(async ({ request }) => {
+    await request.post('/api/createAccount', { form: {
+      name: 'API Test User', email: testEmail, password: testPassword,
+      title: 'Mr', birth_date: '1', birth_month: '1', birth_year: '2000',
+      firstname: 'API', lastname: 'Test', company: 'QA Co',
+      address1: '123 Main St', address2: '', country: 'United States',
+      zipcode: '10001', state: 'New York', city: 'New York',
+      mobile_number: '5551234567'
+    }});
+  });
+
+  test.afterAll(async ({ request }) => {
+    await request.delete('/api/deleteAccount', {
+      form: { email: testEmail, password: testPassword }
+    });
+  });
+});
 
 ### Output format
 Respond with raw JSON only (no markdown fences):
@@ -84,6 +167,8 @@ export async function generateApiTestTool(args: {
   description: string;
   test_name?: string;
   spec_file?: string;
+  budget?: TokenBudget;
+  noAutoFix?: boolean;
 }): Promise<{
   content: { type: 'text'; text: string }[];
   _meta?: { specFile?: string; lastFailureOutput?: string; passing: boolean };
@@ -95,9 +180,23 @@ export async function generateApiTestTool(args: {
 
   const localAvailable = await isLocalLlmAvailable();
 
+  // Read existing spec file so the AI can append rather than overwrite
+  let existingContent = '';
+  if (args.spec_file) {
+    try {
+      existingContent = await readFile(join(ROOT, args.spec_file), 'utf-8');
+    } catch { /* new file */ }
+  }
+
+  const specInstruction = args.spec_file
+    ? existingContent
+      ? `Add the new test to ${args.spec_file}. Current file content shown below — do NOT remove or modify existing tests, only add the new one:\n\`\`\`typescript\n${existingContent}\n\`\`\``
+      : `Create ${args.spec_file} with this test.`
+    : '';
+
   const userPrompt = [
     args.test_name ? `Test name hint: ${args.test_name}` : '',
-    args.spec_file ? `Write the test to ${args.spec_file}. Create the file if it does not exist; add to it if it does.` : '',
+    specInstruction,
     args.description,
   ].filter(Boolean).join('\n\n');
 
@@ -148,32 +247,40 @@ export async function generateApiTestTool(args: {
     const passed = (testOutput.match(/✓/g) ?? []).length;
     const hasFailed = testOutput.includes('failed') || (testOutput.match(/✗/g) ?? []).length > 0;
 
-    if (passed > 0) await recordPassingTests(parsePassingTests(testOutput), TEST_API_PATH);
+    if (passed > 0) await recordPassingTests(parsePassingTests(testOutput), TESTS_API_PATH);
 
     if (passed > 0 && !hasFailed) {
       testRunNote = `✅ ${passed} test${passed === 1 ? '' : 's'} passed — recorded in TEST_API.md`;
     } else {
       passing = false;
       lastFailureOutput = testOutput;
-      testRunNote = '⚠️ Initial run failed — attempting auto-fix...\n';
-      const fix = await autoFixFailure(testOutput, specFile.path);
-      if (fix.verdict === 'app_bug') {
-        lastFailureOutput = testOutput;
-        await writeTestAnnotation(specFile.path, testOutput, 'app_bug', fix.rootCause, fix.actualBehavior);
-        testRunNote += [
-          '⚠️  Application bug detected — the test is correct but the API behaves differently.',
-          `  What the API does: ${fix.actualBehavior ?? fix.rootCause}`,
-          '  The test was NOT modified — annotated in the spec with ⚠️ APP BUG.',
-        ].join('\n');
-      } else if (fix.fixed) {
-        passing = true;
-        const fixedPassed = (fix.verifyOutput.match(/✓/g) ?? []).length;
-        testRunNote += `✅ Auto-fix applied — ${fixedPassed} test${fixedPassed === 1 ? '' : 's'} now passing — recorded in TEST_API.md`;
-        if (fix.lesson) testRunNote += `\n  Lesson learned: ${fix.lesson.rule}`;
+
+      if (args.noAutoFix) {
+        // Batch mode — annotate as BROKEN immediately, let user run npm run fix manually
+        await writeTestAnnotation(specFile.path, lastFailureOutput, 'broken',
+          'Failed on first run — run `npm run fix` to investigate');
+        testRunNote = '❌ Test failed — annotated as BROKEN (auto-fix skipped in batch mode). Run `npm run fix` to investigate.';
       } else {
-        lastFailureOutput = fix.verifyOutput || testOutput;
-        await writeTestAnnotation(specFile.path, lastFailureOutput, 'broken', fix.rootCause);
-        testRunNote += `❌ Could not auto-fix — annotated in the spec with ⚠️ BROKEN\n  Root cause: ${fix.rootCause}`;
+        testRunNote = '⚠️ Initial run failed — attempting auto-fix...\n';
+        const fix = await autoFixFailure(testOutput, specFile.path, args.budget);
+        if (fix.verdict === 'app_bug') {
+          lastFailureOutput = testOutput;
+          await writeTestAnnotation(specFile.path, testOutput, 'app_bug', fix.rootCause, fix.actualBehavior);
+          testRunNote += [
+            '⚠️  Application bug detected — the test is correct but the API behaves differently.',
+            `  What the API does: ${fix.actualBehavior ?? fix.rootCause}`,
+            '  The test was NOT modified — annotated in the spec with ⚠️ APP BUG.',
+          ].join('\n');
+        } else if (fix.fixed) {
+          passing = true;
+          const fixedPassed = (fix.verifyOutput.match(/✓/g) ?? []).length;
+          testRunNote += `✅ Auto-fix applied — ${fixedPassed} test${fixedPassed === 1 ? '' : 's'} now passing — recorded in TEST_API.md`;
+          if (fix.lesson) testRunNote += `\n  Lesson learned: ${fix.lesson.rule}`;
+        } else {
+          lastFailureOutput = fix.verifyOutput || testOutput;
+          await writeTestAnnotation(specFile.path, lastFailureOutput, 'broken', fix.rootCause);
+          testRunNote += `❌ Could not auto-fix — annotated in the spec with ⚠️ BROKEN\n  Root cause: ${fix.rootCause}`;
+        }
       }
     }
   }

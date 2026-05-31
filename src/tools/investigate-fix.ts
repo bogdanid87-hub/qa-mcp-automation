@@ -5,7 +5,7 @@ import { getSystemBlocks, appendLearnedRule } from '../prompts/system.js';
 import { readFocusedContextForFailure } from './list-resources.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { runTests, runTestsTool } from './run-tests.js';
-import { parsePassingTests, recordPassingTests } from './test-registry.js';
+import { parsePassingTests, recordPassingTests, registryForSpec } from './test-registry.js';
 import { TokenBudget } from './budget.js';
 
 const ROOT = process.cwd();
@@ -260,7 +260,8 @@ If the failure is not reproducible or the cause is unclear, set "lesson" to null
   let verifyOutput = '';
   if (fixedFiles.length > 0) {
     verifyOutput = await runTests(pattern);
-    await recordPassingTests(parsePassingTests(verifyOutput));
+    const registry = pattern ? registryForSpec(pattern) : undefined;
+    await recordPassingTests(parsePassingTests(verifyOutput), registry);
   }
 
   const failed = verifyOutput.includes('failed') || verifyOutput.includes('Error');

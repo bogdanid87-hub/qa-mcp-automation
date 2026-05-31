@@ -5,7 +5,7 @@ import * as readline from 'readline';
 import { generateTestTool } from './tools/generate-test.js';
 import { generateApiTestTool } from './tools/generate-api-test.js';
 import { runTests } from './tools/run-tests.js';
-import { readTestCases, TEST_API_PATH, type TestEntry } from './tools/test-registry.js';
+import { readTestCases, TESTS_API_PATH, TESTS_E2E_PATH, type TestEntry } from './tools/test-registry.js';
 import { autoFixFailure } from './tools/investigate-fix.js';
 import { TokenBudget } from './tools/budget.js';
 
@@ -13,7 +13,7 @@ const DEFAULT_BUDGET_USD = 0.30;
 
 const ROOT = process.cwd();
 const TRACKED_DIRS = ['pages', 'tests', 'fixtures'];
-const TRACKED_EXTRAS = ['TEST_CASES.md', 'TEST_API.md', 'src/prompts/learned-rules.md'];
+const TRACKED_EXTRAS = ['TESTS_UI.md', 'TESTS_API.md', 'TESTS_E2E.md', 'src/prompts/learned-rules.md'];
 
 // ---------------------------------------------------------------------------
 // API key — read from environment or fall back to .claude/settings.local.json
@@ -190,33 +190,70 @@ function parseMultipleSections(raw: string): Array<{
 // ---------------------------------------------------------------------------
 async function runBatch(
   sections: Array<{ description: string; testName?: string; pagePaths?: string[]; specFile?: string }>,
+  budget: TokenBudget,
 ): Promise<void> {
   console.log(`\n📋 Batch mode — ${sections.length} tests to generate\n`);
 
   const summary: Array<{ label: string; status: string }> = [];
 
-  for (const [i, section] of sections.entries()) {
+  // ── API tests: group by spec file → one generation call per spec ──────────
+  // Generating section-by-section causes a cascade: auto-fix annotations pollute
+  // the file before the next section reads it as "existing content". One combined
+  // call produces a clean, complete file without mid-batch side effects.
+  const apiSections = sections.filter(s => s.specFile?.startsWith('tests/api/'));
+  const nonApiSections = sections.filter(s => !s.specFile?.startsWith('tests/api/'));
+
+  const apiBySpec = new Map<string, typeof apiSections>();
+  for (const s of apiSections) {
+    const key = s.specFile!;
+    if (!apiBySpec.has(key)) apiBySpec.set(key, []);
+    apiBySpec.get(key)!.push(s);
+  }
+
+  for (const [specFile, group] of apiBySpec) {
+    const label = `${specFile} (${group.length} test${group.length === 1 ? '' : 's'})`;
+    const bar = '─'.repeat(48);
+    console.log(`\n${bar}`);
+    console.log(`  API spec: ${specFile}`);
+    console.log(`${bar}\n`);
+
+    const combinedDescription = group.length === 1
+      ? group[0].description
+      : `Generate ALL of the following ${group.length} tests in one complete spec file:\n\n` +
+        group.map((s) => `### ${s.testName ?? 'Test'}:\n${s.description}`).join('\n\n---\n\n');
+
+    console.log(`⏳ Generating ${group.length} test${group.length === 1 ? '' : 's'} in one call (no auto-fix in batch)...\n`);
+    const before = await snapshotFiles();
+    const result = await generateApiTestTool({
+      description: combinedDescription,
+      spec_file: specFile,
+      budget,
+      noAutoFix: true,  // prevents annotation cascade; user runs npm run fix after reviewing
+    });
+    console.log(result.content[0]?.text ?? '');
+    const { created, edited } = await diffFiles(before);
+    printDiff(created, edited);
+
+    const passing = result._meta?.passing !== false;
+    summary.push({ label, status: passing ? '✅' : '❌ failed — run `npm run fix` to investigate' });
+  }
+
+  // ── UI/E2E tests: one call per section (existing behaviour) ───────────────
+  for (const [i, section] of nonApiSections.entries()) {
     const label = section.testName ?? `test ${i + 1}`;
     const bar = '─'.repeat(48);
     console.log(`\n${bar}`);
-    console.log(`  [${i + 1}/${sections.length}]  ${label}`);
+    console.log(`  [${i + 1}/${nonApiSections.length}]  ${label}`);
     console.log(`${bar}\n`);
 
     console.log(`⏳ Generating...\n`);
     const before = await snapshotFiles();
-    const isApiTest = section.specFile?.startsWith('tests/api/');
-    const result = isApiTest
-      ? await generateApiTestTool({
-          description: section.description,
-          test_name: section.testName,
-          spec_file: section.specFile,
-        })
-      : await generateTestTool({
-          description: section.description,
-          test_name: section.testName,
-          page_paths: section.pagePaths,
-          spec_file: section.specFile,
-        });
+    const result = await generateTestTool({
+      description: section.description,
+      test_name: section.testName,
+      page_paths: section.pagePaths,
+      spec_file: section.specFile,
+    });
     console.log(result.content[0]?.text ?? '');
     const { created, edited } = await diffFiles(before);
     printDiff(created, edited);
@@ -229,6 +266,7 @@ async function runBatch(
   console.log(`\n${eq}`);
   console.log(`  Batch complete — ${sections.length} test${sections.length === 1 ? '' : 's'}:`);
   for (const { label, status } of summary) console.log(`    ${status}  ${label}`);
+  console.log(`  Fix budget used: ${budget.summary}`);
   console.log(`${eq}\n`);
 }
 
@@ -428,7 +466,7 @@ async function main(): Promise<void> {
     // Multi-test: sections separated by --- lines → batch mode (non-interactive)
     const sections = parseMultipleSections(fileContent);
     if (sections.length > 0) {
-      await runBatch(sections);
+      await runBatch(sections, budget);
       process.exit(0);
     }
 
@@ -451,8 +489,8 @@ async function main(): Promise<void> {
   }
 
   // ── Step 0: Similarity check ──────────────────────────────────────────────
-  const [uiTests, apiTests] = await Promise.all([readTestCases(), readTestCases(TEST_API_PATH)]);
-  const allTests = [...uiTests, ...apiTests];
+  const [uiTests, apiTests, e2eTests] = await Promise.all([readTestCases(), readTestCases(TESTS_API_PATH), readTestCases(TESTS_E2E_PATH)]);
+  const allTests = [...uiTests, ...apiTests, ...e2eTests];
   if (allTests.length > 0) {
     process.stdout.write('  Checking for existing coverage...\r');
     const similar = await claudeSimilarityCheck(description, allTests);
@@ -622,8 +660,8 @@ async function main(): Promise<void> {
   }
 
   // ── Step 2: Offer additional tests ────────────────────────────────────────
-  const [uiTestsAfter, apiTestsAfter] = await Promise.all([readTestCases(), readTestCases(TEST_API_PATH)]);
-  const allTestsAfter = [...uiTestsAfter, ...apiTestsAfter];
+  const [uiTestsAfter, apiTestsAfter, e2eTestsAfter] = await Promise.all([readTestCases(), readTestCases(TESTS_API_PATH), readTestCases(TESTS_E2E_PATH)]);
+  const allTestsAfter = [...uiTestsAfter, ...apiTestsAfter, ...e2eTestsAfter];
   const existingNames = new Set(allTestsAfter.map(t => t.name.toLowerCase()));
 
   const rawProposals = parseProposedNegatives(output);

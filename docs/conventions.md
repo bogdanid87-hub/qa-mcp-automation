@@ -44,9 +44,9 @@ Tests are split by *how* they test, not by *what* they test:
 
 | Folder | Type | Registry |
 |--------|------|---------|
-| `tests/ui/` | Single-feature browser tests | `TEST_CASES.md` |
-| `tests/e2e/` | Full user journeys (multi-page) | `TEST_CASES.md` |
-| `tests/api/` | Direct HTTP tests (no browser) | `TEST_API.md` |
+| `tests/ui/` | Single-feature browser tests | `TESTS_UI.md` |
+| `tests/e2e/` | Full user journeys (multi-page) | `TESTS_E2E.md` |
+| `tests/api/` | Direct HTTP tests (no browser) | `TESTS_API.md` |
 
 **Why separate registries:** API tests and UI/E2E tests have different failure
 characteristics, different fix strategies, and different app-bug patterns. Mixing

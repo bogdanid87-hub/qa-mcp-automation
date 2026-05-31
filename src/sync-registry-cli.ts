@@ -10,8 +10,9 @@ import {
   normalizeTestName,
   demoteTobroken,
   registryForSpec,
-  TEST_CASES_PATH,
-  TEST_API_PATH,
+  TESTS_UI_PATH,
+  TESTS_API_PATH,
+  TESTS_E2E_PATH,
   type BrokenEntry,
   type FailingTestResult,
 } from './tools/test-registry.js';
@@ -33,16 +34,18 @@ async function main(): Promise<void> {
   }
 
   // Load both registries — the routing for writes is handled by registryForSpec()
-  const [recordedPassing, recordedPassingApi] = await Promise.all([
-    readTestCases(TEST_CASES_PATH),
-    readTestCases(TEST_API_PATH),
+  const [recordedPassing, recordedPassingApi, recordedPassingE2e] = await Promise.all([
+    readTestCases(TESTS_UI_PATH),
+    readTestCases(TESTS_API_PATH),
+    readTestCases(TESTS_E2E_PATH),
   ]);
-  const [recordedBroken, recordedBrokenApi] = await Promise.all([
-    readBrokenTests(TEST_CASES_PATH),
-    readBrokenTests(TEST_API_PATH),
+  const [recordedBroken, recordedBrokenApi, recordedBrokenE2e] = await Promise.all([
+    readBrokenTests(TESTS_UI_PATH),
+    readBrokenTests(TESTS_API_PATH),
+    readBrokenTests(TESTS_E2E_PATH),
   ]);
-  const allRecordedPassing = [...recordedPassing, ...recordedPassingApi];
-  const allRecordedBroken  = [...recordedBroken,  ...recordedBrokenApi];
+  const allRecordedPassing = [...recordedPassing, ...recordedPassingApi, ...recordedPassingE2e];
+  const allRecordedBroken  = [...recordedBroken,  ...recordedBrokenApi,  ...recordedBrokenE2e];
 
   const passingKeys = new Set(allRecordedPassing.map(e => `${e.spec}::${e.name}`));
   const brokenKeys  = new Set(allRecordedBroken.map(e => `${e.spec}::${e.name}`));

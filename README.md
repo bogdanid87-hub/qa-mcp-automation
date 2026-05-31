@@ -38,15 +38,17 @@ Several deliberate decisions to reduce API spend while preserving output quality
 Every time `investigate_and_fix` resolves a failure, the root cause and the corrective rule are appended to `src/prompts/learned-rules.md`. This file is injected into the system prompt on every subsequent generation call. Ten lessons have been accumulated so far (wrong import styles, carousel visibility quirks, `waitForLoadState` timing on this specific site, etc.) — the system gets measurably better with each fixed bug.
 
 ### Failure classification before fixing
-The fix tool classifies every failure as a **code bug** or an **app bug** before touching anything. Code bugs (wrong locator, bad selector, import error) are fixed automatically. App bugs — where the test is correct but the application under test behaves differently from the assertion — are never "fixed" by changing the test. Instead a structured `/* ⚠️ APP BUG */` annotation is written into the spec and the entry is recorded in `TEST_CASES.md` under a separate section. This preserves the test as documentation of a real defect.
+The fix tool classifies every failure as a **code bug** or an **app bug** before touching anything. Code bugs (wrong locator, bad selector, import error) are fixed automatically. App bugs — where the test is correct but the application under test behaves differently from the assertion — are never "fixed" by changing the test. Instead a structured `/* ⚠️ APP BUG */` annotation is written into the spec and the entry is recorded in `TESTS_UI.md` under a separate section. This preserves the test as documentation of a real defect.
 
 The fix tool also reads the Playwright screenshot and live DOM snapshot at point of failure (Claude is multimodal), so locator errors can be corrected from what was actually on screen rather than from source code alone.
 
 ### PRD risk analysis with multi-format input
-`analyze_prd` accepts text, Markdown, PDFs (passed natively to the Claude API — no third-party parser), and images (wireframes, mockups via vision). It classifies features by risk tier (critical → revenue impact, high → trust/data, medium → conversion, low → content), generates test suggestions in a structured batch format, and filters against existing `TEST_CASES.md` coverage so the output is a genuine gap list. The `--tier` and `--focus` flags scope the output to a sprint without re-running the full analysis.
+`analyze_prd` accepts text, Markdown, PDFs (passed natively to the Claude API — no third-party parser), and images (wireframes, mockups via vision). It classifies features by risk tier (critical → revenue impact, high → trust/data, medium → conversion, low → content), generates test suggestions in a structured batch format, and filters against existing `TESTS_UI.md` coverage so the output is a genuine gap list. The `--tier` and `--focus` flags scope the output to a sprint without re-running the full analysis.
 
 ### Test registry and reconciliation
-`TEST_CASES.md` is a markdown file maintained automatically — passing tests, app bugs, and broken tests each have their own section. The `sync-registry` command runs the full suite, adds any undocumented passing tests, promotes resolved broken entries, and flags regressions — but only after running the spec twice to rule out transient failures (the site runs on shared infrastructure with variable load). Fuzzy name matching (normalising articles and punctuation) prevents stale broken entries when test names drift between generation attempts.
+
+> **Format note:** Registries are intentionally stored as human-readable Markdown files (`TESTS_UI.md`, `TESTS_API.md`, `TESTS_E2E.md`). This works well at the scale of a typical automation project (hundreds of tests) and makes test status immediately visible without tooling. At very large scale (thousands of tests), SQLite would be the correct storage choice — indexed lookups, atomic writes, no full-file rewrites on every update — with Markdown generated on demand as a report. This portfolio project uses Markdown because human readability and zero-dependency simplicity are the right trade-offs here.
+`TESTS_UI.md` is a markdown file maintained automatically — passing tests, app bugs, and broken tests each have their own section. The `sync-registry` command runs the full suite, adds any undocumented passing tests, promotes resolved broken entries, and flags regressions — but only after running the spec twice to rule out transient failures (the site runs on shared infrastructure with variable load). Fuzzy name matching (normalising articles and punctuation) prevents stale broken entries when test names drift between generation attempts.
 
 ---
 
@@ -109,7 +111,7 @@ Eight tools are available in Claude Code chat and (most) from the terminal. See 
 |------|-----------|-------|
 | `analyze_prd` | Turn a PRD into a risk-prioritised test backlog (`prd-tests.txt`) | [docs/analyze-prd.md](docs/analyze-prd.md) |
 | `generate_pom` | Inspect a live page, write a locator-only POM — run before `generate_test` for new pages | [docs/generate-pom.md](docs/generate-pom.md) |
-| `generate_api_test` | Generate an API test (request fixture, no browser) — local LLM first, records to `TEST_API.md` | [docs/generate-api-test.md](docs/generate-api-test.md) |
+| `generate_api_test` | Generate an API test (request fixture, no browser) — local LLM first, records to `TESTS_API.md` | [docs/generate-api-test.md](docs/generate-api-test.md) |
 | `generate_test` | Generate a complete UI/E2E test: POM + spec + auto-run + auto-fix + registry | [docs/generate-test.md](docs/generate-test.md) |
 | `inspect_page` | See real DOM elements and locators on a page | [docs/inspect-page.md](docs/inspect-page.md) |
 | `investigate_and_fix` | Diagnose a failure (code bug vs app bug), patch, learn, re-run | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
@@ -146,7 +148,7 @@ Registry out of sync:
 npm run generate -- --file my-test.txt   # generate from description
 npm run analyze_prd -- --file prd.md     # generate test backlog from PRD
 npm run fix                               # investigate and fix failing tests
-npm run sync_registry                     # reconcile TEST_CASES.md with reality
+npm run sync_registry                     # reconcile TESTS_UI.md with reality
 npm run update_registry                   # re-check only known broken/app-bug entries
 npm test                                  # run all tests headless
 npm run test:headed                       # browser visible
@@ -196,7 +198,7 @@ qa-mcp-automation/
 │       ├── investigate-fix.ts    ← failure diagnosis + fix (screenshot + DOM aware)
 │       ├── local-llm.ts          ← Ollama client with startup prompt
 │       ├── inspect-page.ts       ← headless DOM extraction
-│       ├── test-registry.ts      ← reads/writes TEST_CASES.md
+│       ├── test-registry.ts      ← reads/writes TESTS_UI.md
 │       └── budget.ts             ← fix-loop token cost tracking
 │
 ├── docs/                         ← per-tool documentation
@@ -216,7 +218,7 @@ qa-mcp-automation/
 │
 ├── CLAUDE.md                     ← auto-loaded by Claude Code — project context
 ├── TOOLS.md                      ← quick tool index
-├── TEST_CASES.md                 ← auto-updated test registry
+├── TESTS_UI.md                 ← auto-updated test registry
 ├── prd.md.example                ← template for PRD analysis (copy to prd.md)
 └── playwright.config.ts          ← Chromium only, baseURL, storageState
 ```

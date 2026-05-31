@@ -3,7 +3,7 @@
 Generates a Playwright API test using the `request` fixture — no browser, no DOM,
 no page objects. Uses the local LLM (Ollama) as the primary generator; falls back
 to the Claude API automatically. Writes to `tests/api/` and records results in
-`TEST_API.md`.
+`TESTS_API.md`.
 
 ---
 
@@ -113,7 +113,7 @@ Generate API tests for the brands list API
 
 After writing the spec, the tool:
 1. Runs the spec automatically
-2. Records passing tests in `TEST_API.md` (not `TEST_CASES.md`)
+2. Records passing tests in `TESTS_API.md` (not `TESTS_UI.md`)
 3. Attempts one auto-fix if the test fails (Claude API for diagnosis)
 4. Writes a `/* ⚠️ BROKEN */` or `/* ⚠️ APP BUG */` annotation if it can't be fixed
 
@@ -137,7 +137,7 @@ npm run generate_api -- --description "Test POST /api/verifyLogin" --spec_file t
 # Claude Code: type naturally
 # "Generate API tests for the GET /api/productsList endpoint"
 
-# 4. Keep TEST_API.md in sync after any manual changes
+# 4. Keep TESTS_API.md in sync after any manual changes
 npm run sync_registry
 ```
 
@@ -146,8 +146,8 @@ npm run sync_registry
 ## Keeping TEST\_API.md in sync
 
 API tests are tracked separately from UI/E2E tests:
-- Passing tests → `TEST_API.md` (passing table)
-- App bugs / broken tests → `TEST_API.md` (separate sections)
-- `npm run sync_registry` handles both `TEST_CASES.md` and `TEST_API.md`
+- Passing tests → `TESTS_API.md` (passing table)
+- App bugs / broken tests → `TESTS_API.md` (separate sections)
+- `npm run sync_registry` handles both `TESTS_UI.md` and `TESTS_API.md`
 
 See [docs/test-registry.md](test-registry.md) for full details.

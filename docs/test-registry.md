@@ -4,8 +4,8 @@ The project uses two registry files, automatically chosen based on the spec path
 
 | Spec location | Registry |
 |---------------|---------|
-| `tests/ui/` and `tests/e2e/` | `TEST_CASES.md` |
-| `tests/api/` | `TEST_API.md` |
+| `tests/ui/` and `tests/e2e/` | `TESTS_UI.md` |
+| `tests/api/` | `TESTS_API.md` |
 
 Both files have the same structure and are managed by the same tools. You should
 rarely need to edit either by hand.
@@ -40,7 +40,7 @@ The file has three sections:
 | Event | What gets recorded | Registry |
 |-------|-------------------|---------|
 | `generate_test` passes | Test added to passing table | Based on spec path |
-| `generate_api_test` passes | Test added to passing table | `TEST_API.md` |
+| `generate_api_test` passes | Test added to passing table | `TESTS_API.md` |
 | `generate_test` / `generate_api_test` detects an app bug | Added to Application Bugs | Based on spec path |
 | `generate_test` / `generate_api_test` cannot fix a failure | Added to Broken Tests | Based on spec path |
 | `investigate_and_fix` resolves a failure | Entry moved from Broken to passing | Based on spec path |
@@ -92,7 +92,7 @@ app bug and you want to check if the entries can be promoted to passing.
 | | sync_registry | update_registry |
 |--|---------------|-----------------|
 | Runs the full suite | ✓ | ✗ (only affected specs) |
-| Handles both TEST_CASES.md and TEST_API.md | ✓ | ✓ |
+| Handles both TESTS_UI.md and TESTS_API.md | ✓ | ✓ |
 | Finds undocumented passing tests | ✓ | ✗ |
 | Finds regressions in passing tests | ✓ | ✗ |
 | Promotes resolved broken/app-bug entries | ✓ | ✓ |

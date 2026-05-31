@@ -72,12 +72,22 @@ spec_file rules:
    specific numbered item.
 
 ## Other rules
-- test_name must be unique, lowercase, hyphen-separated
+- test_name must be unique, lowercase, hyphen-separated. When the source document names
+  the item explicitly (e.g. "API 5: POST To Search Product", "Test Case 12", "US-03"),
+  derive test_name directly from that original name rather than inventing a descriptive one:
+  "API 5: POST To Search Product" → api-5-post-to-search-product
+  "Test Case 12 — Login" → test-case-12-login
+  This preserves traceability back to the source document.
 - page_paths should list every page the test navigates to on automationexercise.com
 - Generate the happy path AND the most important negative/edge cases as separate blocks
 - Do NOT suggest tests already in the covered list — only genuinely new scenarios
 - For each feature generate 2–4 blocks (happy path + key failure cases), not just one
 - Keep descriptions concrete: what action, what assertion, what data
+- When the source document contains exact quoted strings (error messages, success messages,
+  field names), reproduce them VERBATIM in the test description — never paraphrase or split
+  a single message into "X or Y" alternatives. Example: if the source says the message is
+  "Bad request, email or password parameter is missing in POST request." then write exactly
+  that string in the description, not "Bad request" or "email parameter is missing".
 `;
 
 function buildCoverageList(

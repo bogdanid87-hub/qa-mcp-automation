@@ -3,6 +3,7 @@ import { test, expect } from '../../fixtures';
 const SEARCH_TERM = 'jeans';
 
 test.describe('Product Search', () => {
+  // [UI Product Search #1]
   test('should search for a product and verify results match the API', async ({ homePage, productsPage, page, request }) => {
     // Navigate home and verify (carousel check included in verifyLoaded)
     await homePage.goto();

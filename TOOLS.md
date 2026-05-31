@@ -11,7 +11,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 |------|-------------|-----|
 | `analyze_prd` | Read a PRD or feature description and generate a risk-prioritised test backlog in `prd-tests.txt` | [docs/analyze-prd.md](docs/analyze-prd.md) |
 | `generate_pom` | Inspect a live page and generate a locator-only POM file — run this before `generate_test` when starting on a new page | [docs/generate-pom.md](docs/generate-pom.md) |
-| `generate_api_test` | Generate a Playwright API test (request fixture, no browser) — local LLM first, records to TEST_API.md | [docs/generate-api-test.md](docs/generate-api-test.md) |
+| `generate_api_test` | Generate a Playwright API test (request fixture, no browser) — local LLM first, records to TESTS_API.md | [docs/generate-api-test.md](docs/generate-api-test.md) |
 | `generate_test` | Generate a complete Playwright UI/E2E test: POM + spec + auto-run + auto-fix + registry update | [docs/generate-test.md](docs/generate-test.md) |
 | `inspect_page` | Navigate to a page headlessly and return all DOM elements with their best locator | [docs/inspect-page.md](docs/inspect-page.md) |
 | `investigate_and_fix` | Diagnose a failing test (code bug vs app bug), patch the file, and save a learned rule | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
@@ -28,7 +28,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 | `npm run generate_api` | CLI version of `generate_api_test` — inline description or file | [docs/generate-api-test.md](docs/generate-api-test.md) |
 | `npm run generate` | Generate a test from `my-test.txt` (or any batch `.txt` file) | [docs/generate-test.md](docs/generate-test.md) |
 | `npm run fix` | Interactive fix loop for failing tests | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
-| `npm run sync_registry` | Full reconciliation of `TEST_CASES.md` against actual test results | [docs/test-registry.md](docs/test-registry.md) |
+| `npm run sync_registry` | Full reconciliation of `TESTS_UI.md` against actual test results | [docs/test-registry.md](docs/test-registry.md) |
 | `npm run update_registry` | Re-check only recorded broken/app-bug entries | [docs/test-registry.md](docs/test-registry.md) |
 | `npm test` | Run all tests headless | [docs/run-tests.md](docs/run-tests.md) |
 | `npm run test:headed` | Run with browser visible | [docs/run-tests.md](docs/run-tests.md) |
