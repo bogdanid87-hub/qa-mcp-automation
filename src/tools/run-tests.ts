@@ -8,7 +8,7 @@ export async function runTests(pattern?: string): Promise<string> {
   const patternArg = pattern ? ` ${pattern}` : '';
   const cmd = `npx playwright test${patternArg} --project=chromium 2>&1`;
   try {
-    const { stdout } = await execAsync(cmd, { cwd: ROOT, timeout: 120_000 });
+    const { stdout } = await execAsync(cmd, { cwd: ROOT, timeout: 120_000, maxBuffer: 50 * 1024 * 1024 });
     return stdout || '(no output)';
   } catch (err: any) {
     return err.stdout ?? err.message;

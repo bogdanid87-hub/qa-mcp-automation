@@ -331,9 +331,9 @@ Respond with the standard JSON:
         if (useLocal) {
           try {
             const existing = await readFile(abs, 'utf-8');
-            const missing = [...existing.matchAll(/async (\w+)\s*\(/g)]
+            const missing = [...existing.matchAll(/async\s+(\w+)\s*(?:<[^>]*>)?\s*\(/g)]
               .map(m => m[1])
-              .filter(name => !file.content.includes(`async ${name}(`));
+              .filter(name => !new RegExp(`async\\s+${name}[\\s<(]`).test(file.content));
             if (missing.length > 0) { pomGeneratedByLocal = false; continue; }
           } catch { /* new file */ }
         }

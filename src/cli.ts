@@ -396,7 +396,10 @@ async function claudeSimilarityCheck(
 ): Promise<TestEntry[]> {
   if (allTests.length === 0) return [];
   const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
-  if (!apiKey) return [];
+  if (!apiKey) {
+    console.warn('\n⚠️  ANTHROPIC_API_KEY not set — similarity check skipped (duplicate detection disabled).\n');
+    return [];
+  }
 
   const testList = allTests
     .map(t => `#${t.num}: ${t.describe} › ${t.name}`)
