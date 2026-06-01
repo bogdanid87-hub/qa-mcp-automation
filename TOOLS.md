@@ -28,7 +28,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 | `npm run analyze_coverage` | CLI version of `analyze_coverage` — scope by spec, folder, or registry; optional URL | [docs/analyze-coverage.md](docs/analyze-coverage.md) |
 | `npm run analyze_prd` | CLI version of `analyze_prd` — supports PDF and image inputs | [docs/analyze-prd.md](docs/analyze-prd.md) |
 | `npm run generate_api` | CLI version of `generate_api_test` — inline description or file | [docs/generate-api-test.md](docs/generate-api-test.md) |
-| `npm run audit_site` | Crawl a site, build a page-type × UI-component matrix, and recommend a POM hierarchy | — |
+| `npm run audit_site` | Crawl a site, build a page-type × UI-component matrix, and recommend a POM hierarchy | [docs/audit-site.md](docs/audit-site.md) |
 | `npm run generate` | Generate a test from `my-test.txt` (or any batch `.txt` file) | [docs/generate-test.md](docs/generate-test.md) |
 | `npm run fix` | Interactive fix loop for failing tests | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
 | `npm run status` | Suite health at a glance: registry counts, tagging ratio, open backlog gaps, spec file counts | — |
@@ -44,6 +44,11 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 ## Recommended flow
 
 ```
+Starting a new project:
+  npm run audit_site -- --url <site>  → read site-audit-report.md
+  → design POM hierarchy → write base classes → update system prompt
+  → then generate tests
+
 From a PRD:
   analyze_prd / npm run analyze_prd → review prd-tests.txt → npm run generate --file prd-tests.txt
 

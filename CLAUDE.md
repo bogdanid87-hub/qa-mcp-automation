@@ -135,7 +135,8 @@ NO_LOCAL_LLM=1 npm run generate -- --file my-test.txt  # same via env var
 ## Important conventions
 
 - POM classes: **named exports only** — `export class LoginPage`, never `export default class`
-- BasePage import: `import { BasePage } from './BasePage'` (named, not default)
+- POM parent class: extend `SitePage` for any full site page, `ProductListPage` for product listing pages, `BasePage` only for pages without site nav/footer — see [docs/conventions.md](docs/conventions.md#pom-hierarchy)
+- All POM parent imports are named: `import { SitePage } from './SitePage'` (never default)
 - Spec imports: `import { test, expect } from '../../fixtures'` (two levels up from ui/ or e2e/)
 - Locator priority: `[data-qa="..."]` → role → label → placeholder → text → `#id`
 - `waitForLoadState`: use `'domcontentloaded'` on this site — `'load'` times out due to third-party scripts

@@ -24,11 +24,16 @@ The test rarely fails due to bad locators because they came from the real page.
 
 ## What the generated file looks like
 
+The tool selects the correct parent class based on the page being inspected:
+- `SitePage` for any full site page (has nav bar and footer)
+- `ProductListPage` for pages with a product card grid (`/products`, `/category_products/:id`, `/brand_products/:slug`)
+- `BasePage` only for pages with no site nav/footer
+
 ```typescript
 import { Page, Locator } from '@playwright/test';
-import { BasePage } from './BasePage';
+import { SitePage } from './SitePage';
 
-export class LoginPage extends BasePage {
+export class LoginPage extends SitePage {
   readonly loginEmailInput: Locator;
   readonly loginPasswordInput: Locator;
   readonly loginButton: Locator;
@@ -47,6 +52,10 @@ export class LoginPage extends BasePage {
   }
 }
 ```
+
+Locators already owned by `SitePage` (nav links, footer, subscription form, `loggedInAs`)
+are never re-declared in generated files. See [docs/conventions.md](conventions.md) for the
+full hierarchy.
 
 No `async` methods. Just properties and constructor assignments.
 
