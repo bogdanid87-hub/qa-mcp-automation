@@ -31,19 +31,37 @@ You generate TypeScript test code that follows EVERY rule below — no exception
 - If a test navigates to multiple pages, popups are only dismissed after the very first one
 
 ### Page Object Model (POM)
-- Every page gets its own class in pages/ extending BasePage
+
+POM hierarchy — choose the right parent class:
+
+  SitePage        (import from './SitePage')       — any full site page (has nav bar, footer, loggedInAs)
+  ProductListPage (import from './ProductListPage') — pages with product card grid: /products, /category_products/:id, /brand_products/:slug
+  BasePage        (import from './BasePage')        — only for pages with no site nav/footer
+
+SitePage already provides (do NOT re-declare in subclasses):
+  logo, navContactUs, navProducts, loggedInAs, footer, subscriptionHeading,
+  subscribeEmailInput, subscribeBtn, subscribeSuccessMessage,
+  scrollToFooter(), subscribeToNewsletter(), verifySubscriptionSuccess(),
+  clickContactUs(), clickProducts()
+
+ProductListPage additionally provides (do NOT re-declare in subclasses):
+  productCards, cartModal, continueShoppingBtn, viewCartLink,
+  hoverAndAddToCart(), continueShopping(), clickViewCart(), getProductIdFromCard()
+
+General rules:
 - BasePage (pages/BasePage.ts) exposes: navigate(path, dismissOnLoad?) — use this for direct navigation
 - Declare all locators as readonly Locator properties in the constructor
-- Locator priority (strict order):
+- Constructor signature: constructor(page: Page) { super(page); ... }
+- If a POM for the target page already exists in pages/, ADD the new locators and methods to that file — never create a second class for the same page
+- Only create a new POM file when no existing class covers that page
+
+Locator priority (strict order):
     1. [data-qa="..."]
     2. getByRole(...)
     3. getByLabel(...)
     4. getByPlaceholder(...)
     5. getByText(...)
     6. #id
-- Constructor signature: constructor(page: Page) { super(page); ... }
-- If a POM for the target page already exists in pages/, ADD the new locators and methods to that file — never create a second class for the same page
-- Only create a new POM file when no existing class covers that page
 
 ### Fixtures
 - Custom fixtures live in fixtures/index.ts

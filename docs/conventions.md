@@ -55,6 +55,41 @@ independently.
 
 ---
 
+## POM hierarchy
+
+Page Object Models follow a three-level inheritance chain:
+
+```
+BasePage          — navigate(), popup handling only
+  └── SitePage    — nav bar, footer subscription, loggedInAs (all site pages)
+        ├── HomePage
+        ├── CartPage
+        ├── LoginPage
+        ├── CheckoutPage
+        ├── AccountPage
+        ├── ContactUsPage
+        └── ProductListPage  — product card grid, cart modal (listing pages)
+              └── ProductsPage  — search box, headings (specific to /products)
+```
+
+**When to extend which class:**
+
+| Class | Use when |
+|---|---|
+| `SitePage` | Any full page of the site — has the nav bar and footer |
+| `ProductListPage` | Pages that show a product card grid with sidebar: `/products`, `/category_products/:id`, `/brand_products/:slug` |
+| `BasePage` | Only for pages with no site nav/footer (isolated forms, modals) |
+
+**Locators already owned by parents — never re-declare in subclasses:**
+
+`SitePage`: `logo`, `navContactUs`, `navProducts`, `loggedInAs`, `footer`, `subscriptionHeading`, `subscribeEmailInput`, `subscribeBtn`, `subscribeSuccessMessage`
+
+`ProductListPage`: `productCards`, `cartModal`, `continueShoppingBtn`, `viewCartLink`
+
+**Determining the hierarchy for a new project:** run `npm run audit_site -- --url <url>` before writing any POMs. It crawls the site, builds a component-presence matrix, and recommends which elements belong in shared vs page-specific classes.
+
+---
+
 ## AI model routing
 
 | Task | Model | Reason |
