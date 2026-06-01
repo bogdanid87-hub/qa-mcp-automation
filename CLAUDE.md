@@ -28,6 +28,7 @@ npm run analyze_coverage -- --spec tests/ui/contact.spec.ts  # coverage gap anal
 npm run fix                               # investigate and fix failing tests
 npm run status                            # suite health at a glance
 npm run tag_tests                         # tag spec files with registry IDs
+npm run audit_site -- --url https://...   # crawl site, build component matrix, recommend POM hierarchy
 npm run sync_registry                     # reconcile all three registries with reality
 npm run update_registry                   # re-check known broken/app-bug entries
 npm test                                  # run all tests headless

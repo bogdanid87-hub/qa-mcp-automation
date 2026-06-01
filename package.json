@@ -13,6 +13,7 @@
     "tag_tests": "tsx src/tag-tests-cli.ts",
     "status": "tsx src/status-cli.ts",
     "generate_api": "tsx src/generate-api-test-cli.ts",
+    "audit_site": "tsx src/site-audit-cli.ts",
     "mcp": "tsx src/index.ts",
     "test": "playwright test",
     "test:headed": "playwright test --headed",
