@@ -1,21 +1,19 @@
 import { Page, Locator, expect } from '@playwright/test';
-import { BasePage } from './BasePage';
+import { SitePage } from './SitePage';
 
-export class AccountPage extends BasePage {
+export class AccountPage extends SitePage {
   readonly accountCreatedMessage: Locator;
   readonly continueButtonAfterCreation: Locator;
-  readonly loggedInUsername: Locator;
   readonly deleteAccountButton: Locator;
   readonly accountDeletedMessage: Locator;
   readonly continueButtonAfterDeletion: Locator;
 
   constructor(page: Page) {
     super(page);
-    this.accountCreatedMessage = page.locator('[data-qa="account-created"]');
+    this.accountCreatedMessage      = page.locator('[data-qa="account-created"]');
     this.continueButtonAfterCreation = page.locator('[data-qa="continue-button"]').first();
-    this.loggedInUsername = page.locator('.navbar-nav li a', { hasText: /Logged in as/ });
-    this.deleteAccountButton = page.locator('[data-qa="delete-account"]');
-    this.accountDeletedMessage = page.locator('[data-qa="account-deleted"]');
+    this.deleteAccountButton        = page.locator('[data-qa="delete-account"]');
+    this.accountDeletedMessage      = page.locator('[data-qa="account-deleted"]');
     this.continueButtonAfterDeletion = page.locator('[data-qa="continue-button"]').last();
   }
 
@@ -46,7 +44,7 @@ export class AccountPage extends BasePage {
     await this.page.waitForLoadState('load');
   }
 
-  async verifyAccountCreated() {
+  async verifyAccountCreated(): Promise<void> {
     await expect(this.accountCreatedMessage).toBeVisible();
   }
 
@@ -55,23 +53,23 @@ export class AccountPage extends BasePage {
     await this.page.waitForLoadState('domcontentloaded');
   }
 
-  async clickContinueAfterCreation() {
+  async clickContinueAfterCreation(): Promise<void> {
     await this.continueButtonAfterCreation.click();
   }
 
-  async verifyLoggedIn(username: string) {
-    await expect(this.loggedInUsername).toHaveText(new RegExp(`Logged in as ${username}`));
+  async verifyLoggedIn(username: string): Promise<void> {
+    await expect(this.loggedInAs).toHaveText(new RegExp(`Logged in as ${username}`));
   }
 
-  async deleteAccount() {
+  async deleteAccount(): Promise<void> {
     await this.deleteAccountButton.click();
   }
 
-  async verifyAccountDeleted() {
+  async verifyAccountDeleted(): Promise<void> {
     await expect(this.accountDeletedMessage).toBeVisible();
   }
 
-  async clickContinueAfterDeletion() {
+  async clickContinueAfterDeletion(): Promise<void> {
     await this.continueButtonAfterDeletion.click();
   }
 }

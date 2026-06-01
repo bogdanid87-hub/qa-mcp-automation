@@ -1,5 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
-import { BasePage } from './BasePage';
+import { SitePage } from './SitePage';
 
 export interface CartRow {
   name: string;
@@ -8,7 +8,7 @@ export interface CartRow {
   total: string;
 }
 
-export class CartPage extends BasePage {
+export class CartPage extends SitePage {
   readonly cartTable: Locator;
   readonly cartRows: Locator;
   readonly emptyCartMessage: Locator;
