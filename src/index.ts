@@ -11,6 +11,8 @@ import { runTestsTool } from './tools/run-tests.js';
 import { listResourcesTool } from './tools/list-resources.js';
 import { investigateFixTool } from './tools/investigate-fix.js';
 import { inspectPageTool } from './tools/inspect-page.js';
+import { generateAuthFixtureTool } from './tools/generate-auth-fixture.js';
+import { generateMockTool } from './tools/generate-mock.js';
 
 const server = new McpServer({ name: 'qa-mcp-automation', version: '1.0.0' });
 
@@ -163,6 +165,49 @@ server.registerTool(
     },
   },
   (args) => inspectPageTool(args),
+);
+
+server.registerTool(
+  'generate_auth_fixture',
+  {
+    description:
+      'Generate a Playwright auth fixture for a login flow — produces a global.setup.ts task that ' +
+      'authenticates and saves browser storage state, plus a named fixture (e.g. loggedInPage) for ' +
+      'use in tests. Supports form-based login and OAuth redirect flows.',
+    inputSchema: {
+      type:              z.enum(['form', 'oauth']).default('form').describe('Auth flow type'),
+      name:              z.string().describe('Fixture name, e.g. "loggedIn", "admin", "premiumUser"'),
+      loginUrl:          z.string().describe('Login page path or full URL'),
+      emailSelector:     z.string().optional().describe('CSS/data-qa selector for the email or username input'),
+      passwordSelector:  z.string().optional().describe('CSS/data-qa selector for the password input'),
+      submitSelector:    z.string().optional().describe('CSS/data-qa selector for the submit button'),
+      successIndicator:  z.string().optional().describe('URL pattern or selector confirming successful login'),
+      usernameEnvVar:    z.string().optional().describe('Environment variable name for the username, e.g. TEST_EMAIL'),
+      passwordEnvVar:    z.string().optional().describe('Environment variable name for the password, e.g. TEST_PASSWORD'),
+      notes:             z.string().optional().describe('Extra context — e.g. "login form is inside an iframe", "MFA step shown after password"'),
+    },
+  },
+  (args) => generateAuthFixtureTool(args as any),
+);
+
+server.registerTool(
+  'generate_mock',
+  {
+    description:
+      'Generate a Playwright page.route() network mock — intercepts a URL pattern and returns a ' +
+      'controlled response. Use for mocking third-party APIs (Stripe, Twilio), testing error states, ' +
+      'or making test data deterministic. Outputs a reusable fixture or an inline code snippet.',
+    inputSchema: {
+      name:         z.string().describe('Mock name, e.g. "stripeSuccess", "productSearch", "apiError"'),
+      urlPattern:   z.string().describe('URL pattern to intercept, e.g. "**/api/products" or "https://api.stripe.com/**"'),
+      method:       z.enum(['GET','POST','PUT','PATCH','DELETE','*']).optional().describe('HTTP method to intercept (default: *)'),
+      status:       z.number().optional().describe('HTTP status code to return (default: 200)'),
+      responseBody: z.string().describe('Describe the response body in plain English or paste JSON'),
+      scope:        z.enum(['fixture','inline']).optional().describe('"fixture" = shared file (default); "inline" = code snippet for one test'),
+      notes:        z.string().optional().describe('Extra context, e.g. "simulates a Stripe card_declined error"'),
+    },
+  },
+  (args) => generateMockTool(args as any),
 );
 
 async function main() {

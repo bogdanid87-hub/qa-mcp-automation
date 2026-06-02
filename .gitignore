@@ -21,3 +21,4 @@ coverage-gaps.txt
 # macOS
 .DS_Store
 .setup-guide.md
+.qa-notes.md
