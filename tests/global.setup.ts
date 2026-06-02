@@ -17,3 +17,34 @@ setup('save guest storage state', async () => {
   await context.storageState({ path: guestStorageState });
   await browser.close();
 });
+
+const loggedInStorageState = path.join(__dirname, '../test-data/.auth/loggedIn.json');
+
+setup('save logged-in storage state', async () => {
+  if (!process.env.TEST_EMAIL || !process.env.TEST_PASSWORD) {
+    throw new Error(
+      'TEST_EMAIL and TEST_PASSWORD environment variables must be set before running auth setup.'
+    );
+  }
+
+  const browser = await chromium.launch();
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  await blockAds(page);
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await dismissPopups(page);
+
+  await page.locator('[data-qa="login-email"]').fill(process.env.TEST_EMAIL);
+  await page.locator('[data-qa="login-password"]').fill(process.env.TEST_PASSWORD);
+  await page.locator('[data-qa="login-button"]').click();
+
+  await page.waitForLoadState('domcontentloaded');
+
+  // Wait for the nav bar to confirm successful login
+  await page.locator('.navbar-nav li a').first().waitFor({ state: 'visible' });
+
+  await context.storageState({ path: loggedInStorageState });
+  await browser.close();
+});
+

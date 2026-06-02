@@ -81,8 +81,9 @@ Show the env var entries to add to .env.example
 Respond with raw JSON only (no markdown fences):
 {
   "summary": "one-sentence description of what was generated",
-  "setupTask": "full TypeScript code for the new setup task function",
-  "fixtureEntry": "TypeScript code to add to fixtures/index.ts (just the new fixture, not the whole file)",
+  "setupTask": "full TypeScript code for the new setup task function (no import statements — they already exist at the top of the file)",
+  "fixtureEntry": "TypeScript code for just the fixture property (e.g. loggedInPage: async ({ browser }, use) => { ... },) — no imports, no type declarations",
+  "fixtureType": "${args.name}Page: Page",
   "envVars": ["VAR_NAME=description of value", "..."],
   "storageStatePath": "test-data/.auth/${args.name}.json"
 }
@@ -139,6 +140,7 @@ export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
     summary: string;
     setupTask: string;
     fixtureEntry: string;
+    fixtureType?: string;
     envVars: string[];
     storageStatePath: string;
   };
@@ -155,25 +157,58 @@ export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
   await mkdir(storageDir, { recursive: true });
   await mkdir(join(ROOT, 'tests'), { recursive: true });
 
+  // Strip markdown fences and duplicate import statements from the generated task.
+  // When appending to an existing file the LLM often includes its own import block —
+  // those imports are already at the top of the file.
+  const stripForAppend = (code: string): string => {
+    let s = code
+      .replace(/^```(?:typescript|ts)?\n?/m, '')
+      .replace(/\n?```\s*$/m, '')
+      .trim();
+    if (existingSetup) {
+      // Remove any import lines — the existing file already has them
+      s = s.split('\n').filter(l => !l.trimStart().startsWith('import ')).join('\n').trimStart();
+    }
+    return s;
+  };
+
+  const cleanSetupTask = stripForAppend(parsed.setupTask);
+
   if (existingSetup) {
-    // Append the new setup task before the last closing line if it's a single-export file,
-    // or just append at the end for multi-export files
-    const updated = existingSetup.trimEnd() + '\n\n' + parsed.setupTask + '\n';
+    const updated = existingSetup.trimEnd() + '\n\n' + cleanSetupTask + '\n';
     await writeFile(setupPath, updated, 'utf-8');
   } else {
     const header = `import { test as setup, chromium } from '@playwright/test';\nimport path from 'path';\n\n`;
-    await writeFile(setupPath, header + parsed.setupTask + '\n', 'utf-8');
+    await writeFile(setupPath, header + cleanSetupTask + '\n', 'utf-8');
   }
 
   // ── Append fixture entry to fixtures/index.ts ───────────────────────────
   if (existingFixtures) {
-    // Insert before the closing export line
-    const insertBefore = 'export { expect }';
-    const idx = existingFixtures.lastIndexOf(insertBefore);
-    const updated = idx !== -1
-      ? existingFixtures.slice(0, idx) + '\n' + parsed.fixtureEntry + '\n\n' + existingFixtures.slice(idx)
-      : existingFixtures.trimEnd() + '\n\n' + parsed.fixtureEntry + '\n';
+    // Strip fences from the fixture entry too
+    const cleanFixture = parsed.fixtureEntry
+      .replace(/^```(?:typescript|ts)?\n?/m, '')
+      .replace(/\n?```\s*$/m, '')
+      .replace(/^import [^\n]+\n/gm, '') // strip any import lines
+      .trim();
+
+    // Insert INSIDE the base.extend({...}) object — before the closing '});'
+    const closeIdx = existingFixtures.lastIndexOf('\n});');
+    const updated = closeIdx !== -1
+      ? existingFixtures.slice(0, closeIdx) + '\n\n  ' + cleanFixture.split('\n').join('\n  ') + existingFixtures.slice(closeIdx)
+      : existingFixtures.trimEnd() + '\n\n' + cleanFixture + '\n';
     await writeFile(FIXTURES_PATH, updated, 'utf-8');
+  }
+
+  // ── Add fixture type to PageFixtures in fixtures/index.ts ────────────────
+  const fixtureTypeLine = parsed.fixtureType ?? `${args.name}Page: Page`;
+  const currentFixtures = await readFile(FIXTURES_PATH, 'utf-8').catch(() => '');
+  if (currentFixtures && !currentFixtures.includes(fixtureTypeLine)) {
+    // Insert into the PageFixtures type block — find the closing '};' of the type
+    const typeClose = currentFixtures.indexOf('};', currentFixtures.indexOf('type PageFixtures'));
+    if (typeClose !== -1) {
+      const updated = currentFixtures.slice(0, typeClose) + `  ${fixtureTypeLine};\n` + currentFixtures.slice(typeClose);
+      await writeFile(FIXTURES_PATH, updated, 'utf-8');
+    }
   }
 
   // ── Add storage state path to .gitignore ────────────────────────────────
