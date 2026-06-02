@@ -143,10 +143,12 @@ Leaving `test_output` empty runs all tests automatically first.
 npm run fix                                              # run all tests, fix whatever fails
 npm run fix -- --pattern tests/login.spec.ts            # target one spec
 npm run fix -- --output "Error: locator '#btn' ..."     # use pre-captured output
+npm run fix -- --pattern tests/login.spec.ts --budget 0.50  # optional spending cap
 ```
 
-The CLI enters an interactive loop: each fix attempt shows the running token cost,
-and when the $0.30 budget is reached you're asked whether to continue.
+The CLI runs to completion by default — cost is tracked and displayed after each
+attempt but never stops the loop. Pass `--budget N` to opt in to a spending cap
+(useful when sharing an API key with a usage quota).
 
 ---
 
@@ -162,4 +164,4 @@ The fix tool writes results to the correct registry based on the spec path:
 `generate_test` runs one auto-fix attempt automatically. If that doesn't resolve the
 failure, it annotates the spec as `BROKEN` and stops. `investigate_and_fix` (or
 `npm run fix`) is the deeper tool — it retries with full DOM and screenshot context
-and can attempt multiple rounds until fixed or budget is exhausted.
+and can attempt multiple rounds until fixed or the optional spending cap is reached.

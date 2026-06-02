@@ -28,11 +28,17 @@ export class TokenBudget {
     );
   }
 
+  get capped(): boolean {
+    return isFinite(this.limitUsd);
+  }
+
   get exceeded(): boolean {
-    return this.cost >= this.limitUsd;
+    return this.capped && this.cost >= this.limitUsd;
   }
 
   get summary(): string {
-    return `$${this.cost.toFixed(4)} of $${this.limitUsd.toFixed(2)} limit`;
+    return this.capped
+      ? `$${this.cost.toFixed(4)} of $${this.limitUsd.toFixed(2)} limit`
+      : `$${this.cost.toFixed(4)} spent`;
   }
 }

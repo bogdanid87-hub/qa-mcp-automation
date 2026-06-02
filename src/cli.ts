@@ -10,7 +10,9 @@ import { autoFixFailure } from './tools/investigate-fix.js';
 import { writeTestAnnotation } from './tools/annotations.js';
 import { TokenBudget } from './tools/budget.js';
 
-const DEFAULT_BUDGET_USD = 0.30;
+// No budget cap by default — cost is tracked and displayed but never blocks completion.
+// Pass --budget 0.30 to opt in to a spending limit.
+const DEFAULT_BUDGET_USD = Infinity;
 
 const ROOT = process.cwd();
 const TRACKED_DIRS = ['pages', 'tests', 'fixtures'];
@@ -110,6 +112,7 @@ function parseArgs(argv: string[]): {
   pagePaths?: string[];
   testName?: string;
   noLocal?: boolean;
+  budget?: number;
 } {
   const raw: Record<string, string> = {};
   const flags = new Set<string>();
@@ -128,6 +131,7 @@ function parseArgs(argv: string[]): {
     pagePaths: raw['page_paths']?.split(',').map(p => p.trim()),
     testName: raw['test_name'],
     noLocal: flags.has('no-local'),
+    budget: raw['budget'] ? parseFloat(raw['budget']) : undefined,
   };
 }
 
@@ -403,7 +407,7 @@ async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   await ensureApiKey();
   if (args.noLocal) process.env.NO_LOCAL_LLM = '1';
-  const budget = new TokenBudget(DEFAULT_BUDGET_USD);
+  const budget = new TokenBudget(args.budget ?? DEFAULT_BUDGET_USD);
 
   // Resolve description and metadata
   let description = args.description;
@@ -577,14 +581,11 @@ async function main(): Promise<void> {
       }
 
       if (budget.exceeded) {
-        console.log(`\n⚠️  Fix budget of $${budget.limitUsd.toFixed(2)} reached (${budget.summary}).`);
-        const continueAnyway = await askYesNo('Continue spending tokens anyway? [y/N] ');
-        if (!continueAnyway) {
-          console.log('\n⚠️  Writing BROKEN comment into the spec file...');
-          await writeTestAnnotation(specFile, lastFailureOutput, 'broken', 'Fix budget exceeded — run npm run fix to continue');
-          console.log(`  Done. Open ${specFile} to review.\n`);
-          break;
-        }
+        console.log(`\n⚠️  Spending cap of $${budget.limitUsd.toFixed(2)} reached (${budget.summary}).`);
+        console.log('\n⚠️  Writing BROKEN comment into the spec file...');
+        await writeTestAnnotation(specFile, lastFailureOutput, 'broken', 'Spending cap reached — run npm run fix to continue');
+        console.log(`  Done. Open ${specFile} to review.\n`);
+        break;
       }
 
       console.log('\n⏳ Attempting another fix...\n');

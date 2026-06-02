@@ -138,8 +138,9 @@ If the generated test fails on the first run, the tool:
    `test()` call; the test is **not** modified because it correctly documents a defect
 
 If the auto-fix doesn't resolve the failure, the CLI prompts to retry. Each attempt
-shows the running token cost. When the $0.30 budget is reached you're asked whether
-to continue. Declining writes a `/* ⚠️ BROKEN */` annotation.
+shows the running token cost. The loop runs to completion — pass `--budget N` to
+`npm run generate` to set an optional spending cap. If the cap is reached before
+a fix is found, a `/* ⚠️ BROKEN */` annotation is written instead.
 
 ---
 

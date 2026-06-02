@@ -8,7 +8,9 @@ import { writeTestAnnotation } from './tools/annotations.js';
 import { parseFailingTestsFromOutput, deriveRisk } from './tools/test-registry.js';
 
 const ROOT = process.cwd();
-const DEFAULT_BUDGET_USD = 0.30;
+// No budget cap by default — cost is tracked and displayed but never blocks completion.
+// Pass --budget 0.30 to opt in to a spending limit (useful when working with a shared API key).
+const DEFAULT_BUDGET_USD = Infinity;
 
 async function ensureApiKey(): Promise<void> {
   if (process.env.ANTHROPIC_API_KEY) return;
@@ -19,14 +21,18 @@ async function ensureApiKey(): Promise<void> {
   } catch { /* not found */ }
 }
 
-function parseArgs(argv: string[]): { pattern?: string; output?: string } {
+function parseArgs(argv: string[]): { pattern?: string; output?: string; budget?: number } {
   const raw: Record<string, string> = {};
   for (let i = 0; i < argv.length; i++) {
     if (argv[i].startsWith('--') && argv[i + 1] && !argv[i + 1].startsWith('--')) {
       raw[argv[i].slice(2)] = argv[++i];
     }
   }
-  return { pattern: raw['pattern'], output: raw['output'] };
+  return {
+    pattern: raw['pattern'],
+    output:  raw['output'],
+    budget:  raw['budget'] ? parseFloat(raw['budget']) : undefined,
+  };
 }
 
 function ask(question: string): Promise<string> {
@@ -50,7 +56,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const budget = new TokenBudget(DEFAULT_BUDGET_USD);
+  const budget = new TokenBudget(args.budget ?? DEFAULT_BUDGET_USD);
 
   // Get initial failure output
   let failureOutput = args.output ?? '';
@@ -87,22 +93,19 @@ async function main(): Promise<void> {
   let lastRootCause = '';
   let lastFailureOutput = failureOutput;
 
-  // Fix loop
+  // Fix loop — runs to completion; --budget flag enables an optional spending cap
   while (true) {
     if (budget.exceeded) {
       const bar = '─'.repeat(48);
       console.log(`\n${bar}`);
-      console.log(`  ⚠️  Token budget of $${budget.limitUsd.toFixed(2)} reached (${budget.summary}).`);
+      console.log(`  ⚠️  Spending cap of $${budget.limitUsd.toFixed(2)} reached (${budget.summary}).`);
       console.log(`${bar}`);
-      const continueAnyway = await askYesNo('Continue spending tokens anyway? [y/N] ');
-      if (!continueAnyway) {
-        if (args.pattern) {
-          console.log('\n⚠️  Writing BROKEN comment into the spec file...');
-          await writeTestAnnotation(args.pattern, lastFailureOutput, 'broken', lastRootCause || 'Exceeded token budget during auto-fix');
-          console.log(`  Done. Open ${args.pattern} to review.\n`);
-        }
-        break;
+      if (args.pattern) {
+        console.log('\n⚠️  Writing BROKEN comment into the spec file...');
+        await writeTestAnnotation(args.pattern, lastFailureOutput, 'broken', lastRootCause || 'Spending cap reached — run npm run fix to continue');
+        console.log(`  Done. Open ${args.pattern} to review.\n`);
       }
+      break;
     }
 
     console.log('\n⏳ Investigating and fixing...\n');
