@@ -125,6 +125,30 @@ Both tools normalise test names before comparing — stripping articles (`a`, `a
 `the`), lowercasing, collapsing punctuation — so minor wording drift doesn't prevent
 broken entries from being promoted.
 
+**What normalisation does:**
+
+| Original | Normalised |
+|---|---|
+| "should add a product to the cart" | "should add product cart" |
+| "should add product to cart" | "should add product cart" |
+| "Should Add Product To Cart" | "should add product cart" |
+
+These all match each other.
+
+**What normalisation does NOT handle:**
+
+Semantic rewrites — renaming a test to describe a different intent:
+
+| Old name | New name | Result |
+|---|---|---|
+| "should verify cart totals" | "should confirm cart totals" | ✅ Match — same words, different verb |
+| "should reject duplicate email" | "should accept duplicate email" | ❌ No match — "reject" vs "accept" |
+| "should add product to cart" | "should remove product from cart" | ❌ No match — fundamentally different test |
+
+If a broken entry doesn't promote after a test passes, the names may have drifted too far
+for fuzzy matching to bridge. Check `npm run tag_tests` — it warns when a registry name
+doesn't appear verbatim in the spec file (the most reliable sign of a name mismatch).
+
 ---
 
 ## Manual cleanup after annotation

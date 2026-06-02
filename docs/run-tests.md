@@ -64,7 +64,9 @@ context, so cart state, cookies, and session data are never shared between tests
 
 **Workers:**
 - Local: `undefined` → Playwright auto-selects based on CPU count (typically `cpus / 2`)
-- CI: 2 workers — conservative for shared CI runners and to avoid overloading the target site
+- CI: 2 workers — explicit because `undefined` on a standard 2-vCPU GitHub Actions runner
+  gives `ceil(2/2) = 1` (serial). Setting 2 guarantees parallel execution on CI regardless
+  of runner size, while keeping load on the target site predictable and controlled
 
 Every generated test is written to be fully independent: it sets up its own
 preconditions, produces the same result regardless of what ran before it, and

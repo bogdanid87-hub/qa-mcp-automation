@@ -16,8 +16,31 @@ spec(s) once:
 | Original failure | Passes on retry | Verdict |
 |---|---|---|
 | Connection/navigation error (`net::ERR_*`, `Navigation failed`, 502/503) | yes | ⚡ **Transient** — app was temporarily unavailable; no code change |
-| Locator/element timeout (`waiting for locator`, `toBeVisible`) | yes | 🌀 **Flaky** — timing or race condition; consider `retries: 1` in playwright.config.ts |
+| Locator/element timeout (`waiting for locator`, `toBeVisible`) | yes | 🌀 **Flaky** — timing or race condition; see below |
 | Any failure | no | Proceeds to Claude investigation below |
+
+**What to do with a 🌀 Flaky verdict:**
+
+The tool doesn't modify test code — flakiness is not a code bug to fix, it's an instability
+to manage. The right response depends on how often it flakes:
+
+| Frequency | Action |
+|---|---|
+| Rare (< 5% of runs) | Add `retries: 1` to `playwright.config.ts` — one automatic retry absorbs occasional timing glitches without hiding real failures |
+| Consistent (> 10% of runs) | The wait strategy is wrong. Find the specific element that's timing out and replace `waitForLoadState` or a hardcoded wait with `.waitFor({ state: 'visible' })` on that element |
+| After a recent code change | The change probably introduced a race condition. Investigate the interaction between the new code and the test |
+
+Retry config (conservative — catch real failures on second run):
+```typescript
+// playwright.config.ts
+retries: process.env.CI ? 1 : 0,  // already set in this project
+```
+
+**What to do with a ⚡ Transient verdict:**
+
+The app was temporarily unavailable — the test itself is correct. No action needed unless
+it happens repeatedly, which would indicate infrastructure instability rather than a
+test problem.
 
 **Code bug** — the test logic is mechanically wrong: bad locator, wrong selector,
 missing wait, incorrect import, wrong URL, timing issue. The test's *intention* is

@@ -78,7 +78,22 @@ Test login with an incorrect password...
 ```
 
 The CLI shows a per-test result and a final summary. The token budget accumulates
-across all tests, and if it's reached mid-batch the remaining tests are skipped.
+across all tests in the batch.
+
+**If the budget is reached mid-batch**, the remaining tests are skipped — they are
+not queued or retried automatically. The tests that already completed are fully
+written, committed to the registry, and not lost. Example:
+
+```
+✅ Test 1 (cart.spec.ts) — passed
+✅ Test 2 (search.spec.ts) — passed
+⚠️  Budget of $0.30 reached after Test 2. Tests 3–5 were not generated.
+    Re-run with: npm run generate -- --file my-test.txt --start 3
+```
+
+To avoid hitting the budget mid-batch:
+- Split large files into smaller batches (3–4 tests per file is a safe size)
+- To generate the skipped tests, remove the completed ones from the file and re-run
 
 ### Inline flags (no file)
 
