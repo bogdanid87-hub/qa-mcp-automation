@@ -106,9 +106,13 @@ server.registerTool(
 server.registerTool(
   'run_tests',
   {
-    description: 'Run Playwright tests (Chromium) and return the output.',
+    description:
+      'Run Playwright tests (Chromium) and return the output. ' +
+      'Use pattern to target a file or folder; use grep to run a single test by name ' +
+      'without triggering investigation or file changes.',
     inputSchema: {
-      pattern: z.string().optional().describe('Optional file path or glob, e.g. "tests/contactUs.spec.ts"'),
+      pattern: z.string().optional().describe('File path, folder, or glob — e.g. "tests/ui/cart.spec.ts" or "tests/api/"'),
+      grep:    z.string().optional().describe('Filter by test name (Playwright --grep). Runs only tests whose name contains this string, e.g. "should add two products to cart"'),
     },
   },
   (args) => runTestsTool(args),

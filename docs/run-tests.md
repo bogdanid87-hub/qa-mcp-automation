@@ -10,14 +10,22 @@ reports — it never modifies `TESTS_UI.md` or any source files.
 ```
 Run the tests
 Run tests matching tests/cart.spec.ts
-Run tests matching tests/login
+Run the test called "should add two products to cart"
+Run only the empty cart test in tests/ui/cart.spec.ts
 ```
 
-### Parameter
+### Parameters
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
-| `pattern` | no | File path or partial name to filter which tests run |
+| `pattern` | no | File path or glob to target a file or folder — e.g. `"tests/ui/cart.spec.ts"` or `"tests/api/"` |
+| `grep` | no | Filter by test name — runs only tests whose name contains this string, e.g. `"should add two products"`. Combined with `pattern` to target one test inside one file. |
+
+**Run a single test by name:**
+```
+Run the test "should add two products to cart" in tests/ui/cart.spec.ts
+```
+This calls `run_tests` with both `pattern` and `grep` — far faster than running the whole spec when you just want to verify one scenario.
 
 ---
 
@@ -30,10 +38,11 @@ npm run test:debug              # Playwright Inspector — step through test act
 npm run test:report             # open the HTML report from the last run
 ```
 
-Targeting a specific file or pattern:
+Targeting a specific file or a single test by name:
 ```bash
-npx playwright test tests/cart.spec.ts --project=chromium
-npx playwright test --grep "should add" --project=chromium
+npx playwright test tests/ui/cart.spec.ts --project=chromium              # whole file
+npx playwright test tests/ui/cart.spec.ts --grep "should add" --project=chromium  # one test in a file
+npx playwright test --grep "should add two products" --project=chromium   # by name across all files
 ```
 
 ---

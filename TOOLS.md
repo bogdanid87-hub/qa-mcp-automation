@@ -16,7 +16,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 | `generate_test` | Generate a complete Playwright UI/E2E test: POM + spec + auto-run + auto-fix + registry update | [docs/generate-test.md](docs/generate-test.md) |
 | `inspect_page` | Navigate to a page headlessly and return all DOM elements with their best locator | [docs/inspect-page.md](docs/inspect-page.md) |
 | `investigate_and_fix` | Diagnose a failing test (code bug vs app bug), patch the file, and save a learned rule | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
-| `run_tests` | Run the Playwright test suite and return the output | [docs/run-tests.md](docs/run-tests.md) |
+| `run_tests` | Run tests and return output — target a file with `pattern`, or a single test by name with `grep` | [docs/run-tests.md](docs/run-tests.md) |
 | `list_resources` | List all existing page objects, fixtures, and spec files | [docs/list-resources.md](docs/list-resources.md) |
 | `generate_auth_fixture` | Generate a Playwright auth fixture for form or OAuth login — saves browser storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
 | `generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
