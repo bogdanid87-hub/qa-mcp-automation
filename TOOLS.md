@@ -12,8 +12,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 | `analyze_coverage` | Analyse the existing test suite for gaps and risk areas; writes `coverage-report.md` and optionally `coverage-gaps.txt` | [docs/analyze-coverage.md](docs/analyze-coverage.md) |
 | `analyze_prd` | Read a PRD or feature description and generate a risk-prioritised test backlog in `prd-tests.txt` | [docs/analyze-prd.md](docs/analyze-prd.md) |
 | `generate_pom` | Inspect a live page and generate a locator-only POM file — run this before `generate_test` when starting on a new page | [docs/generate-pom.md](docs/generate-pom.md) |
-| `generate_api_test` | Generate a Playwright API test (request fixture, no browser) — local LLM first, records to TESTS_API.md | [docs/generate-api-test.md](docs/generate-api-test.md) |
-| `generate_test` | Generate a complete Playwright UI/E2E test: POM + spec + auto-run + auto-fix + registry update | [docs/generate-test.md](docs/generate-test.md) |
+| `generate_test` | Generate a UI, API, E2E, or mixed Playwright test — type auto-detected from description and spec_file path. POM + spec + auto-run + auto-fix + registry update | [docs/generate-test.md](docs/generate-test.md) |
 | `inspect_page` | Navigate to a page headlessly and return all DOM elements with their best locator | [docs/inspect-page.md](docs/inspect-page.md) |
 | `investigate_and_fix` | Diagnose a failing test (code bug vs app bug), patch the file, and save a learned rule | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
 | `run_tests` | Run tests and return output — target a file with `pattern`, or a single test by name with `grep` | [docs/run-tests.md](docs/run-tests.md) |
@@ -29,7 +28,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 |---------|-------------|-----|
 | `npm run analyze_coverage` | CLI version of `analyze_coverage` — scope by spec, folder, or registry; optional URL | [docs/analyze-coverage.md](docs/analyze-coverage.md) |
 | `npm run analyze_prd` | CLI version of `analyze_prd` — supports PDF and image inputs | [docs/analyze-prd.md](docs/analyze-prd.md) |
-| `npm run generate_api` | CLI version of `generate_api_test` — inline description or file | [docs/generate-api-test.md](docs/generate-api-test.md) |
+| `npm run generate_api` | Shorthand for generating an API test — forces `type=api`, otherwise identical to `npm run generate` | [docs/generate-api-test.md](docs/generate-api-test.md) |
 | `npm run generate_auth` | Generate a Playwright auth fixture for form or OAuth login — saves storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
 | `npm run generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
 | `npm run audit_site` | Crawl a site, build a page-type × UI-component matrix, and recommend a POM hierarchy | [docs/audit-site.md](docs/audit-site.md) |

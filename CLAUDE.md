@@ -1,7 +1,7 @@
 # qa-mcp-automation
 
 MCP server that generates Playwright tests for automationexercise.com using the
-Claude API and a local LLM. Eleven tools cover the full QA workflow from PRD
+Claude API and a local LLM. Ten tools cover the full QA workflow from PRD
 analysis through test generation, auth fixture setup, network mocking, failure
 investigation, and registry maintenance.
 
@@ -51,7 +51,7 @@ npm run mcp                               # start MCP server manually
 
 ```
 src/
-  index.ts              — MCP server entry point, 9 tools registered
+  index.ts              — MCP server entry point, 10 tools registered
   cli.ts                — npm run generate (interactive, cost-tracked)
   fix-cli.ts            — npm run fix
   analyze-prd-cli.ts    — npm run analyze_prd

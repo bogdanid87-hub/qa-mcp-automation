@@ -11,7 +11,7 @@ Describe a test scenario in plain English. The server uses **Claude Sonnet 4.6**
 ## What this project demonstrates
 
 ### MCP server architecture
-A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes eleven AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
+A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes ten AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
 
 ### Dual-model routing with local LLM fallback
 The project uses two AI models for different tasks based on what each does best and what it costs:
@@ -114,18 +114,17 @@ NO_LOCAL_LLM=1 npm run generate -- --file my-test.txt   # same via env var
 
 ## Tools
 
-Eleven tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
+Ten tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
 
 | Tool | One-liner | Guide |
 |------|-----------|-------|
 | `analyze_coverage` | Analyse the existing test suite for coverage gaps and risk areas — scoped or full-suite, with optional URL context | [docs/analyze-coverage.md](docs/analyze-coverage.md) |
 | `analyze_prd` | Turn a PRD into a risk-prioritised test backlog (`prd-tests.txt`) | [docs/analyze-prd.md](docs/analyze-prd.md) |
 | `generate_pom` | Inspect a live page, write a locator-only POM — run before `generate_test` for new pages | [docs/generate-pom.md](docs/generate-pom.md) |
-| `generate_api_test` | Generate an API test (request fixture, no browser) — local LLM first, records to `TESTS_API.md` | [docs/generate-api-test.md](docs/generate-api-test.md) |
-| `generate_test` | Generate a complete UI/E2E test: POM + spec + auto-run + auto-fix + registry | [docs/generate-test.md](docs/generate-test.md) |
+| `generate_test` | Generate a UI, API, E2E, or mixed Playwright test — type auto-detected; POM + spec + auto-run + auto-fix + registry | [docs/generate-test.md](docs/generate-test.md) |
 | `inspect_page` | See real DOM elements and locators on a page | [docs/inspect-page.md](docs/inspect-page.md) |
 | `investigate_and_fix` | Diagnose a failure (code bug vs app bug), patch, learn, re-run | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
-| `run_tests` | Run the test suite and return output | [docs/run-tests.md](docs/run-tests.md) |
+| `run_tests` | Run tests and return output — `pattern` targets a file, `grep` runs a single test by name | [docs/run-tests.md](docs/run-tests.md) |
 | `list_resources` | List all existing POMs, fixtures, and spec files | [docs/list-resources.md](docs/list-resources.md) |
 | `generate_auth_fixture` | Generate a Playwright auth fixture — saves browser storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
 | `generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
@@ -204,7 +203,7 @@ Separate multiple tests with `---` for batch mode (non-interactive, all run in s
 qa-mcp-automation/
 │
 ├── src/                          ← MCP server + CLIs
-│   ├── index.ts                  ← MCP server entry point — 11 tools registered
+│   ├── index.ts                  ← MCP server entry point — 10 tools registered
 │   ├── cli.ts                    ← npm run generate
 │   ├── fix-cli.ts                ← npm run fix
 │   ├── analyze-prd-cli.ts        ← npm run analyze_prd

@@ -1,4 +1,8 @@
-# generate\_api\_test
+# generate\_api (CLI) / generate\_test with API auto-detection
+
+API test generation is now handled by `generate_test` — the type is detected
+automatically from the description and spec_file path, so there is **no separate
+MCP tool**. The `npm run generate_api` CLI shorthand still exists for convenience.
 
 Generates a Playwright API test using the `request` fixture — no browser, no DOM,
 no page objects. Uses the local LLM (Ollama) as the primary generator; falls back
@@ -11,8 +15,26 @@ to the Claude API automatically. Writes to `tests/api/` and records results in
 
 - Testing an HTTP endpoint directly (status code, response body, error handling)
 - After running `npm run analyze_prd -- --url <api-docs-page>` — the generated `prd-tests.txt`
-  already has `# spec_file: tests/api/...` set; call this tool for each suggested block
+  already has `# spec_file: tests/api/...` set; use `npm run generate --file prd-tests.txt`
 - When you want API test coverage without spending Claude API tokens on generation
+
+## How to trigger it
+
+From Claude Code — `generate_test` auto-detects:
+```
+Generate a test for GET /api/productsList that checks it returns at least 20 products
+```
+
+From the terminal — `generate_api` shorthand forces the API path:
+```bash
+npm run generate_api -- --description "Test GET /api/productsList returns 20+ products"
+npm run generate_api -- --file my-api-test.txt
+```
+
+From the main CLI — same as `generate_api`:
+```bash
+npm run generate -- --description "Test GET /api/productsList" --type api
+```
 
 ---
 

@@ -1,14 +1,15 @@
 # generate\_test
 
-> **For API tests** (HTTP endpoints, request fixture, no browser) use
-> [`generate_api_test`](generate-api-test.md) instead — it uses the local LLM by
-> default (free) and records to `TESTS_API.md` automatically.
+Generates a Playwright test — UI, API, E2E, or mixed — from a plain-English
+description. The type is detected automatically:
 
+- **UI / E2E** — description mentions page navigation, form interactions, or DOM elements
+- **API** — description mentions an endpoint URL, HTTP method, or `tests/api/` spec_file
+- **Mixed** — API calls alongside browser interactions (API setup → UI flow → API verify)
 
-
-Generates a complete Playwright test: creates or updates the Page Object Model,
-writes the spec file, runs it automatically, attempts to fix any failures, and
-records the result in `TESTS_UI.md`. The single most-used tool in the project.
+Creates or updates the Page Object Model (for UI/E2E), writes the spec, runs it
+automatically, attempts to fix any failures, and records the result in the correct
+registry. The single most-used tool in the project.
 
 ---
 
