@@ -16,7 +16,11 @@ See [TOOLS.md](TOOLS.md) for a quick index and [docs/](docs/) for per-tool guide
 - **Never run token-consuming operations** (Claude API calls, Playwright test runs, Ollama inference, `npm run fix`, `npm run generate`, `npm run analyze_prd`, etc.) without first notifying the user and receiving permission
 - **Never fix test files directly** without first telling the user the fix is happening outside the tool flow — explain what is being changed and why before touching the file
 - **When given permission to fix tests manually:** also update the system prompt, learned rules, or tool code so the same issue cannot recur — a fix that only patches one file without closing the root cause is incomplete
-- **When adding or significantly changing a tool:** create or update `docs/[tool-name].md`, add/update the row in `TOOLS.md` with a doc link, update `CLAUDE.md` key commands if it is a daily-use command — documentation must be updated in the same commit as the code change, not as a follow-up
+- **When adding or significantly changing a tool:** update ALL of these in the same commit as the code — never as a follow-up:
+  - `docs/[tool-name].md` — create or update the per-tool guide
+  - `TOOLS.md` — add/update both the MCP tools table and the terminal commands table, with doc links
+  - `CLAUDE.md` — update the tool count in the header and add to key commands if daily-use
+  - `README.md` — update the tool count (header + tools section + architecture block), add to the tools table and terminal commands list
 - **When a general improvement is made here:** ask before propagating to `mcp-qa-skeleton`; when propagating, verify the tool has no site-specific assumptions and note in the skeleton's docs that tools should be validated on the target site
 
 ---

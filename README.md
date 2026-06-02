@@ -11,7 +11,7 @@ Describe a test scenario in plain English. The server uses **Claude Sonnet 4.6**
 ## What this project demonstrates
 
 ### MCP server architecture
-A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes nine AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
+A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes eleven AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
 
 ### Dual-model routing with local LLM fallback
 The project uses two AI models for different tasks based on what each does best and what it costs:
@@ -35,7 +35,7 @@ Several deliberate decisions to reduce API spend while preserving output quality
 - **Budget separation** — generation runs without a cap (stopping mid-generation wastes money and produces nothing useful); the $0.30 budget applies only to the interactive fix retry loop where costs are genuinely unbounded
 
 ### Self-improving rule system
-Every time `investigate_and_fix` resolves a failure, the root cause and the corrective rule are appended to `src/prompts/learned-rules.md`. This file is injected into the system prompt on every subsequent generation call. Ten lessons have been accumulated so far (wrong import styles, carousel visibility quirks, `waitForLoadState` timing on this specific site, etc.) — the system gets measurably better with each fixed bug.
+Every time `investigate_and_fix` resolves a failure, the root cause and the corrective rule are appended to `src/prompts/learned-rules.md`. This file is injected into the system prompt on every subsequent generation call. Twenty-two lessons have been accumulated so far (wrong import styles, carousel visibility quirks, `waitForLoadState` timing on this specific site, etc.) — the system gets measurably better with each fixed bug.
 
 ### Failure classification before fixing
 The fix tool classifies every failure as a **code bug** or an **app bug** before touching anything. Code bugs (wrong locator, bad selector, import error) are fixed automatically. App bugs — where the test is correct but the application under test behaves differently from the assertion — are never "fixed" by changing the test. Instead a structured `/* ⚠️ APP BUG */` annotation is written into the spec and the entry is recorded in `TESTS_UI.md` under a separate section. This preserves the test as documentation of a real defect.
@@ -105,7 +105,7 @@ NO_LOCAL_LLM=1 npm run generate -- --file my-test.txt   # same via env var
 
 ## Tools
 
-Nine tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
+Eleven tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
 
 | Tool | One-liner | Guide |
 |------|-----------|-------|
@@ -118,6 +118,8 @@ Nine tools are available in Claude Code chat and (most) from the terminal. See [
 | `investigate_and_fix` | Diagnose a failure (code bug vs app bug), patch, learn, re-run | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
 | `run_tests` | Run the test suite and return output | [docs/run-tests.md](docs/run-tests.md) |
 | `list_resources` | List all existing POMs, fixtures, and spec files | [docs/list-resources.md](docs/list-resources.md) |
+| `generate_auth_fixture` | Generate a Playwright auth fixture — saves browser storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
+| `generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
 
 ---
 
@@ -147,11 +149,18 @@ Registry out of sync:
 
 ```bash
 npm run generate -- --file my-test.txt   # generate from description
+npm run generate_api -- --description "..." # generate an API test
+npm run generate_auth -- --name loggedIn --login-url /login  # auth fixture + storage state
+npm run generate_mock -- --name stripe --url 'https://api.stripe.com/**' --response "..."  # network mock
 npm run analyze_prd -- --file prd.md     # generate test backlog from PRD
+npm run analyze_coverage                  # find coverage gaps
+npm run audit_site -- --url https://...  # crawl site and recommend POM hierarchy
 npm run fix                               # investigate and fix failing tests
-npm run sync_registry                     # reconcile TESTS_UI.md with reality
+npm run status                            # suite health at a glance
+npm run tag_tests                         # tag spec files with registry IDs
+npm run sync_registry                     # reconcile all three registries with reality
 npm run update_registry                   # re-check only known broken/app-bug entries
-npm test                                  # run all tests headless
+npm test                                  # run all tests (2 workers, fully parallel)
 npm run test:headed                       # browser visible
 npm run test:debug                        # Playwright inspector
 npm run test:report                       # open HTML report
@@ -186,7 +195,7 @@ Separate multiple tests with `---` for batch mode (non-interactive, all run in s
 qa-mcp-automation/
 │
 ├── src/                          ← MCP server + CLIs
-│   ├── index.ts                  ← MCP server entry point — 9 tools registered
+│   ├── index.ts                  ← MCP server entry point — 11 tools registered
 │   ├── cli.ts                    ← npm run generate
 │   ├── fix-cli.ts                ← npm run fix
 │   ├── analyze-prd-cli.ts        ← npm run analyze_prd
