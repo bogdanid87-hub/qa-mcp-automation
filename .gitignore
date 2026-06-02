@@ -22,3 +22,4 @@ coverage-gaps.txt
 .DS_Store
 .setup-guide.md
 .qa-notes.md
+test-data/.auth/loggedIn.json
