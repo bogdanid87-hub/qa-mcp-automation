@@ -113,6 +113,7 @@ function parseArgs(argv: string[]): {
   noLocal?: boolean;
   budget?: number;
   maxAttempts?: number;
+  type?: 'auto' | 'ui' | 'e2e' | 'api';
 } {
   const raw: Record<string, string> = {};
   const flags = new Set<string>();
@@ -133,6 +134,7 @@ function parseArgs(argv: string[]): {
     noLocal:     flags.has('no-local'),
     budget:      raw['budget']       ? parseFloat(raw['budget'])        : undefined,
     maxAttempts: raw['max-attempts'] ? parseInt(raw['max-attempts'], 10) : undefined,
+    type:        raw['type'] as 'auto' | 'ui' | 'e2e' | 'api' | undefined,
   };
 }
 
@@ -550,8 +552,7 @@ async function main(): Promise<void> {
   console.log('\n⏳ Generating test...\n');
 
   let before = await snapshotFiles();
-  // Type is auto-detected inside generateTestTool from description + spec_file path
-  const result = await generateTestTool({ description, page_paths: pagePaths, test_name: testName, spec_file: specFile });
+  const result = await generateTestTool({ description, page_paths: pagePaths, test_name: testName, spec_file: specFile, type: args.type });
   const output = result.content[0]?.text ?? '';
   console.log(output);
 

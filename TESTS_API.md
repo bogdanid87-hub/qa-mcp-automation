@@ -1,6 +1,6 @@
 # Test Cases
 
-**Total: 21 tests**
+**Total: 22 tests**
 
 ---
 
@@ -41,3 +41,12 @@
 | 13 | should return 404 when updating a nonexistent user account |
 | 14 | should return 400 when registering with an already existing email |
 
+---
+
+## tests/api/brands.spec.ts
+
+### Brands API
+
+| # | Test |
+|---|------|
+| 1 | should return brands list with brand fields |

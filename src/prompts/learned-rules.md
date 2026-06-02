@@ -101,4 +101,20 @@ const appeared = await locator.waitFor({ state: 'visible', timeout: 5000 }).then
 expect(appeared, 'descriptive failure message').toBe(false);
 ```
 This waits up to 5 seconds for the element to appear; if it does, the test correctly fails. If 5 seconds pass with no appearance, the assertion passes correctly.
+
+## Rule 025 — Missing import statements cause ReferenceError for `test` and `expect` in spec files
+**Problem class**: Missing import statements cause ReferenceError for `test` and `expect` in spec files.
+**Rule**: Every spec file must start with `import { test, expect } from '../../fixtures';` (adjusting the relative path to the project root). Never reference `test` or `expect` without importing them, even in API test files.
+
+## Rule 026 — Missing import statements cause ReferenceError for `test` and `expect` in spec files
+**Problem class**: Missing import statements cause ReferenceError for `test` and `expect` in spec files.
+**Rule**: Every spec file must start with `import { test, expect } from '../../fixtures';` (adjusting the relative path to the project root). Never reference `test` or `expect` without importing them, even in API test files.
+
+## Rule 027 — Missing import statements cause ReferenceError for `test` and `expect` in spec files
+**Problem class**: Missing import statements cause ReferenceError for `test` and `expect` in spec files.
+**Rule**: Every spec file must start with `import { test, expect } from '../../fixtures';` (adjusting the relative path to the project root). Never reference `test` or `expect` without importing them, even in API test files.
+
+## Rule 028 — Asserting the wrong field name on an API response object without verifying the actual response shape first
+**Problem class**: Asserting the wrong field name on an API response object without verifying the actual response shape first.
+**Rule**: Before asserting specific field names on an API response, inspect a real response to confirm the exact field names. For the automationexercise.com `/api/brandsList` endpoint, each brand object uses the field `brand` (not `name`) to hold the brand name string.
 <!-- rules-end -->

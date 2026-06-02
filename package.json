@@ -12,7 +12,7 @@
     "analyze_coverage": "tsx src/analyze-coverage-cli.ts",
     "tag_tests": "tsx src/tag-tests-cli.ts",
     "status": "tsx src/status-cli.ts",
-    "generate_api": "tsx src/generate-api-test-cli.ts",
+    "generate_api": "tsx src/cli.ts --type api",
     "generate_auth": "tsx src/generate-auth-fixture-cli.ts",
     "generate_mock": "tsx src/generate-mock-cli.ts",
     "audit_site": "tsx src/site-audit-cli.ts",

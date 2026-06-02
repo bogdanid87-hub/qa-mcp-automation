@@ -216,10 +216,14 @@ export async function generateApiTestTool(args: {
   ].filter(Boolean).join('\n\n');
 
   // ── Generate — local LLM first, Claude fallback ──────────────────────────
+  // Skip local LLM when appending to an existing file: the local model ignores
+  // the "add only — do not remove existing tests" instruction and regenerates the
+  // whole file, destroying the existing tests. Claude handles merging reliably.
+  const useLocalLlm = localAvailable && !existingContent;
   let generatedBy = 'Claude API';
   let raw: string;
 
-  if (localAvailable) {
+  if (useLocalLlm) {
     try {
       raw = await callLocalLlm(API_SYSTEM_PROMPT, userPrompt);
       extractJson(raw); // validate — throws if not parseable
