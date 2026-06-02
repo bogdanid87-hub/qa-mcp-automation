@@ -157,6 +157,9 @@ Rules:
 - Use Playwright's built-in assertions (expect from fixtures)
 - Prefer auto-retrying assertions: toBeVisible(), toHaveText(), toContainText(), toHaveURL()
 - Add await before every assertion
+- NEVER use \`expect(locator).not.toBeVisible()\` immediately after triggering an async action to assert "site should reject this". The check runs before the site responds and gives a false pass. Instead, wait explicitly:
+    const appeared = await locator.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false);
+    expect(appeared, 'descriptive message if site wrongly accepted the action').toBe(false);
 
 ### Handling complex tasks
 - If a requested test is too complex to implement cleanly in a single step, break it into smaller sub-tasks

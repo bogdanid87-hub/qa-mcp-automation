@@ -46,4 +46,39 @@ test.describe('Subscription', () => {
     );
     expect(isInvalid).toBe(true);
   });
+
+  // [UI Subscription #3]
+  /* ⚠️  APP BUG — This test is correct; the application under test has a defect.
+   * Expected behaviour: The test asserts that subscribing with the same email twice should not show a success message on the second attempt. However, the screenshot confirms that the application does show 'You have been successfully subscribed!' for the duplicate email — the site accepts duplicate subscriptions without any error or rejection.
+   * Actual behaviour:   automationexercise.com accepts duplicate email subscriptions silently. When the same email is submitted a second time, the site responds with the same 'You have been successfully subscribed!' success message as the first submission, rather than rejecting or warning about the duplicate.
+   * Do NOT change this test — it documents a real bug. Fix the application instead. */
+  test('should reject duplicate email subscriptions', async ({ homePage }) => {
+    // Navigate to home page
+    await homePage.goto();
+    await homePage.verifyLoaded();
+
+    // Scroll to footer and verify the subscription section is present
+    await homePage.scrollToFooter();
+    await expect(homePage.subscriptionHeading).toBeVisible();
+
+    // Subscribe with a random email for the first time and verify success
+    const email = randomEmail();
+    await homePage.subscribeToNewsletter(email);
+    await homePage.verifySubscriptionSuccess();
+
+    // Scroll back to footer and attempt to subscribe again with the same email
+    await homePage.scrollToFooter();
+    await homePage.subscribeToNewsletter(email);
+
+    // Assert that the success message does NOT appear for the duplicate subscription
+    // Using explicit wait to give the site time to respond before concluding it won't appear
+    const successAppeared = await homePage.subscribeSuccessMessage
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+    expect(
+      successAppeared,
+      'Success message should not appear for a duplicate email subscription'
+    ).toBe(false);
+  });
 });

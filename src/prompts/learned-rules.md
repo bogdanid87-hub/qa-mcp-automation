@@ -89,4 +89,16 @@ Each rule is injected into the system prompt automatically.
 ## Rule 022 — Always validate DOM text before parsing numbers
 **Problem class**: Calling `parseInt(textContent.replace(/[^\d]/g, ''), 10)` on text that is empty, null, or non-numeric (e.g. "Out of stock") silently returns `NaN`. Assertions then fail with confusing messages like "Expected NaN to be greater than 0".
 **Rule**: Before calling `parseInt` or `parseFloat` on text extracted from the DOM, validate it matches the expected format. Use a guard: `if (!text.match(/\d+/)) throw new Error(\`Unexpected price format: "${text}"\`);` This converts silent NaN failures into clear, actionable errors.
+
+## Rule 023 — A required setup step throws a hard error when optional environment variables are absent, causing the entire setup suite to fail even for tests that don't need those credentials
+**Problem class**: A required setup step throws a hard error when optional environment variables are absent, causing the entire setup suite to fail even for tests that don't need those credentials.
+**Rule**: When a setup step depends on optional environment variables (e.g. credentials for a logged-in session), gracefully skip or degrade rather than throwing — write a fallback empty storage state file and log a warning, so the setup suite as a whole can still complete for tests that don't require that state.
+## Rule 024 — `not.toBeVisible()` is not a safe assertion for "site should reject this action"
+**Problem class**: Using `expect(locator).not.toBeVisible()` immediately after triggering an action gives a false pass when the site's response is asynchronous. The assertion checks the current DOM state and returns true if the element is not yet visible — even if the site will show it 500 ms later. This produces tests that pass incorrectly, masking real application bugs.
+**Rule**: When asserting that a site should NOT show a success/confirmation element after an action, use an explicit wait that gives the site time to respond before concluding the element won't appear:
+```typescript
+const appeared = await locator.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false);
+expect(appeared, 'descriptive failure message').toBe(false);
+```
+This waits up to 5 seconds for the element to appear; if it does, the test correctly fails. If 5 seconds pass with no appearance, the assertion passes correctly.
 <!-- rules-end -->
