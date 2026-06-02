@@ -50,6 +50,15 @@ The fix tool also reads the Playwright screenshot and live DOM snapshot at point
 > **Format note:** Registries are intentionally stored as human-readable Markdown files (`TESTS_UI.md`, `TESTS_API.md`, `TESTS_E2E.md`). This works well at the scale of a typical automation project (hundreds of tests) and makes test status immediately visible without tooling. At very large scale (thousands of tests), SQLite would be the correct storage choice — indexed lookups, atomic writes, no full-file rewrites on every update — with Markdown generated on demand as a report. This portfolio project uses Markdown because human readability and zero-dependency simplicity are the right trade-offs here.
 `TESTS_UI.md` is a markdown file maintained automatically — passing tests, app bugs, and broken tests each have their own section. The `sync-registry` command runs the full suite, adds any undocumented passing tests, promotes resolved broken entries, and flags regressions — but only after running the spec twice to rule out transient failures (the site runs on shared infrastructure with variable load). Fuzzy name matching (normalising articles and punctuation) prevents stale broken entries when test names drift between generation attempts.
 
+### Reusable skeleton
+
+A config-driven version of this server is available as a private repo. All
+automationexercise.com-specific content is replaced by a single `mcp-qa.config.json`
+(site URL, folder structure, registry names, POM hierarchy, risk tiers). The skeleton
+includes the site audit tool for POM hierarchy discovery, the same tool suite, and a
+6-step setup guide that takes a new project from zero to generating tests in under an
+hour. Validated against a separate demo site. **Available on request.**
+
 ---
 
 ## Prerequisites
