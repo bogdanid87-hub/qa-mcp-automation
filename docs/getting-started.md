@@ -209,8 +209,9 @@ The fix loop shows a running cost after each attempt and asks before each retry:
 Test is still failing. Attempt another fix? [y/N]
 ```
 
-The loop runs to completion — there is no default cap. Pass `--budget 0.50` to
-set an optional spending limit. See [docs/investigate-and-fix.md](investigate-and-fix.md) for full details.
+The loop stops after **5 attempts by default** — a hard guard against a problem
+Claude can't resolve. Pass `--max-attempts N` to override, or `--budget N` for
+a spending cap. See [docs/investigate-and-fix.md](investigate-and-fix.md) for details.
 
 ---
 

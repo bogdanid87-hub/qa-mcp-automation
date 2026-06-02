@@ -21,7 +21,9 @@ async function ensureApiKey(): Promise<void> {
   } catch { /* not found */ }
 }
 
-function parseArgs(argv: string[]): { pattern?: string; output?: string; budget?: number } {
+const DEFAULT_MAX_ATTEMPTS = 5;
+
+function parseArgs(argv: string[]): { pattern?: string; output?: string; budget?: number; maxAttempts?: number } {
   const raw: Record<string, string> = {};
   for (let i = 0; i < argv.length; i++) {
     if (argv[i].startsWith('--') && argv[i + 1] && !argv[i + 1].startsWith('--')) {
@@ -29,9 +31,10 @@ function parseArgs(argv: string[]): { pattern?: string; output?: string; budget?
     }
   }
   return {
-    pattern: raw['pattern'],
-    output:  raw['output'],
-    budget:  raw['budget'] ? parseFloat(raw['budget']) : undefined,
+    pattern:     raw['pattern'],
+    output:      raw['output'],
+    budget:      raw['budget']       ? parseFloat(raw['budget'])       : undefined,
+    maxAttempts: raw['max-attempts'] ? parseInt(raw['max-attempts'], 10) : undefined,
   };
 }
 
@@ -92,9 +95,26 @@ async function main(): Promise<void> {
 
   let lastRootCause = '';
   let lastFailureOutput = failureOutput;
+  let attempts = 0;
+  const maxAttempts = args.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
 
-  // Fix loop — runs to completion; --budget flag enables an optional spending cap
+  // Fix loop — stops at natural verdicts, user declining retry, spending cap,
+  // or max attempt count (whichever comes first).
   while (true) {
+    if (attempts >= maxAttempts) {
+      const bar = '─'.repeat(48);
+      console.log(`\n${bar}`);
+      console.log(`  ⛔ Maximum attempts (${maxAttempts}) reached without a fix.`);
+      console.log(`  Claude couldn't resolve this automatically — investigate manually.`);
+      console.log(`  Cost: ${budget.summary}`);
+      console.log(`${bar}`);
+      if (args.pattern) {
+        console.log('\n⚠️  Writing BROKEN comment into the spec file...');
+        await writeTestAnnotation(args.pattern, lastFailureOutput, 'broken', lastRootCause || `Could not auto-fix after ${maxAttempts} attempts`);
+        console.log(`  Done. Open ${args.pattern} to review.\n`);
+      }
+      break;
+    }
     if (budget.exceeded) {
       const bar = '─'.repeat(48);
       console.log(`\n${bar}`);
@@ -108,7 +128,8 @@ async function main(): Promise<void> {
       break;
     }
 
-    console.log('\n⏳ Investigating and fixing...\n');
+    attempts++;
+    console.log(`\n⏳ Investigating and fixing (attempt ${attempts}/${maxAttempts})...\n`);
     const fix = await autoFixFailure(lastFailureOutput, args.pattern, budget);
     lastRootCause = fix.rootCause;
 

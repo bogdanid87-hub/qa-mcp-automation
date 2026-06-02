@@ -113,6 +113,7 @@ function parseArgs(argv: string[]): {
   testName?: string;
   noLocal?: boolean;
   budget?: number;
+  maxAttempts?: number;
 } {
   const raw: Record<string, string> = {};
   const flags = new Set<string>();
@@ -130,8 +131,9 @@ function parseArgs(argv: string[]): {
     description: raw['description'],
     pagePaths: raw['page_paths']?.split(',').map(p => p.trim()),
     testName: raw['test_name'],
-    noLocal: flags.has('no-local'),
-    budget: raw['budget'] ? parseFloat(raw['budget']) : undefined,
+    noLocal:     flags.has('no-local'),
+    budget:      raw['budget']       ? parseFloat(raw['budget'])        : undefined,
+    maxAttempts: raw['max-attempts'] ? parseInt(raw['max-attempts'], 10) : undefined,
   };
 }
 
@@ -565,12 +567,21 @@ async function main(): Promise<void> {
     const specFile: string = result._meta.specFile;
     let lastFailureOutput: string = result._meta.lastFailureOutput ?? '';
     let stillFailing = true;
+    let fixAttempts = 1; // initial auto-fix in generate already counted as attempt 1
+    const maxFixAttempts = args.maxAttempts ?? 5;
 
     while (stillFailing) {
       const budgetBar = '─'.repeat(48);
       console.log(`\n${budgetBar}`);
       console.log(`  Fix budget used: ${budget.summary}`);
       console.log(`${budgetBar}`);
+
+      if (fixAttempts >= maxFixAttempts) {
+        console.log(`\n⛔ Maximum attempts (${maxFixAttempts}) reached — annotating as BROKEN.`);
+        console.log('   Run npm run fix for a deeper investigation.\n');
+        await writeTestAnnotation(specFile, lastFailureOutput, 'broken', `Could not auto-fix after ${maxFixAttempts} attempts`);
+        break;
+      }
 
       const retry = await askYesNo('Test is still failing. Attempt another fix? [y/N] ');
       if (!retry) {
@@ -588,7 +599,8 @@ async function main(): Promise<void> {
         break;
       }
 
-      console.log('\n⏳ Attempting another fix...\n');
+      fixAttempts++;
+      console.log(`\n⏳ Attempting another fix (attempt ${fixAttempts}/${maxFixAttempts})...\n`);
       const newFailureOutput = await runTests(specFile);
       const fix = await autoFixFailure(newFailureOutput, specFile, budget);
 

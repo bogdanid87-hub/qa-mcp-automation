@@ -140,15 +140,23 @@ Leaving `test_output` empty runs all tests automatically first.
 ### From the terminal
 
 ```bash
-npm run fix                                              # run all tests, fix whatever fails
-npm run fix -- --pattern tests/login.spec.ts            # target one spec
-npm run fix -- --output "Error: locator '#btn' ..."     # use pre-captured output
+npm run fix                                                   # run all tests, fix whatever fails
+npm run fix -- --pattern tests/login.spec.ts                 # target one spec
+npm run fix -- --output "Error: locator '#btn' ..."          # use pre-captured output
 npm run fix -- --pattern tests/login.spec.ts --budget 0.50  # optional spending cap
+npm run fix -- --pattern tests/login.spec.ts --max-attempts 3  # override attempt limit
 ```
 
-The CLI runs to completion by default — cost is tracked and displayed after each
-attempt but never stops the loop. Pass `--budget N` to opt in to a spending cap
-(useful when sharing an API key with a usage quota).
+The CLI tracks and displays cost after each attempt but never stops based on
+cost alone. Two guards prevent runaway loops:
+
+**`--max-attempts N`** (default: 5) — hard stop after N attempts regardless of
+what the user answers at the retry prompt. When reached, the test is annotated
+as BROKEN and the tool exits with a clear message. This is the primary guard
+against a stuck problem that Claude can't resolve automatically.
+
+**`--budget N`** — optional spending cap (useful for shared API keys with a usage
+quota). Stops immediately when the cap is reached.
 
 ---
 

@@ -32,7 +32,8 @@ npm run generate -- --file my-test.txt   # generate a UI/E2E test from descripti
 npm run generate_api -- --description "..." # generate an API test (local LLM first)
 npm run analyze_prd -- --file prd.md     # generate test backlog from a PRD
 npm run analyze_coverage -- --spec tests/ui/contact.spec.ts  # coverage gap analysis
-npm run fix                               # investigate and fix failing tests
+npm run fix                               # investigate and fix failing tests (max 5 attempts)
+npm run fix -- --max-attempts 3          # override attempt limit
 npm run status                            # suite health at a glance
 npm run tag_tests                         # tag spec files with registry IDs
 npm run audit_site -- --url https://...   # crawl site, build component matrix, recommend POM hierarchy

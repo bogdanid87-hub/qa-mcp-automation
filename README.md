@@ -32,7 +32,7 @@ Several deliberate decisions to reduce API spend while preserving output quality
 
 - **Prompt caching** — the system prompt and per-call codebase context are marked `cache_control: ephemeral`; within the 5-minute TTL, repeated calls pay 90% less for input tokens
 - **Focused context** — instead of sending every source file on every call, only files relevant to the current task are sent in full; everything else is listed by name, keeping Claude aware of what exists without wasting tokens on unrelated code
-- **Cost tracking without blocking** — generation and the fix loop both run to completion; spend is displayed after each attempt but never stops work. Pass `--budget N` to opt in to a spending cap (useful for shared API keys)
+- **Bounded fix loop** — stops after 5 attempts by default (the right signal that a problem needs human investigation), overridable with `--max-attempts N`. Cost is tracked and displayed after each attempt. `--budget N` adds an optional spending cap for shared API keys
 
 ### Self-improving rule system
 Every time `investigate_and_fix` resolves a failure, the root cause and the corrective rule are appended to `src/prompts/learned-rules.md`. This file is injected into the system prompt on every subsequent generation call. Twenty-two lessons have been accumulated so far (wrong import styles, carousel visibility quirks, `waitForLoadState` timing on this specific site, etc.) — the system gets measurably better with each fixed bug.

@@ -137,9 +137,9 @@ If the generated test fails on the first run, the tool:
    `test()` call; the test is **not** modified because it correctly documents a defect
 
 If the auto-fix doesn't resolve the failure, the CLI prompts to retry. Each attempt
-shows the running token cost. The loop runs to completion — pass `--budget N` to
-`npm run generate` to set an optional spending cap. If the cap is reached before
-a fix is found, a `/* ⚠️ BROKEN */` annotation is written instead.
+shows the running token cost. The loop stops after **5 attempts** (override with
+`--max-attempts N`) or when the user declines. Pass `--budget N` for an optional
+spending cap. In all stop cases a `/* ⚠️ BROKEN */` annotation is written.
 
 ---
 
@@ -160,15 +160,18 @@ There is no default spending cap — both generation and the fix loop run to
 completion. Cost is tracked from actual API usage (including cache hits and
 writes) and displayed after each attempt so you can see what a session costs.
 
-To add a spending cap, pass `--budget N` on the CLI:
+Two optional controls on the fix loop:
 
 ```bash
-npm run generate -- --file my-test.txt --budget 1.00
-npm run fix -- --pattern tests/login.spec.ts --budget 0.50
+npm run generate -- --file my-test.txt --max-attempts 3   # stop after 3 fix attempts
+npm run generate -- --file my-test.txt --budget 1.00      # stop at $1.00 spent
 ```
 
-This is useful when sharing an API key with a team usage quota. Without `--budget`,
-there is no cap and the tools always run to completion.
+**`--max-attempts N`** (default: 5) — stops after N attempts even if the user
+keeps answering 'y'. The right guard for a problem Claude can't resolve — five
+attempts is a clear signal that manual investigation is needed.
+
+**`--budget N`** — stops at a spending cap. Use for shared API keys with usage quotas.
 
 ---
 
