@@ -200,17 +200,17 @@ npm run fix -- --pattern tests/ui/auth.spec.ts          # target one spec
 npm run fix -- --output "Error: locator '#btn' ..."     # use pre-captured output
 ```
 
-The fix loop shows a running cost and asks before each retry:
+The fix loop shows a running cost after each attempt and asks before each retry:
 
 ```
 ────────────────────────────────────────────────
-  Fix budget used: $0.08 of $0.30 limit
+  Cost so far: $0.08 spent
 ────────────────────────────────────────────────
 Test is still failing. Attempt another fix? [y/N]
 ```
 
-When the $0.30 limit is reached, you're asked whether to continue spending.
-See [docs/investigate-and-fix.md](investigate-and-fix.md) for full details.
+The loop runs to completion — there is no default cap. Pass `--budget 0.50` to
+set an optional spending limit. See [docs/investigate-and-fix.md](investigate-and-fix.md) for full details.
 
 ---
 

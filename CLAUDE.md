@@ -51,7 +51,7 @@ npm run mcp                               # start MCP server manually
 ```
 src/
   index.ts              — MCP server entry point, 9 tools registered
-  cli.ts                — npm run generate (interactive, budget-controlled)
+  cli.ts                — npm run generate (interactive, cost-tracked)
   fix-cli.ts            — npm run fix
   analyze-prd-cli.ts    — npm run analyze_prd
   analyze-coverage-cli.ts — npm run analyze_coverage

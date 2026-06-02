@@ -87,8 +87,7 @@ written, committed to the registry, and not lost. Example:
 ```
 ✅ Test 1 (cart.spec.ts) — passed
 ✅ Test 2 (search.spec.ts) — passed
-⚠️  Budget of $0.30 reached after Test 2. Tests 3–5 were not generated.
-    Re-run with: npm run generate -- --file my-test.txt --start 3
+⚠️  Spending cap of $0.30 reached after Test 2. Tests 3–5 were not generated.
 ```
 
 To avoid hitting the budget mid-batch:
@@ -155,13 +154,21 @@ genuinely new suggestions.
 
 ---
 
-## Token budget
+## Token cost tracking
 
-The default per-session budget is **$0.30**. This covers roughly one generate call
-plus two or three fix attempts at current Sonnet 4.6 pricing. The budget is tracked
-from actual API usage (including cache hits and writes), not estimated.
+There is no default spending cap — both generation and the fix loop run to
+completion. Cost is tracked from actual API usage (including cache hits and
+writes) and displayed after each attempt so you can see what a session costs.
 
-To change it, update `DEFAULT_BUDGET_USD` in `src/cli.ts` and `src/fix-cli.ts`.
+To add a spending cap, pass `--budget N` on the CLI:
+
+```bash
+npm run generate -- --file my-test.txt --budget 1.00
+npm run fix -- --pattern tests/login.spec.ts --budget 0.50
+```
+
+This is useful when sharing an API key with a team usage quota. Without `--budget`,
+there is no cap and the tools always run to completion.
 
 ---
 

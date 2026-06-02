@@ -100,11 +100,10 @@ BasePage          — navigate(), popup handling only
 | Failure diagnosis and fix | Claude API always | Requires multimodal reasoning (screenshots + DOM) |
 | PRD analysis | Claude API always | Requires risk classification and multi-feature reasoning |
 
-**The fix loop is the only budget-capped operation.** Generation (POM + spec +
-single auto-fix attempt) runs to completion regardless of cost — stopping
-mid-generation wastes money and produces nothing useful. The $0.30 budget
-applies only to the interactive fix retry loop, where costs are genuinely
-unbounded and human judgment is needed at each step.
+**Both generation and the fix loop run to completion by default** — stopping
+mid-generation or mid-fix wastes money and produces nothing useful. Cost is
+tracked and displayed after each attempt. Pass `--budget N` to either CLI
+to opt in to a spending cap (useful when sharing an API key with a usage quota).
 
 ---
 
