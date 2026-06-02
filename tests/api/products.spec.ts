@@ -76,4 +76,12 @@ test.describe('Products API', () => {
     expect(typeof body.responseCode).toBe('number');
   });
 
+
+  // [API Products API #8]
+  test('should return at least 20 products', async ({ request }) => {
+    const body = await parseApiResponse(await request.get(PRODUCTS_ENDPOINT));
+    expect(body.responseCode).toBe(200);
+    expect(Array.isArray(body.products)).toBe(true);
+    expect(body.products.length).toBeGreaterThanOrEqual(20);
+  });
 });

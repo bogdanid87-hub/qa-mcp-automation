@@ -1,6 +1,6 @@
 # Test Cases
 
-**Total: 22 tests**
+**Total: 23 tests**
 
 ---
 
@@ -17,6 +17,7 @@
 | 5 | should return bad request for missing search_product parameter |
 | 6 | should return a valid response for non-existent search term |
 | 7 | should return products matching search term |
+| 8 | should return at least 20 products |
 
 ---
 
