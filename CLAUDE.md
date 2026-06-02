@@ -1,8 +1,9 @@
 # qa-mcp-automation
 
 MCP server that generates Playwright tests for automationexercise.com using the
-Claude API and a local LLM. Seven tools cover the full QA workflow from PRD
-analysis through test generation, failure investigation, and registry maintenance.
+Claude API and a local LLM. Eleven tools cover the full QA workflow from PRD
+analysis through test generation, auth fixture setup, network mocking, failure
+investigation, and registry maintenance.
 
 See [TOOLS.md](TOOLS.md) for a quick index and [docs/](docs/) for per-tool guides.
 
@@ -15,6 +16,8 @@ See [TOOLS.md](TOOLS.md) for a quick index and [docs/](docs/) for per-tool guide
 - **Never run token-consuming operations** (Claude API calls, Playwright test runs, Ollama inference, `npm run fix`, `npm run generate`, `npm run analyze_prd`, etc.) without first notifying the user and receiving permission
 - **Never fix test files directly** without first telling the user the fix is happening outside the tool flow — explain what is being changed and why before touching the file
 - **When given permission to fix tests manually:** also update the system prompt, learned rules, or tool code so the same issue cannot recur — a fix that only patches one file without closing the root cause is incomplete
+- **When adding or significantly changing a tool:** create or update `docs/[tool-name].md`, add/update the row in `TOOLS.md` with a doc link, update `CLAUDE.md` key commands if it is a daily-use command — documentation must be updated in the same commit as the code change, not as a follow-up
+- **When a general improvement is made here:** ask before propagating to `mcp-qa-skeleton`; when propagating, verify the tool has no site-specific assumptions and note in the skeleton's docs that tools should be validated on the target site
 
 ---
 
@@ -29,6 +32,8 @@ npm run fix                               # investigate and fix failing tests
 npm run status                            # suite health at a glance
 npm run tag_tests                         # tag spec files with registry IDs
 npm run audit_site -- --url https://...   # crawl site, build component matrix, recommend POM hierarchy
+npm run generate_auth -- --name loggedIn --login-url /login  # generate auth fixture + storage state
+npm run generate_mock -- --name stripe --url 'https://api.stripe.com/**' --response "..."  # network mock
 npm run sync_registry                     # reconcile all three registries with reality
 npm run update_registry                   # re-check known broken/app-bug entries
 npm test                                  # run all tests headless
