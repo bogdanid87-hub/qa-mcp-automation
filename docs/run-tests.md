@@ -57,6 +57,27 @@ error details.
 
 ---
 
+## Parallel execution
+
+Tests run with `fullyParallel: true` — each test gets its own isolated browser
+context, so cart state, cookies, and session data are never shared between tests.
+
+**Workers:**
+- Local: `undefined` → Playwright auto-selects based on CPU count (typically `cpus / 2`)
+- CI: 2 workers — conservative for shared CI runners and to avoid overloading the target site
+
+Every generated test is written to be fully independent: it sets up its own
+preconditions, produces the same result regardless of what ran before it, and
+never relies on state left by another test. This is what makes parallelism safe.
+
+To run with a specific worker count:
+```bash
+npx playwright test --workers=4   # override locally if the site handles it
+npx playwright test --workers=1   # force serial — useful for debugging a specific failure
+```
+
+---
+
 ## Run tests vs sync-registry
 
 Running tests manually never touches `TESTS_UI.md` or `TESTS_API.md`. If you want
