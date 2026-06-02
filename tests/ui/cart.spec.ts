@@ -1,9 +1,6 @@
 import { test, expect } from '../../fixtures';
 
 test.describe('Cart', () => {
-  // Tests interact with shared cart state — must run in order
-  test.describe.configure({ mode: 'serial' });
-
   // [UI Cart #1]
   test('should add two products to cart and verify prices, quantity and total', async ({ homePage, productsPage, cartPage }) => {
     // Step 2-3: Navigate to home page and verify it loaded successfully

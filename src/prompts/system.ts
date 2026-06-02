@@ -81,6 +81,14 @@ Locator priority (strict order):
 - If a spec file already exists for the same feature area, ADD the new test inside that file — do not create a new spec file
 - Only create a new spec file when no existing file covers that feature area
 
+### Test isolation — critical
+Every test must be fully independent:
+- Sets up its own preconditions (navigation, data, state) inside the test body
+- Does not rely on state left by a previous test
+- Produces the same result whether it runs first, last, or alone
+- Never use test.describe.configure({ mode: 'serial' }) to paper over state dependencies — fix the isolation instead
+Each test in this project starts with a fresh isolated browser context (the guest storage state is applied fresh per test), so cart state, cookies, and localStorage are never shared between tests.
+
 ### Folder structure — where to put new tests
 Tests live under one of these subdirectories:
 
