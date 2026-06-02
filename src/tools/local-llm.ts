@@ -100,6 +100,16 @@ export async function isLocalLlmAvailable(): Promise<boolean> {
  * Uses format:"json" to guarantee parseable output.
  * Throws on network error or non-2xx response.
  */
+// Appended to every system prompt sent to the local model.
+// Prevents the two most common local LLM code-generation issues:
+//   1. Wrapping TypeScript in markdown fences inside JSON string values
+//   2. Adding import statements when the output is a snippet, not a full file
+const LOCAL_LLM_CONSTRAINTS = `
+## Output constraints (CRITICAL — follow exactly)
+- When your JSON response contains TypeScript code in a string field, write the TypeScript DIRECTLY — do NOT wrap it in markdown fences (\`\`\`typescript ... \`\`\`)
+- Do NOT include import statements unless the instructions explicitly say this is a complete standalone file
+- Raw TypeScript only inside JSON string values — no code fences, no preamble`;
+
 export async function callLocalLlm(systemPrompt: string, userPrompt: string): Promise<string> {
   const res = await fetch(`${OLLAMA_HOST}/api/chat`, {
     method: 'POST',
@@ -108,7 +118,7 @@ export async function callLocalLlm(systemPrompt: string, userPrompt: string): Pr
     body: JSON.stringify({
       model: LOCAL_MODEL,
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: systemPrompt + LOCAL_LLM_CONSTRAINTS },
         { role: 'user', content: userPrompt },
       ],
       stream: false,

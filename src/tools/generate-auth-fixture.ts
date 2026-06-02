@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join, dirname } from 'path';
 import { getSystemBlocks } from '../prompts/system.js';
+import { cleanLlmCode } from './llm-utils.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -157,22 +158,9 @@ export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
   await mkdir(storageDir, { recursive: true });
   await mkdir(join(ROOT, 'tests'), { recursive: true });
 
-  // Strip markdown fences and duplicate import statements from the generated task.
-  // When appending to an existing file the LLM often includes its own import block —
-  // those imports are already at the top of the file.
-  const stripForAppend = (code: string): string => {
-    let s = code
-      .replace(/^```(?:typescript|ts)?\n?/m, '')
-      .replace(/\n?```\s*$/m, '')
-      .trim();
-    if (existingSetup) {
-      // Remove any import lines — the existing file already has them
-      s = s.split('\n').filter(l => !l.trimStart().startsWith('import ')).join('\n').trimStart();
-    }
-    return s;
-  };
-
-  const cleanSetupTask = stripForAppend(parsed.setupTask);
+  const cleanSetupTask = cleanLlmCode(parsed.setupTask, {
+    stripImports: !!existingSetup, // only strip imports when appending to existing file
+  });
 
   if (existingSetup) {
     const updated = existingSetup.trimEnd() + '\n\n' + cleanSetupTask + '\n';
@@ -184,12 +172,7 @@ export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
 
   // ── Append fixture entry to fixtures/index.ts ───────────────────────────
   if (existingFixtures) {
-    // Strip fences from the fixture entry too
-    const cleanFixture = parsed.fixtureEntry
-      .replace(/^```(?:typescript|ts)?\n?/m, '')
-      .replace(/\n?```\s*$/m, '')
-      .replace(/^import [^\n]+\n/gm, '') // strip any import lines
-      .trim();
+    const cleanFixture = cleanLlmCode(parsed.fixtureEntry, { stripImports: true });
 
     // Insert INSIDE the base.extend({...}) object — before the closing '});'
     const closeIdx = existingFixtures.lastIndexOf('\n});');

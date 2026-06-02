@@ -72,6 +72,17 @@ Run `npm run generate_auth -- --help` for all options.
 
 ---
 
+## What the tool updates automatically
+
+| File | What changes |
+|---|---|
+| `tests/global.setup.ts` | New setup task appended (imports are shared, not duplicated) |
+| `fixtures/index.ts` | New fixture property added inside `base.extend()` |
+| `fixtures/index.ts` | `PageFixtures` type updated with the new fixture type |
+| `.gitignore` | Storage state path added |
+
+---
+
 ## What gets generated
 
 ### `tests/global.setup.ts` — new task appended
@@ -117,12 +128,25 @@ TEST_PASSWORD=your-test-password
 
 ## After generation
 
-1. Add the env vars to your `.env` file (never commit credentials)
-2. Run the setup to generate the storage state file:
+1. **Create a persistent test account** on the site (the credentials must not be
+   deleted between runs). For sites where tests create/delete accounts in `beforeAll`,
+   you need a separate dedicated account used only by the auth fixture — not one of the
+   throwaway accounts created per test.
+
+2. **Add credentials to `.env`** (never commit this file):
+   ```
+   TEST_EMAIL=your-dedicated-test-account@example.com
+   TEST_PASSWORD=your-test-password
+   ```
+
+3. **Run the setup** to generate the auth storage state file:
    ```bash
    npx playwright test --project=setup
    ```
-3. Use the fixture in tests:
+   This saves `test-data/.auth/<name>.json` (gitignored). Re-run whenever credentials
+   change or if the site clears sessions.
+
+4. **Use the fixture in tests**:
    ```typescript
    test('should show dashboard', async ({ loggedInPage }) => {
      // already logged in — no login step needed
