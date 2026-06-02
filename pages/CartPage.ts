@@ -80,12 +80,14 @@ export class CartPage extends SitePage {
   async getRowPrice(index: number): Promise<number> {
     const row = this.cartRows.nth(index);
     const priceText = (await row.locator('.cart_price p').textContent()) ?? '';
+    if (!priceText.match(/\d+/)) throw new Error(`Unexpected price format: "${priceText}"`);
     return parseInt(priceText.replace(/[^\d]/g, ''), 10);
   }
 
   async getRowTotal(index: number): Promise<number> {
     const row = this.cartRows.nth(index);
     const totalText = (await row.locator('.cart_total p').textContent()) ?? '';
+    if (!totalText.match(/\d+/)) throw new Error(`Unexpected total format: "${totalText}"`);
     return parseInt(totalText.replace(/[^\d]/g, ''), 10);
   }
 
@@ -101,7 +103,7 @@ export class CartPage extends SitePage {
     const row = this.cartRows.nth(rowIndex);
     const deleteBtn = row.locator('.cart_delete a');
     await deleteBtn.click();
-    await this.page.waitForTimeout(1500);
+    await row.waitFor({ state: 'detached' });
   }
 
   async getRowCount(): Promise<number> {

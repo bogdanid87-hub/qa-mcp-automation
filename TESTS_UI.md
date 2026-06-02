@@ -1,6 +1,6 @@
 # Test Cases
 
-**Total: 8 tests**
+**Total: 7 tests**
 
 ---
 
@@ -22,13 +22,12 @@
 |---|------|
 | 1 | should subscribe via the footer subscription form on the home page |
 | 2 | should show an error when subscribing with an invalid email format |
-| 3 | should accept duplicate email subscriptions and show success each time |
 
 ---
 
 ## tests/ui/cart.spec.ts
 
-### Place Order: Add Products in Cart
+### Cart
 
 | # | Test |
 |---|------|

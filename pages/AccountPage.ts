@@ -14,7 +14,8 @@ export class AccountPage extends SitePage {
     this.continueButtonAfterCreation = page.locator('[data-qa="continue-button"]').first();
     this.deleteAccountButton        = page.locator('[data-qa="delete-account"]');
     this.accountDeletedMessage      = page.locator('[data-qa="account-deleted"]');
-    this.continueButtonAfterDeletion = page.locator('[data-qa="continue-button"]').last();
+    // Each button appears on a different page (created vs deleted) — only one exists at a time.
+    this.continueButtonAfterDeletion = page.locator('[data-qa="continue-button"]').first();
   }
 
   async fillAccountDetails(details: {

@@ -82,4 +82,11 @@ Each rule is injected into the system prompt automatically.
 ## Rule 020 — Wrong relative path from test file to shared test-data directory causes ENOENT at runtime
 **Problem class**: Wrong relative path from test file to shared test-data directory causes ENOENT at runtime.
 **Rule**: When resolving paths to shared test fixtures (uploads, test data files), always count the directory depth from the spec file to the project root correctly. Spec files in `tests/ui/` are two levels deep, so the path to `test-data/` at the project root requires `../../test-data/`, not `../test-data/`.
+## Rule 021 — Never use waitForTimeout to wait for element state changes
+**Problem class**: Using `page.waitForTimeout(N)` to wait for an element to disappear, appear, or change state causes flaky tests — the hardcoded delay is either too short on slow runners or wastes time on fast ones.
+**Rule**: Always use the element's own `.waitFor({ state: 'detached' | 'hidden' | 'visible' })` method instead. For example, after removing a cart row: `await row.waitFor({ state: 'detached' })`. Only use `waitForTimeout` for the specific dialog-handling pattern documented in the system prompt.
+
+## Rule 022 — Always validate DOM text before parsing numbers
+**Problem class**: Calling `parseInt(textContent.replace(/[^\d]/g, ''), 10)` on text that is empty, null, or non-numeric (e.g. "Out of stock") silently returns `NaN`. Assertions then fail with confusing messages like "Expected NaN to be greater than 0".
+**Rule**: Before calling `parseInt` or `parseFloat` on text extracted from the DOM, validate it matches the expected format. Use a guard: `if (!text.match(/\d+/)) throw new Error(\`Unexpected price format: "${text}"\`);` This converts silent NaN failures into clear, actionable errors.
 <!-- rules-end -->

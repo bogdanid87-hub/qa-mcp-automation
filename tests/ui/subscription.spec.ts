@@ -46,34 +46,4 @@ test.describe('Subscription', () => {
     );
     expect(isInvalid).toBe(true);
   });
-  // THIS TESTCASE IS THE RESULT OF A BUG - the AI fix login did not differentiate 
-  // between code bug and app bug and it altered the test so it passed
-  // guardrails have been added against this behaviour so it does not occur 
-  // in the future, but kept the test case for posterity
-  // [UI Subscription #3]
-  test('should accept duplicate email subscriptions and show success each time', async ({ homePage, page }) => {
-    // Navigate to home page and verify it loaded successfully
-    await homePage.goto();
-    await homePage.verifyLoaded();
-
-    // Scroll down to the footer subscription form
-    await homePage.scrollToFooter();
-
-    // Verify the SUBSCRIPTION heading is visible in the footer
-    await expect(homePage.subscriptionHeading).toBeVisible();
-
-    // Subscribe with a valid random email for the first time
-    const email = randomEmail();
-    await homePage.subscribeToNewsletter(email);
-
-    // Verify the first subscription was successful
-    await homePage.verifySubscriptionSuccess();
-
-    // Scroll to footer again and subscribe with the same email a second time
-    await homePage.scrollToFooter();
-    await homePage.subscribeToNewsletter(email);
-
-    // The site accepts duplicate subscriptions — verify a success message is shown again
-    await homePage.verifySubscriptionSuccess();
-  });
 });

@@ -2,6 +2,21 @@ import { test, expect } from '../../fixtures';
 import { randomName, randomEmail, randomPassword } from '../../utils/randomData';
 
 test.describe('Place Order', () => {
+  // Credentials scoped here so afterEach can clean up even on mid-test failure
+  let testEmail = '';
+  let testPassword = '';
+
+  test.afterEach(async ({ request }) => {
+    if (testEmail) {
+      // Safety net: delete the account via API in case the test failed before the UI deletion
+      await request.delete('https://automationexercise.com/api/deleteAccount', {
+        form: { email: testEmail, password: testPassword },
+      }).catch(() => {}); // non-fatal — account may already be deleted by the test itself
+      testEmail = '';
+      testPassword = '';
+    }
+  });
+
   // [E2E Place Order #1]
   test('should register during checkout, place an order, and delete the account', async ({
     page,
@@ -12,6 +27,8 @@ test.describe('Place Order', () => {
     loginPage,
     accountPage,
   }) => {
+    test.setTimeout(5 * 60_000); // multi-step flow — 5 minutes
+
     // Step 2-3: Navigate to home page and verify it loaded successfully
     await homePage.goto();
     await homePage.verifyLoaded();
@@ -35,8 +52,10 @@ test.describe('Place Order', () => {
 
     // Step 9: Fill all details in Signup form and create account
     const name = randomName();
-    const email = randomEmail();
-    const password = randomPassword();
+    testEmail = randomEmail();
+    testPassword = randomPassword();
+    const email = testEmail;
+    const password = testPassword;
     await loginPage.signupWithNameAndEmail(name, email);
     await page.waitForLoadState('load');
     await accountPage.fillAccountDetails({

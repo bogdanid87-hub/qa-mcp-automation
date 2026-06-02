@@ -62,6 +62,11 @@ Locator priority (strict order):
     4. getByPlaceholder(...)
     5. getByText(...)
     6. #id
+- Never use .first() or .last() as the only way to distinguish between elements that share the same selector — scope the locator to a unique parent container instead:
+    // Wrong:
+    page.locator('[data-qa="submit"]').first()
+    // Right:
+    page.locator('#registration-form [data-qa="submit"]')
 
 ### Fixtures
 - Custom fixtures live in fixtures/index.ts
@@ -114,12 +119,31 @@ Rules:
   Register the handler BEFORE the click. Use page.on (not page.once).
 
 ### User management
-- Tests that create a user MUST delete the user at the end, even if the test fails:
-    test.afterEach(async ({ apiContext }) => { /* delete via API */ });
+- Tests that create a user MUST delete the user at the end, even if the test fails.
+  Declare credentials at describe scope and use test.afterEach with the request fixture:
+    let testEmail: string;
+    let testPassword: string;
+    test.afterEach(async ({ request }) => {
+      if (testEmail) {
+        await request.delete('/api/deleteAccount', {
+          form: { email: testEmail, password: testPassword }
+        }).catch(() => {}); // non-fatal — account may already be deleted by the test
+        testEmail = ''; testPassword = '';
+      }
+    });
+    test('...', async ({ ... }) => {
+      testEmail = randomEmail(); testPassword = randomPassword();
+      // ... rest of test
+    });
 - User names and email addresses MUST be randomised using utils/randomData.ts:
     import { randomName, randomEmail, randomPassword } from '../utils/randomData';
 - Tests that require login MUST create the user via the Automationexercise API FIRST
   (POST /api/createAccount) and store credentials, then log in
+
+### E2E test timeouts
+- E2E tests spanning 10 or more actions must set an explicit timeout at the start of the test body:
+    test.setTimeout(5 * 60_000); // 5 minutes for multi-step flows
+  The default per-action timeout is 30 s; a 20-action flow can legitimately take several minutes on slow runners without this guard.
 
 ### Assertions
 - Use Playwright's built-in assertions (expect from fixtures)
