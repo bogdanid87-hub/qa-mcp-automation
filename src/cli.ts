@@ -3,7 +3,6 @@ import { readFile, readdir, stat } from 'fs/promises';
 import { join } from 'path';
 import * as readline from 'readline';
 import { generateTestTool } from './tools/generate-test.js';
-import { generateApiTestTool } from './tools/generate-api-test.js';
 import { runTests } from './tools/run-tests.js';
 import { readTestCases, TESTS_API_PATH, TESTS_E2E_PATH, type TestEntry } from './tools/test-registry.js';
 import { autoFixFailure } from './tools/investigate-fix.js';
@@ -231,11 +230,10 @@ async function runBatch(
 
     console.log(`⏳ Generating ${group.length} test${group.length === 1 ? '' : 's'} in one call (no auto-fix in batch)...\n`);
     const before = await snapshotFiles();
-    const result = await generateApiTestTool({
+    const result = await generateTestTool({
       description: combinedDescription,
-      spec_file: specFile,
-      budget,
-      noAutoFix: true,  // prevents annotation cascade; user runs npm run fix after reviewing
+      spec_file:   specFile,
+      type:        'api',
     });
     console.log(result.content[0]?.text ?? '');
     const { created, edited } = await diffFiles(before);
@@ -552,10 +550,8 @@ async function main(): Promise<void> {
   console.log('\n⏳ Generating test...\n');
 
   let before = await snapshotFiles();
-  const isApiTest = specFile?.startsWith('tests/api/');
-  const result = isApiTest
-    ? await generateApiTestTool({ description, test_name: testName, spec_file: specFile })
-    : await generateTestTool({ description, page_paths: pagePaths, test_name: testName, spec_file: specFile });
+  // Type is auto-detected inside generateTestTool from description + spec_file path
+  const result = await generateTestTool({ description, page_paths: pagePaths, test_name: testName, spec_file: specFile });
   const output = result.content[0]?.text ?? '';
   console.log(output);
 

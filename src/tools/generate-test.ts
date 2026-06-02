@@ -7,6 +7,7 @@ import { readFocusedContextForFeature, pomExistsForFeature } from './list-resour
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { runTests } from './run-tests.js';
 import { parsePassingTests, recordPassingTests } from './test-registry.js';
+import { generateApiTestTool } from './generate-api-test.js';
 import { tagSpecAfterRecording } from './tag-tests.js';
 import { markBacklogEntriesCovered } from './analyze-coverage.js';
 import { autoFixFailure } from './investigate-fix.js';
@@ -121,12 +122,41 @@ function parseJson(raw: string): GenerateResponse {
   return JSON.parse(extractJson(raw));
 }
 
+/**
+ * Detect whether a test description is asking for a pure API test (request
+ * fixture, no browser). The strongest signal is the spec_file path; description
+ * keywords are secondary. Deliberately conservative — when ambiguous, default
+ * to the UI path so the user gets POM generation and browser context.
+ */
+function detectApiIntent(description: string, specFile?: string): boolean {
+  // Spec file path is the strongest signal
+  if (specFile && (specFile.startsWith('tests/api/') || specFile.includes('/api/'))) return true;
+
+  const desc = description.toLowerCase();
+
+  // Explicit API test language
+  if (/\bapi\s+test\b|\btest\s+the\s+api\b|\bapi\s+endpoint\b/.test(desc)) return true;
+
+  // HTTP method + path patterns (POST /api/..., GET /api/...)
+  if (/\b(post|get|put|patch|delete)\s+\/\S+/.test(desc)) return true;
+
+  // Request fixture / no browser language
+  if (/\brequest\s+fixture\b|\bno\s+browser\b|\bwithout\s+browser\b/.test(desc)) return true;
+
+  // Direct API testing language (not "verify against the API" which is UI + reference)
+  if (/\bhttp\s+(request|call|endpoint)\b|\brest\s+api\b/.test(desc)) return true;
+
+  return false;
+}
+
 export async function generateTestTool(args: {
   description: string;
   test_name?: string;
   page_paths?: string[];
   spec_file?: string;
   proposalsOnly?: boolean;
+  /** Override auto-detection. 'api' forces the API path; 'ui'/'e2e' forces the browser path. */
+  type?: 'auto' | 'ui' | 'e2e' | 'api';
 }): Promise<{ content: { type: 'text'; text: string }[]; _meta?: { specFile?: string; lastFailureOutput?: string; passing: boolean } }> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -134,6 +164,21 @@ export async function generateTestTool(args: {
       content: [{ type: 'text', text: 'Error: ANTHROPIC_API_KEY environment variable is not set.' }],
     };
   }
+
+  // Route to API generation when explicitly requested or confidently detected.
+  // Mixed tests (UI + API calls) fall through to the UI path — the browser path
+  // already supports the request fixture alongside page interactions.
+  const isApiTest = args.type === 'api' ||
+    (args.type !== 'ui' && args.type !== 'e2e' && detectApiIntent(args.description, args.spec_file));
+
+  if (isApiTest) {
+    return generateApiTestTool({
+      description: args.description,
+      test_name:   args.test_name,
+      spec_file:   args.spec_file,
+    });
+  }
+
 
   const client = new Anthropic({ apiKey });
   const systemBlocks = await getSystemBlocks();

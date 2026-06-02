@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { generateApiTestTool } from './tools/generate-api-test.js';
+import { generateTestTool } from './tools/generate-test.js';
 
 const ROOT = process.cwd();
 
@@ -88,7 +88,8 @@ async function main(): Promise<void> {
 
   console.log('\n⏳ Generating API test...\n');
 
-  const result = await generateApiTestTool({ description, test_name: testName, spec_file: specFile });
+  // Route through the unified generate_test tool with type forced to 'api'
+  const result = await generateTestTool({ description, test_name: testName, spec_file: specFile, type: 'api' });
   console.log(result.content[0]?.text ?? '');
   console.log('');
 }

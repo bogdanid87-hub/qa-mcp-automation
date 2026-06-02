@@ -20,33 +20,21 @@ server.registerTool(
   'generate_test',
   {
     description:
-      'Generate a Playwright test (and POM page object if needed) for automationexercise.com. ' +
-      'Provide test steps as a description; Claude Sonnet 4.6 writes the code following project conventions and saves the files.',
+      'Generate a Playwright test for automationexercise.com. ' +
+      'Handles UI tests (browser + Page Object Model), API tests (request fixture, no browser), ' +
+      'E2E flows (multi-page), and mixed tests (API setup + UI interaction). ' +
+      'The type is detected automatically from the description and spec_file path — ' +
+      'no need to call a separate API test tool. ' +
+      'Writes the spec, runs it, attempts auto-fix on failure, and records the result.',
     inputSchema: {
-      description: z.string().describe('Test steps or description of what to test. May be plain text or a numbered list.'),
+      description: z.string().describe('What to test — plain text or numbered steps. For API tests describe the endpoint, method, and assertions. For UI tests describe the user flow.'),
       test_name: z.string().optional().describe('Names the test() and describe() blocks. Does not control the filename.'),
-      spec_file: z.string().optional().describe('Target spec file path, e.g. "tests/ui/cart.spec.ts" or "tests/e2e/place-order.spec.ts". Created if it does not exist; new test is added if it does.'),
-      page_paths: z.array(z.string()).optional().describe('Page paths to inspect live for accurate locators, e.g. ["/contact_us", "/login"]. The server navigates each page headlessly and extracts real DOM elements before generating the POM.'),
+      spec_file: z.string().optional().describe('Target spec file, e.g. "tests/ui/cart.spec.ts", "tests/api/products.spec.ts", or "tests/e2e/checkout.spec.ts". Inferred if omitted. tests/api/ prefix forces API generation.'),
+      page_paths: z.array(z.string()).optional().describe('Page paths to inspect live for accurate locators (UI/E2E tests). The server navigates each page headlessly and extracts real DOM elements.'),
+      type: z.enum(['auto', 'ui', 'e2e', 'api']).optional().describe('Override auto-detection: "api" forces request-fixture path, "ui"/"e2e" forces browser path. Omit to auto-detect.'),
     },
   },
-  (args) => generateTestTool({ ...args, spec_file: (args as { spec_file?: string }).spec_file }),
-);
-
-server.registerTool(
-  'generate_api_test',
-  {
-    description:
-      'Generate a Playwright API test (no browser — uses the request fixture) for automationexercise.com. ' +
-      'Uses the local LLM (Ollama) when available for zero API cost; falls back to Claude automatically. ' +
-      'Tests are written to tests/api/ and results are recorded in TEST_API.md. ' +
-      'Describe the endpoint to test; the tool writes the spec, runs it, and attempts auto-fix on failure.',
-    inputSchema: {
-      description: z.string().describe('What API endpoint or scenario to test. Include the endpoint URL, HTTP method, expected status code, and key response fields to validate.'),
-      test_name: z.string().optional().describe('Hint for naming the test() and describe() blocks.'),
-      spec_file: z.string().optional().describe('Target spec file, e.g. "tests/api/products.spec.ts". Inferred from the description if omitted.'),
-    },
-  },
-  (args) => generateApiTestTool(args),
+  (args) => generateTestTool(args as Parameters<typeof generateTestTool>[0]),
 );
 
 server.registerTool(
