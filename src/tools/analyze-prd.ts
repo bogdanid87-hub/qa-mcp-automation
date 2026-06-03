@@ -305,12 +305,18 @@ export async function analyzePrdTool(args: {
   const sourceLabel = args.prdContent
     ? args.prdContent.slice(0, 60).replace(/\n/g, ' ').trim() + '…'
     : 'file/url input';
-  const testNames = [...raw.matchAll(/^# test_name:\s*(.+)$/gm)].map(m => m[1].trim());
+  // Extract test_name + spec_file pairs so each backlog entry is scannable
+  const testEntries: { name: string; spec: string }[] = [];
+  for (const block of raw.split(/^---$/m)) {
+    const nameM = block.match(/^# test_name:\s*(.+)$/m);
+    const specM = block.match(/^# spec_file:\s*(.+)$/m);
+    if (nameM) testEntries.push({ name: nameM[1].trim(), spec: specM?.[1].trim() ?? '' });
+  }
   const backlogSection = [
     `## ${date} — analyze_prd — ${sourceLabel} (${testCount} suggestion${testCount === 1 ? '' : 's'})`,
     '',
     `${criticalCount} critical · ${highCount} high · ${testCount - criticalCount - highCount} medium/low`,
-    ...testNames.map(n => `- ${n}`),
+    ...testEntries.map(e => e.spec ? `- ${e.name}  # ${e.spec}` : `- ${e.name}`),
     '',
     '---',
     '',

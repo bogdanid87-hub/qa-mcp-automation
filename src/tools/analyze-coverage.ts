@@ -355,13 +355,24 @@ export async function markBacklogEntriesCovered(passingTestNames: string[]): Pro
   const norm = (s: string) => s.toLowerCase().replace(/[-\s\W]+/g, '');
   const covered = new Set(passingTestNames.map(norm));
 
-  // Match table data rows (not header/separator rows)
-  const updated = content.replace(
+  // Match analyze_coverage pipe-table rows (| priority | name | `spec` | source |)
+  let updated = content.replace(
     /^\| ([^|\n]+) \| ([^|\n]+) \| (`[^|\n]+`) \| ([^|\n]+) \|$/gm,
     (line, priority, testName, spec, source) => {
       if (testName.includes('✅')) return line; // already marked
       if (covered.has(norm(testName.trim()))) {
         return `| ✅ | ~~${testName.trim()}~~ | ${spec.trim()} | ${source.trim()} |`;
+      }
+      return line;
+    },
+  );
+
+  // Match analyze_prd bullet rows (- test-name or - test-name  # spec_file)
+  updated = updated.replace(
+    /^- (?!~~)(.+?)(?:\s+#\s*\S+)?$/gm,
+    (line, testName) => {
+      if (covered.has(norm(testName.trim()))) {
+        return line.replace(`- ${testName}`, `- ~~${testName.trim()}~~`);
       }
       return line;
     },
