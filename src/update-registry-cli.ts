@@ -11,6 +11,7 @@ import {
   TESTS_UI_PATH,
   TESTS_API_PATH,
   TESTS_E2E_PATH,
+  TESTS_VISUAL_PATH,
 } from './tools/test-registry.js';
 
 const ROOT = process.cwd();
@@ -24,13 +25,31 @@ async function ensureApiKey(): Promise<void> {
   } catch { /* not found */ }
 }
 
-/** Extract test names that failed with "Expected to fail, but passed" (unexpected pass). */
+/** Extract test names that failed with "Expected to fail, but passed" (unexpected pass).
+ *  Uses two patterns for resilience against minor Playwright output format changes. */
 function detectUnexpectedPasses(output: string): string[] {
   const names: string[] = [];
-  // Playwright reports unexpected passes in the numbered failure block
-  const re = /\d+\)\s+\[chromium\]\s+›\s+[^\s:]+:\d+:\d+\s+›\s+([^›\n]+?)\s+›\s+(.+?)\n[\s\S]*?Error:\s+Expected to fail/gm;
+
+  // Pattern 1: numbered failure block with error message (most reliable)
+  const re1 = /\d+\)\s+\[chromium\]\s+›\s+[^\s:]+:\d+:\d+\s+›\s+([^›\n]+?)\s+›\s+(.+?)\n[\s\S]*?Error:\s+Expected to fail/gm;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(output)) !== null) names.push(m[2].trim());
+  while ((m = re1.exec(output)) !== null) names.push(m[2].trim());
+
+  // Pattern 2: scan for the error phrase and extract the preceding test name line
+  if (names.length === 0 && output.includes('Expected to fail')) {
+    const re2 = /›\s+([^›\n]+)\s*\(\d+/gm;
+    const errorLines = output.split('\n');
+    for (let i = 0; i < errorLines.length; i++) {
+      if (errorLines[i].includes('Expected to fail')) {
+        // Look backward for the test title line (within 10 lines)
+        for (let j = i - 1; j >= Math.max(0, i - 10); j--) {
+          const titleMatch = errorLines[j].match(/›\s+(.+?)\s+\(\d+/);
+          if (titleMatch) { names.push(titleMatch[1].trim()); break; }
+        }
+      }
+    }
+  }
+
   return [...new Set(names)];
 }
 
@@ -63,15 +82,16 @@ async function stripAppBugMarkers(absPath: string, testName: string): Promise<{ 
 async function main(): Promise<void> {
   await ensureApiKey();
 
-  const [broken, brokenApi, brokenE2e] = await Promise.all([
+  const [broken, brokenApi, brokenE2e, brokenVisual] = await Promise.all([
     readBrokenTests(TESTS_UI_PATH),
     readBrokenTests(TESTS_API_PATH),
     readBrokenTests(TESTS_E2E_PATH),
+    readBrokenTests(TESTS_VISUAL_PATH),
   ]);
-  const allBroken = [...broken, ...brokenApi, ...brokenE2e];
+  const allBroken = [...broken, ...brokenApi, ...brokenE2e, ...brokenVisual];
 
   if (allBroken.length === 0) {
-    console.log('\n✅ No broken or app-bug tests recorded in TEST_CASES.md or TEST_API.md.\n');
+    console.log('\n✅ No broken or app-bug tests recorded in any registry.\n');
     return;
   }
 
