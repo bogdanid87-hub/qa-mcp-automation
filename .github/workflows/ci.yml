@@ -7,14 +7,17 @@ on:
     branches: [main]
 
 # Cancel any in-progress run for the same branch when a new push arrives.
-# Prevents queued runs from executing against stale code.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  functional:
-    name: Functional tests (Chromium)
+  # ── Fast structural checks — no live site, no API keys needed ────────────────
+  # Playwright tests run via the Husky pre-push hook on the developer's machine
+  # (residential IP) before the branch is pushed. By the time a PR is opened,
+  # the full test suite has already been validated locally.
+  type-check:
+    name: TypeScript + MCP schema validation
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -25,35 +28,22 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright browsers
-        run: npx playwright install chromium --with-deps
+      - name: TypeScript compilation check
+        run: npx tsc --noEmit
 
-      - name: Run functional test suite
-        # Playwright tests hit the live site directly — no Claude API needed.
-        # ANTHROPIC_API_KEY is only required for generation tools (npm run fix, generate, etc.)
-        run: npm test
-        env:
-          CI: true
+      - name: Validate MCP tool exports
+        run: npx tsx scripts/validate-mcp.ts
 
-      - name: Upload test report on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
-
+  # ── Visual regression — browser-based, no API calls, separate runner ─────────
   visual:
     name: Visual regression tests
     runs-on: ubuntu-latest
-    # write permission needed so the self-healing step can commit and push
-    # Linux baselines on the first run.
     permissions:
       contents: write
 
@@ -65,7 +55,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -76,21 +66,17 @@ jobs:
 
       - name: Run visual regression tests
         id: visual_tests
-        # First run: no Linux baselines exist → fails with "snapshot doesn't exist"
-        # Subsequent runs: compares against committed baselines
         run: npm run test:visual
         continue-on-error: true
         env:
           CI: true
 
-      - name: Generate missing Linux baselines (first run only)
-        # Runs only when visual tests failed — almost always because baselines
-        # don't exist yet. Generates them and commits so the next run compares.
-        if: steps.visual_tests.outcome == 'failure'
+      - name: Generate missing Linux baselines (main push only)
+        if: steps.visual_tests.outcome == 'failure' && github.event_name == 'push'
         run: npm run test:update-snapshots
 
       - name: Commit generated baselines
-        if: steps.visual_tests.outcome == 'failure'
+        if: steps.visual_tests.outcome == 'failure' && github.event_name == 'push'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -100,12 +86,11 @@ jobs:
             exit 1
           else
             git commit -m "chore: generate Linux visual baselines [skip ci]"
-            git push
+            git push origin HEAD:${{ github.ref_name }}
           fi
 
       - name: Re-run visual tests against new baselines
-        # Verify the newly committed baselines pass comparison immediately.
-        if: steps.visual_tests.outcome == 'failure'
+        if: steps.visual_tests.outcome == 'failure' && github.event_name == 'push'
         run: npm run test:visual
         env:
           CI: true

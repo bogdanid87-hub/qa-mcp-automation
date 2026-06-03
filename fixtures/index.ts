@@ -23,6 +23,10 @@ type PageFixtures = {
 export const test = base.extend<PageFixtures>({
   // Override the default page to always block ads and dismiss popups on first load
   page: async ({ page }, use) => {
+    // Hide automation signals — prevents Cloudflare from serving 403 to the browser
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+    });
     await blockAds(page);
 
     let firstNavigation = true;

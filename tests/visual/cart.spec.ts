@@ -37,6 +37,15 @@ test.describe('Cart Page — Table Structure', () => {
     await page.locator('#cart_info_table').waitFor({ state: 'visible' });
     await page.locator('#cart_info_table tbody tr').first().waitFor({ state: 'visible' });
 
+    // Wait for all cart table images to finish loading before capturing.
+    // Masking covers image elements but the mask bounding box is wrong when an
+    // image hasn't loaded yet (zero or incorrect height shifts surrounding layout).
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('#cart_info_table img')].every(
+        img => (img as HTMLImageElement).complete && (img as HTMLImageElement).naturalHeight > 0,
+      )
+    );
+
     // Allow CSS transitions to settle before capturing
     await page.waitForTimeout(500);
 

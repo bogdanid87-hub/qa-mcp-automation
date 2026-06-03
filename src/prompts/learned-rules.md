@@ -130,4 +130,37 @@ This fails in 2 s as an assertion error (caught by `test.fail()`), while preserv
 ## Rule 030 — Confirm nav/counter elements exist before testing them
 **Problem class**: Generating tests for nav badge or counter elements that may not exist on the specific site under test.
 **Rule**: Before writing assertions against nav counters, cart badges, or notification indicators, use inspect_page to confirm the element exists in the live DOM. Standard e-commerce badge patterns don't apply universally — always verify with real DOM output first.
+
+## Rule 031 — API tests must use requestWithRetry for all setup calls in beforeAll
+**Problem class**: Demo/practice sites return transient 503 (Service Unavailable), 521/522 (Cloudflare origin unreachable), or redirect loops (302→302, throws "Max redirect count exceeded") under CI load. A single failed `request.post` in `beforeAll` cascades to all dependent tests because Playwright's per-test retry does not re-run `beforeAll`. The 30s default beforeAll timeout is also insufficient when retrying multiple account creations.
+**Rule**: Every `request.post` / `request.put` / `request.delete` call inside `beforeAll` must be wrapped with a `requestWithRetry` helper. Redirect loops throw exceptions rather than returning a status code, so the helper must use try/catch, not just status code checks. Always add `test.describe.configure({ timeout: 120_000 })` to any describe block with a `beforeAll` that creates accounts. Include this helper at the top of every API spec file:
+```typescript
+const TRANSIENT_CODES = new Set([502, 503, 521, 522, 524]);
+async function requestWithRetry(requestFn: () => Promise<APIResponse>, maxAttempts = 3): Promise<APIResponse> {
+  let lastErr: Error | undefined;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await requestFn();
+      if (!TRANSIENT_CODES.has(response.status()) || attempt === maxAttempts) return response;
+    } catch (err: any) {
+      lastErr = err; // catches redirect loops, connection resets, etc.
+      if (attempt === maxAttempts) throw err;
+    }
+    await new Promise(r => setTimeout(r, 2000 * attempt));
+  }
+  throw lastErr ?? new Error('unreachable');
+}
+```
+
+## Rule 032 — Visual tests must wait for images to be fully loaded before taking screenshots
+**Problem class**: On CI, images inside the screenshot region may not have finished loading when the `waitFor({ state: 'visible' })` check passes. Even when image elements are masked, an unloaded image has incorrect height (zero or wrong), which shifts surrounding layout and produces a different structural baseline than a fully-loaded page.
+**Rule**: Before calling `toHaveScreenshot()`, always wait for all images in the target region to be `complete` and have a non-zero `naturalHeight`:
+```typescript
+await page.waitForFunction(() =>
+  [...document.querySelectorAll('#target-region img')].every(
+    img => (img as HTMLImageElement).complete && (img as HTMLImageElement).naturalHeight > 0
+  )
+);
+```
+Replace `#target-region` with the actual screenshot locator selector.
 <!-- rules-end -->

@@ -45,6 +45,7 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         channel: 'chromium',
         storageState: 'test-data/.auth/guest.json',
+        launchOptions: { args: ['--disable-blink-features=AutomationControlled'] },
       },
       dependencies: ['setup'],
     },

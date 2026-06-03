@@ -27,7 +27,8 @@
     "test:update-snapshots": "playwright test --project=setup --project=visual --update-snapshots",
     "test:headed": "playwright test --project=chromium --headed",
     "test:debug": "playwright test --project=chromium --debug",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "prepare": "husky"
   },
   "keywords": [],
   "author": "",
@@ -36,6 +37,7 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@types/node": "^25.9.1",
+    "husky": "^9.1.7",
     "ts-node": "^10.9.2",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3"

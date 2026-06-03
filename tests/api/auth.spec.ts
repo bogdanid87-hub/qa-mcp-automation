@@ -12,6 +12,30 @@ async function parseApiResponse(response: APIResponse): Promise<any> {
   return response.json();
 }
 
+// HTTP codes that indicate a transient server/CDN issue on the demo site.
+// 302 redirect loops (site returning 302 → 302) throw an exception rather than
+// returning a status code, so those are caught in the try/catch block below.
+const TRANSIENT_CODES = new Set([502, 503, 521, 522, 524]);
+
+async function requestWithRetry(
+  requestFn: () => Promise<APIResponse>,
+  maxAttempts = 3,
+): Promise<APIResponse> {
+  let lastErr: Error | undefined;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await requestFn();
+      if (!TRANSIENT_CODES.has(response.status()) || attempt === maxAttempts) return response;
+    } catch (err: any) {
+      // Catches redirect loops, connection resets, and similar thrown errors
+      lastErr = err;
+      if (attempt === maxAttempts) throw err;
+    }
+    await new Promise(r => setTimeout(r, 2000 * attempt));
+  }
+  throw lastErr ?? new Error('unreachable');
+}
+
 // Shared test account created in beforeAll and deleted in afterAll
 const sharedEmail = `api_test_${Date.now()}@example.com`;
 const sharedPassword = 'TestPass123';
@@ -33,11 +57,14 @@ const existingEmail = `api_existing_${Date.now()}@example.com`;
 const existingPassword = 'Test@1234';
 
 test.describe('Auth API', () => {
+  // Allow extra time for beforeAll account setup: 5 accounts × up to 3 retries
+  // with 2s/4s backoff each = up to ~90s in the worst case on a flaky demo site.
+  test.describe.configure({ timeout: 120_000 });
 
   // Create the shared account used by verifyLogin (valid login) and getUserDetail tests
   test.beforeAll(async ({ request }) => {
     // Shared account for verifyLogin valid test
-    await request.post(CREATE_ACCOUNT_ENDPOINT, {
+    await requestWithRetry(() => request.post(CREATE_ACCOUNT_ENDPOINT, {
       form: {
         name: 'API Test User',
         email: sharedEmail,
@@ -57,10 +84,10 @@ test.describe('Auth API', () => {
         city: 'New York',
         mobile_number: '5551234567'
       }
-    });
+    }));
 
     // Account for delete lifecycle test (api-12)
-    await request.post(CREATE_ACCOUNT_ENDPOINT, {
+    await requestWithRetry(() => request.post(CREATE_ACCOUNT_ENDPOINT, {
       form: {
         name: 'Delete Lifecycle User',
         email: deleteLifecycleEmail,
@@ -80,10 +107,10 @@ test.describe('Auth API', () => {
         city: 'New York',
         mobile_number: '5551234567'
       }
-    });
+    }));
 
     // Account for update lifecycle test (api-13)
-    await request.post(CREATE_ACCOUNT_ENDPOINT, {
+    await requestWithRetry(() => request.post(CREATE_ACCOUNT_ENDPOINT, {
       form: {
         name: 'Update Lifecycle User',
         email: updateLifecycleEmail,
@@ -103,10 +130,10 @@ test.describe('Auth API', () => {
         city: 'New York',
         mobile_number: '5551234567'
       }
-    });
+    }));
 
     // Account for getUserDetailByEmail test (api-14)
-    await request.post(CREATE_ACCOUNT_ENDPOINT, {
+    await requestWithRetry(() => request.post(CREATE_ACCOUNT_ENDPOINT, {
       form: {
         name: 'GetUser Test',
         email: getUserEmail,
@@ -126,10 +153,10 @@ test.describe('Auth API', () => {
         city: 'Toronto',
         mobile_number: '4161234567'
       }
-    });
+    }));
 
     // Account for existing-email registration test (api-11-register-user-with-existing-email)
-    await request.post(CREATE_ACCOUNT_ENDPOINT, {
+    await requestWithRetry(() => request.post(CREATE_ACCOUNT_ENDPOINT, {
       form: {
         name: 'Existing User',
         email: existingEmail,
@@ -149,7 +176,7 @@ test.describe('Auth API', () => {
         city: 'New York',
         mobile_number: '5551234567'
       }
-    });
+    }));
   });
 
   test.afterAll(async ({ request }) => {
