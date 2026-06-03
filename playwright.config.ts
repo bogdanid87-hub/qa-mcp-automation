@@ -77,6 +77,8 @@ export default defineConfig({
     {
       name: 'visual',
       testDir: './tests/visual',
+      // Demo site is slow on CI runners; 30s default is not enough for navigation + waitFor
+      timeout: 60000,
       use: {
         ...devices['Desktop Chrome'],
         channel: 'chromium',
