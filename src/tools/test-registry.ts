@@ -15,35 +15,6 @@ export function registryForSpec(specPath: string): string {
   return TESTS_UI_PATH;
 }
 
-const STOPWORDS = new Set([
-  // Generic English
-  'test', 'that', 'with', 'from', 'this', 'should', 'will', 'when', 'then',
-  'have', 'been', 'make', 'into', 'also', 'which', 'each', 'does', 'after',
-  'before', 'while', 'about', 'than', 'more', 'some', 'such', 'they', 'their',
-  // QA / browser actions — too common to be identifying
-  'verify', 'check', 'click', 'step', 'navigate', 'browser', 'launch', 'enter',
-  'submit', 'assert', 'ensure', 'confirm', 'open', 'close', 'scroll', 'back',
-  // Web element types — appear in almost every test
-  'form', 'button', 'page', 'link', 'text', 'field', 'input', 'label', 'modal',
-  'menu', 'icon', 'image', 'logo', 'header', 'footer', 'section', 'item',
-  // Site-wide concepts on automationexercise.com — too broad to identify a feature
-  'home', 'email', 'address', 'user', 'name', 'data', 'account',
-  'success', 'error', 'message', 'visible', 'successfully', 'invalid', 'valid',
-  'using', 'show', 'display', 'appear', 'redirect', 'load', 'loaded',
-]);
-
-function extractWords(text: string): string[] {
-  return text
-    .toLowerCase()
-    .split(/[\s\W]+/)
-    .filter(w => w.length > 3 && !STOPWORDS.has(w));
-}
-
-/** Shared prefix (first 6 chars) used as a lightweight stem. */
-function stem(w: string): string {
-  return w.slice(0, Math.min(6, w.length));
-}
-
 /** Replace characters that would break markdown table cells. */
 function sanitizeCell(s: string): string {
   return s.replace(/\|/g, '–').replace(/\n/g, ' ').trim();

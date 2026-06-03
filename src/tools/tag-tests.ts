@@ -3,9 +3,6 @@ import { join } from 'path';
 import {
   readTestCases,
   registryForSpec,
-  TESTS_UI_PATH,
-  TESTS_API_PATH,
-  TESTS_E2E_PATH,
   type TestEntry,
 } from './test-registry.js';
 

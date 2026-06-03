@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { readFile, readdir, writeFile } from 'fs/promises';
-import { join, extname } from 'path';
-import { readTestCases, readBrokenTests, TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH, registryForSpec } from './test-registry.js';
+import { join } from 'path';
+import { TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH, registryForSpec } from './test-registry.js';
 import { readAppKnowledge, readAppLimitations } from './generate-app-knowledge.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { chromium } from '@playwright/test';
