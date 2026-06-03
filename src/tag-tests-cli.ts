@@ -3,14 +3,16 @@ import {
   TESTS_UI_PATH,
   TESTS_API_PATH,
   TESTS_E2E_PATH,
+  TESTS_VISUAL_PATH,
   type TestEntry,
 } from './tools/test-registry.js';
 import { tagSpec } from './tools/tag-tests.js';
 
 const REGISTRIES: Array<{ path: string; prefix: string }> = [
-  { path: TESTS_UI_PATH, prefix: 'UI'  },
-  { path: TESTS_API_PATH,   prefix: 'API' },
-  { path: TESTS_E2E_PATH,   prefix: 'E2E' },
+  { path: TESTS_UI_PATH,     prefix: 'UI'     },
+  { path: TESTS_API_PATH,    prefix: 'API'    },
+  { path: TESTS_E2E_PATH,    prefix: 'E2E'    },
+  { path: TESTS_VISUAL_PATH, prefix: 'Visual' },
 ];
 
 async function main(): Promise<void> {

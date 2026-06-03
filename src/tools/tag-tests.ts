@@ -12,12 +12,13 @@ import {
 const ROOT = process.cwd();
 
 // Matches any existing ID comment: // [UI Contact Us Form #1], // [API Products API #3]
-export const ID_COMMENT_RE = /\/\/\s*\[(UI|API|E2E)[\s\w:#-]*#\d+\]/;
+export const ID_COMMENT_RE = /\/\/\s*\[(UI|API|E2E|Visual)[\s\w:#-]*#\d+\]/;
 
 /** Return the registry prefix for a spec path. */
 export function prefixForSpec(specPath: string): string {
-  if (specPath.startsWith('tests/api/')) return 'API';
-  if (specPath.startsWith('tests/e2e/')) return 'E2E';
+  if (specPath.startsWith('tests/api/'))    return 'API';
+  if (specPath.startsWith('tests/e2e/'))    return 'E2E';
+  if (specPath.startsWith('tests/visual/')) return 'Visual';
   return 'UI';
 }
 
@@ -58,13 +59,13 @@ export async function tagSpec(
     const prevLine = trimmedBefore.slice(prevLineStart);
 
     if (ID_COMMENT_RE.test(prevLine.trim())) {
-      const existingMatch = prevLine.match(/\[(UI|API|E2E)[\s\w:#-]*#(\d+)\]/);
+      const existingMatch = prevLine.match(/\[(UI|API|E2E|Visual)[\s\w:#-]*#(\d+)\]/);
       const expectedComment = `// [${prefix} ${entry.describe} #${entry.num}]`;
       if (existingMatch && prevLine.trim() === `${indent.trim()}${expectedComment}`.trim()) {
         correct++;
       } else {
         const updatedLine = prevLine.replace(
-          /\/\/\s*\[(?:UI|API|E2E)[\s\w:#-]*#\d+\]/,
+          /\/\/\s*\[(?:UI|API|E2E|Visual)[\s\w:#-]*#\d+\]/,
           `// [${prefix} ${entry.describe} #${entry.num}]`,
         );
         src = src.slice(0, prevLineStart) + updatedLine + '\n' + src.slice(insertAt);

@@ -177,7 +177,14 @@ Rules for visual tests:
     await expect(page.locator('.navbar')).toHaveScreenshot('nav.png'); // component
 - Use descriptive, stable snapshot names — the name is the baseline filename:
     'checkout-form-empty-state.png' not 'screenshot1.png'
-- Disable animations before capturing (already configured globally via animations: 'disabled')
+- Disable animations before capturing (already configured globally via animations: 'disabled').
+  Note: this disables CSS transitions but NOT JavaScript-driven carousels or auto-advancing
+  sliders. For pages with carousels, mask the animated region rather than capturing it:
+    await expect(page).toHaveScreenshot('home.png', {
+      mask: [page.locator('#slider'), page.locator('.carousel')],
+    });
+  Or use a component-level capture that avoids the carousel entirely:
+    await expect(page.locator('.features_items')).toHaveScreenshot('featured-products.png');
 - Wait for the page to fully load and settle before capturing:
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(500); // allow CSS transitions to complete — ONLY acceptable use of waitForTimeout

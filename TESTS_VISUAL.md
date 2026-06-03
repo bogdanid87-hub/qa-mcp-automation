@@ -1,17 +1,15 @@
-# Visual Regression Tests
+# Test Cases
 
-**Total: 0 tests**
+**Total: 3 tests**
 
-Visual tests run against committed baseline screenshots (Chromium, local OS).
-Baselines live next to the spec files in `tests/visual/__snapshots__/` and are
-committed to git. Update baselines after intentional UI changes with:
+---
 
-```bash
-npm run test:update-snapshots
-```
+## tests/visual/products.spec.ts
 
-> **Note:** Baselines are taken on the developer's OS. Small rendering differences
-> between macOS and Linux CI may cause false positives. Increase
-> `maxDiffPixelRatio` in `playwright.config.ts` if needed, or switch to
-> Docker-consistent CI baselines (tracked in .qa-notes.md).
+### Products Page Visual
 
+| # | Test |
+|---|------|
+| 1 | should match the products left sidebar layout baseline |
+| 2 | should match the products grid layout baseline |
+| 3 | should match the products page layout baseline |

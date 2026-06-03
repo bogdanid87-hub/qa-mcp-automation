@@ -6,6 +6,7 @@ import {
   TESTS_UI_PATH,
   TESTS_API_PATH,
   TESTS_E2E_PATH,
+  TESTS_VISUAL_PATH,
 } from './tools/test-registry.js';
 
 const ROOT = process.cwd();
@@ -103,9 +104,10 @@ async function main(): Promise<void> {
 
   // ── Registries ───────────────────────────────────────────────────────────────
   const registries = [
-    { path: TESTS_UI_PATH,  label: 'TESTS_UI.md ', prefix: 'UI'  },
-    { path: TESTS_API_PATH, label: 'TESTS_API.md', prefix: 'API' },
-    { path: TESTS_E2E_PATH, label: 'TESTS_E2E.md', prefix: 'E2E' },
+    { path: TESTS_UI_PATH,     label: 'TESTS_UI.md    ', prefix: 'UI'     },
+    { path: TESTS_API_PATH,    label: 'TESTS_API.md   ', prefix: 'API'    },
+    { path: TESTS_E2E_PATH,    label: 'TESTS_E2E.md   ', prefix: 'E2E'    },
+    { path: TESTS_VISUAL_PATH, label: 'TESTS_VISUAL.md', prefix: 'Visual' },
   ];
 
   let grandPassing = 0, grandBroken = 0, grandBugs = 0;
@@ -170,12 +172,13 @@ async function main(): Promise<void> {
   }
 
   // ── Spec files on disk ───────────────────────────────────────────────────────
-  const [uiCount, e2eCount, apiCount] = await Promise.all([
+  const [uiCount, e2eCount, apiCount, visualCount] = await Promise.all([
     countSpecsInDir('ui'),
     countSpecsInDir('e2e'),
     countSpecsInDir('api'),
+    countSpecsInDir('visual'),
   ]);
-  console.log(`\n  📁 Spec files:  ui/ ${uiCount}  ·  e2e/ ${e2eCount}  ·  api/ ${apiCount}\n`);
+  console.log(`\n  📁 Spec files:  ui/ ${uiCount}  ·  e2e/ ${e2eCount}  ·  api/ ${apiCount}  ·  visual/ ${visualCount}\n`);
 
   console.log(bar + '\n');
 }

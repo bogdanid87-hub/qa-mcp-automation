@@ -2,14 +2,16 @@ import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 
 const ROOT = process.cwd();
-export const TESTS_UI_PATH  = join(ROOT, 'TESTS_UI.md');
-export const TESTS_API_PATH = join(ROOT, 'TESTS_API.md');
-export const TESTS_E2E_PATH = join(ROOT, 'TESTS_E2E.md');
+export const TESTS_UI_PATH     = join(ROOT, 'TESTS_UI.md');
+export const TESTS_API_PATH    = join(ROOT, 'TESTS_API.md');
+export const TESTS_E2E_PATH    = join(ROOT, 'TESTS_E2E.md');
+export const TESTS_VISUAL_PATH = join(ROOT, 'TESTS_VISUAL.md');
 
 /** Returns the correct registry file for a given spec path. */
 export function registryForSpec(specPath: string): string {
-  if (specPath.startsWith('tests/api/')) return TESTS_API_PATH;
-  if (specPath.startsWith('tests/e2e/')) return TESTS_E2E_PATH;
+  if (specPath.startsWith('tests/api/'))    return TESTS_API_PATH;
+  if (specPath.startsWith('tests/e2e/'))    return TESTS_E2E_PATH;
+  if (specPath.startsWith('tests/visual/')) return TESTS_VISUAL_PATH;
   return TESTS_UI_PATH;
 }
 
