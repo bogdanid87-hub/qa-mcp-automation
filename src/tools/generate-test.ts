@@ -13,6 +13,7 @@ import { markBacklogEntriesCovered } from './analyze-coverage.js';
 import { autoFixFailure } from './investigate-fix.js';
 import { writeTestAnnotation } from './annotations.js';
 import { readAppLimitations } from './generate-app-knowledge.js';
+import { extractJson } from './llm-utils.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -106,18 +107,6 @@ and is shown in the codebase context above. Generate ONLY the test spec file (te
 fixture additions if needed. Use the exact class name, constructor signature, and method \
 names from the POM as it appears in the context. Do NOT output any pages/ files.`;
 
-function extractJson(raw: string): string {
-  // Strip markdown fences if present
-  const stripped = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
-  // Try direct parse; if Claude added preamble text, find the outermost { }
-  try { JSON.parse(stripped); return stripped; } catch { /* fall through */ }
-  // Find the first { that starts at a line boundary to skip inline { in prose
-  const lineStart = stripped.search(/(?:^|\n)\s*\{/);
-  const start = lineStart !== -1 ? stripped.indexOf('{', lineStart) : stripped.indexOf('{');
-  const end = stripped.lastIndexOf('}');
-  if (start !== -1 && end > start) return stripped.slice(start, end + 1);
-  throw new Error('No JSON object found in response');
-}
 
 function parseJson(raw: string): GenerateResponse {
   return JSON.parse(extractJson(raw));

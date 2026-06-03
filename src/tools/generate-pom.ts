@@ -3,6 +3,7 @@ import { readFile, writeFile, mkdir } from 'fs/promises';
 import { dirname, join } from 'path';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { isLocalLlmAvailable, callLocalLlm, LOCAL_MODEL } from './local-llm.js';
+import { extractJson } from './llm-utils.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -73,14 +74,6 @@ Raw JSON only (no markdown fences, no explanation):
   "content": "full TypeScript file content"
 }`;
 
-function extractJson(raw: string): string {
-  const stripped = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
-  try { JSON.parse(stripped); return stripped; } catch { /* */ }
-  const start = stripped.indexOf('{');
-  const end = stripped.lastIndexOf('}');
-  if (start !== -1 && end > start) return stripped.slice(start, end + 1);
-  throw new Error('No JSON object found');
-}
 
 async function generateForSnapshot(opts: {
   path: string;

@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join, dirname } from 'path';
 import { getSystemBlocks } from '../prompts/system.js';
-import { cleanLlmCode } from './llm-utils.js';
+import { cleanLlmCode, extractJson } from './llm-utils.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -90,15 +90,6 @@ Respond with raw JSON only (no markdown fences):
 }
 `;
 
-function extractJson(raw: string): string {
-  const stripped = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
-  try { JSON.parse(stripped); return stripped; } catch { /* */ }
-  const lineStart = stripped.search(/(?:^|\n)\s*\{/);
-  const start = lineStart !== -1 ? stripped.indexOf('{', lineStart) : stripped.indexOf('{');
-  const end = stripped.lastIndexOf('}');
-  if (start !== -1 && end > start) return stripped.slice(start, end + 1);
-  throw new Error('No JSON found in response');
-}
 
 export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
   content: { type: 'text'; text: string }[];

@@ -3,7 +3,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { getSystemBlocks } from '../prompts/system.js';
 import { isLocalLlmAvailable, callLocalLlm, LOCAL_MODEL } from './local-llm.js';
-import { cleanLlmCode } from './llm-utils.js';
+import { cleanLlmCode, extractJson } from './llm-utils.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -99,15 +99,6 @@ function capitalise(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function extractJson(raw: string): string {
-  const stripped = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
-  try { JSON.parse(stripped); return stripped; } catch { /* */ }
-  const lineStart = stripped.search(/(?:^|\n)\s*\{/);
-  const start = lineStart !== -1 ? stripped.indexOf('{', lineStart) : stripped.indexOf('{');
-  const end = stripped.lastIndexOf('}');
-  if (start !== -1 && end > start) return stripped.slice(start, end + 1);
-  throw new Error('No JSON found in response');
-}
 
 export async function generateMockTool(args: GenerateMockArgs): Promise<{
   content: { type: 'text'; text: string }[];
