@@ -4,10 +4,13 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 const ROOT = process.cwd();
 
-export async function runTests(pattern?: string, grep?: string): Promise<string> {
+export type Browser = 'chromium' | 'firefox' | 'webkit' | 'visual';
+
+export async function runTests(pattern?: string, grep?: string, browser: Browser = 'chromium'): Promise<string> {
   const patternArg = pattern ? ` ${pattern}` : '';
   const grepArg    = grep    ? ` --grep ${JSON.stringify(grep)}` : '';
-  const cmd = `npx playwright test${patternArg}${grepArg} --project=chromium 2>&1`;
+  const projectArg = ` --project=${browser}`;
+  const cmd = `npx playwright test${patternArg}${grepArg}${projectArg} 2>&1`;
   try {
     const { stdout } = await execAsync(cmd, { cwd: ROOT, timeout: 120_000, maxBuffer: 50 * 1024 * 1024 });
     return stdout || '(no output)';
@@ -19,7 +22,8 @@ export async function runTests(pattern?: string, grep?: string): Promise<string>
 export async function runTestsTool(args: {
   pattern?: string;
   grep?: string;
+  browser?: Browser;
 }): Promise<{ content: { type: 'text'; text: string }[] }> {
-  const text = await runTests(args.pattern, args.grep);
+  const text = await runTests(args.pattern, args.grep, args.browser ?? 'chromium');
   return { content: [{ type: 'text', text }] };
 }

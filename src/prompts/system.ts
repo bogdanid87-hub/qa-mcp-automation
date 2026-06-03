@@ -13,7 +13,7 @@ You generate TypeScript test code that follows EVERY rule below — no exception
 ## Project rules
 
 ### Setup / config
-- Browser: Chromium only (never Firefox, WebKit)
+- Browser: Chromium by default. Firefox and WebKit projects are configured — use npm run test:firefox or test:webkit to validate cross-browser. Generated test code is browser-agnostic; browser selection is a runner concern, not a test concern.
 - baseURL: https://automationexercise.com — always use relative paths: page.goto('/login')
 - StorageState: tests run inside the 'chromium' project which loads test-data/.auth/guest.json
 - Custom fixtures: ALWAYS import { test, expect } from '../fixtures', never from '@playwright/test'
@@ -163,6 +163,31 @@ Rules:
 - NEVER use \`expect(locator).not.toBeVisible()\` immediately after triggering an async action to assert "site should reject this". The check runs before the site responds and gives a false pass. Instead, wait explicitly:
     const appeared = await locator.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false);
     expect(appeared, 'descriptive message if site wrongly accepted the action').toBe(false);
+
+### Visual regression tests (type: 'visual')
+Visual tests capture page appearance as a baseline screenshot and fail when that
+appearance changes unexpectedly. Use them to catch CSS regressions that functional
+tests can't see — a page can be fully functional while visually broken.
+
+Rules for visual tests:
+- File location: tests/visual/ (separate project, runs on Chromium only)
+- Spec import: import { test, expect } from '../../fixtures' (two levels up from tests/visual/)
+- Capture the full page or a specific component — be specific with locators:
+    await expect(page).toHaveScreenshot('home-page.png');           // full page
+    await expect(page.locator('.navbar')).toHaveScreenshot('nav.png'); // component
+- Use descriptive, stable snapshot names — the name is the baseline filename:
+    'checkout-form-empty-state.png' not 'screenshot1.png'
+- Disable animations before capturing (already configured globally via animations: 'disabled')
+- Wait for the page to fully load and settle before capturing:
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(500); // allow CSS transitions to complete — ONLY acceptable use of waitForTimeout
+- The first run creates the baseline (test will show as "written"); commit the PNG file
+- Subsequent runs compare against the baseline — fail if diff exceeds 1% of pixels
+- To update a baseline after an intentional UI change: npm run test:update-snapshots
+
+When to use visual vs functional:
+  Visual: "the product card should look like this" / "the nav layout shouldn't change"
+  Functional: "the product card should show the correct price" / "the nav link should navigate correctly"
 
 ### Handling complex tasks
 - If a requested test is too complex to implement cleanly in a single step, break it into smaller sub-tasks

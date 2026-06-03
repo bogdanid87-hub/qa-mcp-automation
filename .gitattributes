@@ -1,0 +1,6 @@
+# Treat Playwright snapshot files as binary — prevents git from trying to
+# text-diff PNG files and generating unreadable merge conflicts.
+# Snapshots are committed as baselines and updated intentionally via:
+#   npm run test:update-snapshots
+tests/**/*.png binary
+tests/**/*-snapshots/*.png binary

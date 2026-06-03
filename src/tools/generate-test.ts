@@ -123,6 +123,19 @@ function parseJson(raw: string): GenerateResponse {
 }
 
 /**
+ * Detect whether a test description is asking for a visual regression test.
+ * Strong signals: spec_file under tests/visual/, or explicit visual keywords.
+ */
+function detectVisualIntent(description: string, specFile?: string): boolean {
+  if (specFile?.startsWith('tests/visual/')) return true;
+  const desc = description.toLowerCase();
+  if (/\bvisual\s+(test|regression|snapshot|baseline)\b/.test(desc)) return true;
+  if (/\btoHaveScreenshot\b|\bbaseline\s+screenshot\b/.test(desc)) return true;
+  if (/\bcapture\s+(the\s+)?(layout|appearance|screenshot|page)\b/.test(desc)) return true;
+  return false;
+}
+
+/**
  * Detect whether a test description is asking for a pure API test (request
  * fixture, no browser). The strongest signal is the spec_file path; description
  * keywords are secondary. Deliberately conservative — when ambiguous, default
@@ -155,8 +168,8 @@ export async function generateTestTool(args: {
   page_paths?: string[];
   spec_file?: string;
   proposalsOnly?: boolean;
-  /** Override auto-detection. 'api' forces the API path; 'ui'/'e2e' forces the browser path. */
-  type?: 'auto' | 'ui' | 'e2e' | 'api';
+  /** Override auto-detection. 'api' forces API path; 'visual' forces visual regression path; 'ui'/'e2e' forces browser path. */
+  type?: 'auto' | 'ui' | 'e2e' | 'api' | 'visual';
 }): Promise<{ content: { type: 'text'; text: string }[]; _meta?: { specFile?: string; lastFailureOutput?: string; passing: boolean } }> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -165,11 +178,30 @@ export async function generateTestTool(args: {
     };
   }
 
+  // Route to visual regression when explicitly requested or keyword-detected.
+  const isVisualTest = args.type === 'visual' ||
+    (args.type == null && detectVisualIntent(args.description, args.spec_file));
+
+  if (isVisualTest) {
+    // Force spec_file into tests/visual/ if not already there
+    const visualSpecFile = args.spec_file?.startsWith('tests/visual/')
+      ? args.spec_file
+      : args.spec_file
+        ? `tests/visual/${args.spec_file.replace(/^tests\/[^/]+\//, '')}`
+        : undefined;
+
+    return generateTestTool({
+      ...args,
+      spec_file: visualSpecFile,
+      type: 'ui', // visual tests use the browser/UI generation path
+    });
+  }
+
   // Route to API generation when explicitly requested or confidently detected.
   // Mixed tests (UI + API calls) fall through to the UI path — the browser path
   // already supports the request fixture alongside page interactions.
   const isApiTest = args.type === 'api' ||
-    (args.type !== 'ui' && args.type !== 'e2e' && detectApiIntent(args.description, args.spec_file));
+    (args.type !== 'ui' && args.type !== 'e2e' && args.type !== 'visual' && detectApiIntent(args.description, args.spec_file));
 
   if (isApiTest) {
     return generateApiTestTool({
