@@ -1,7 +1,7 @@
 #!/bin/sh
-# Run the full Playwright suite before pushing — tests hit the live site
-# from your local machine (trusted IP) rather than from CI cloud runners.
-# Use git push --no-verify to skip if you need an emergency push.
+# Skip in CI — GitHub Actions has its own quality gates (tsc + MCP schema validation).
+# The hook is for local pushes only, where tests run from a trusted IP address.
+[ "${CI}" = "true" ] && exit 0
+
 echo "⏳ Running Playwright tests before push (npm test)..."
 npm test
-
