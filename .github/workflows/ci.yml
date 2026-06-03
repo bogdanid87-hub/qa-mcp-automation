@@ -10,6 +10,8 @@ jobs:
   functional:
     name: Functional tests (Chromium)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -44,12 +46,15 @@ jobs:
   visual:
     name: Visual regression tests
     runs-on: ubuntu-latest
-    # Only run visual tests when Linux baselines exist.
-    # Run update-visual-baselines.yml first if this step fails with
-    # "snapshot doesn't exist" errors.
+    # write permission needed so the self-healing step can commit and push
+    # Linux baselines on the first run.
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
