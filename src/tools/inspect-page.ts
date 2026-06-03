@@ -145,36 +145,52 @@ export async function inspectPages(paths: string[]): Promise<PageSnapshot[]> {
   return snapshots;
 }
 
-/** Format snapshots as a markdown block for Claude's context. */
+// If total formatted DOM exceeds this, condense to high-priority elements only.
+const DOM_CHAR_THRESHOLD = 12_000;
+
+function formatSingleSnapshot(s: PageSnapshot): string {
+  const lines: string[] = [
+    `## DOM snapshot: ${s.path} (${s.title})`,
+    '',
+    '### Headings',
+    ...s.headings.map((h) => `  - ${h}`),
+    '',
+    '### Forms',
+    ...s.forms.map(
+      (f) =>
+        `  - id="${f.id ?? '—'}" action="${f.action}" method="${f.method}" enctype="${f.enctype}"`,
+    ),
+    '',
+    '### Elements (use these for locators — listed in priority order)',
+    ...s.elements.map((el) => {
+      const parts: string[] = [`  - ${el.selector} [${el.tag}]`];
+      if (el.type) parts.push(`type="${el.type}"`);
+      if (el.placeholder) parts.push(`placeholder="${el.placeholder}"`);
+      if (el.text) parts.push(`text="${el.text}"`);
+      if (el.ariaLabel) parts.push(`aria-label="${el.ariaLabel}"`);
+      if (el.note) parts.push(`⚠ ${el.note}`);
+      return parts.join(' | ');
+    }),
+  ];
+  return lines.join('\n');
+}
+
+/** Format snapshots as a markdown block for Claude's context.
+ *  Automatically condenses to high-priority elements when output exceeds DOM_CHAR_THRESHOLD. */
 export function formatSnapshots(snapshots: PageSnapshot[]): string {
-  return snapshots
-    .map((s) => {
-      const lines: string[] = [
-        `## DOM snapshot: ${s.path} (${s.title})`,
-        '',
-        '### Headings',
-        ...s.headings.map((h) => `  - ${h}`),
-        '',
-        '### Forms',
-        ...s.forms.map(
-          (f) =>
-            `  - id="${f.id ?? '—'}" action="${f.action}" method="${f.method}" enctype="${f.enctype}"`,
-        ),
-        '',
-        '### Elements (use these for locators — listed in priority order)',
-        ...s.elements.map((el) => {
-          const parts: string[] = [`  - ${el.selector} [${el.tag}]`];
-          if (el.type) parts.push(`type="${el.type}"`);
-          if (el.placeholder) parts.push(`placeholder="${el.placeholder}"`);
-          if (el.text) parts.push(`text="${el.text}"`);
-          if (el.ariaLabel) parts.push(`aria-label="${el.ariaLabel}"`);
-          if (el.note) parts.push(`⚠ ${el.note}`);
-          return parts.join(' | ');
-        }),
-      ];
-      return lines.join('\n');
-    })
-    .join('\n\n');
+  const full = snapshots.map(formatSingleSnapshot).join('\n\n');
+  if (full.length <= DOM_CHAR_THRESHOLD) return full;
+
+  // Over threshold: keep data-qa elements + form controls + first 8 nav links per page
+  const condensed = snapshots.map((s) => {
+    const priority = s.elements.filter(
+      (el) => el.dataQa || ['input', 'button', 'select', 'textarea'].includes(el.tag),
+    );
+    const nav = s.elements.filter((el) => el.tag === 'a').slice(0, 8);
+    return formatSingleSnapshot({ ...s, elements: [...priority, ...nav] });
+  }).join('\n\n');
+
+  return condensed + '\n\n_(DOM condensed to key elements — use inspect_page for full detail)_';
 }
 
 /** MCP tool handler — inspect one or more page paths. */

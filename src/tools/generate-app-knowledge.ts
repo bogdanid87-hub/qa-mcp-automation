@@ -13,6 +13,7 @@ const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
 export const APP_KNOWLEDGE_PATH = join(ROOT, 'APP_KNOWLEDGE.md');
 export const APP_KNOWLEDGE_MANUAL_PATH = join(ROOT, 'APP_KNOWLEDGE_MANUAL.md');
+export const APP_LIMITATIONS_PATH = join(ROOT, 'APP_LIMITATIONS.md');
 const GAPS_BACKLOG_PATH = join(ROOT, 'GAPS_BACKLOG.md');
 const COVERAGE_REPORT_PATH = join(ROOT, 'coverage-report.md');
 
@@ -174,6 +175,15 @@ export async function generateAppKnowledgeTool(args: {
 export async function readAppKnowledge(): Promise<string> {
   try {
     return await readFile(APP_KNOWLEDGE_PATH, 'utf-8');
+  } catch {
+    return '';
+  }
+}
+
+/** Read the app limitations file for injection into generator and analysis prompts. */
+export async function readAppLimitations(): Promise<string> {
+  try {
+    return await readFile(APP_LIMITATIONS_PATH, 'utf-8');
   } catch {
     return '';
   }

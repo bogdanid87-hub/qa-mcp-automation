@@ -12,6 +12,7 @@ import { tagSpecAfterRecording } from './tag-tests.js';
 import { markBacklogEntriesCovered } from './analyze-coverage.js';
 import { autoFixFailure } from './investigate-fix.js';
 import { writeTestAnnotation } from './annotations.js';
+import { readAppLimitations } from './generate-app-knowledge.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -216,16 +217,26 @@ export async function generateTestTool(args: {
   const systemBlocks = await getSystemBlocks();
 
   async function callClaude(userBlocks: ReturnType<typeof buildUserBlocks>): Promise<string> {
-    const message = await client.messages.create({
-      model: MODEL,
-      max_tokens: 8192,
-      system: systemBlocks,
-      messages: [{ role: 'user', content: userBlocks }],
-    });
-    return message.content
-      .filter((b) => b.type === 'text')
-      .map((b) => (b as { type: 'text'; text: string }).text)
-      .join('');
+    for (let attempt = 0; attempt <= 1; attempt++) {
+      try {
+        const message = await client.messages.create({
+          model: MODEL,
+          max_tokens: 8192,
+          system: systemBlocks,
+          messages: [{ role: 'user', content: userBlocks }],
+        });
+        return message.content
+          .filter((b) => b.type === 'text')
+          .map((b) => (b as { type: 'text'; text: string }).text)
+          .join('');
+      } catch (err: any) {
+        const isConnection = /connection/i.test(err.message ?? '') ||
+          ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT'].includes(err.code ?? '');
+        if (!isConnection || attempt === 1) throw err;
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    }
+    throw new Error('unreachable');
   }
 
   const featureKeywords = [
@@ -245,10 +256,15 @@ export async function generateTestTool(args: {
     }
   }
 
+  const limitations = await readAppLimitations();
+  const limitationsNote = limitations
+    ? `\n\n## Known app limitations — do NOT generate tests for these features\n${limitations}`
+    : '';
+
   const description = [
     args.test_name ? `Test name hint: ${args.test_name}` : '',
     args.spec_file ? `Spec file hint: write this test into ${args.spec_file} — create the file if it does not exist, or add to it if it does` : '',
-    args.description,
+    args.description + limitationsNote,
   ].filter(Boolean).join('\n\n');
 
   const proposalsHint = args.proposalsOnly

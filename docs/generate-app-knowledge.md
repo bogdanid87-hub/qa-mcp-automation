@@ -93,14 +93,36 @@ npm run generate_knowledge -- --output path/to/custom.md
 
 ## Effect on other tools
 
-`analyze_prd` and `analyze_coverage` call `readAppKnowledge()` at the start of every
-run. If `APP_KNOWLEDGE.md` exists, its content is prepended to the Claude prompt as an
-"App knowledge base" section. If the file doesn't exist, these tools behave exactly as
-before.
+`analyze_prd`, `analyze_coverage`, and `generate_test` all read both context files at
+the start of every run — no flags needed.
 
-This means running `generate_app_knowledge` once before a PRD analysis session will
-cause Claude to weight test suggestions toward features with known defects or recurring
-gap patterns — without any change to the prompt or the calling workflow.
+| File | Read by | Effect |
+|------|---------|--------|
+| `APP_KNOWLEDGE.md` | `analyze_prd`, `analyze_coverage` | Weights suggestions toward features with known defects or gaps |
+| `APP_LIMITATIONS.md` | `analyze_prd`, `analyze_coverage`, `generate_test` | Tells Claude not to suggest or generate tests for listed features |
+
+---
+
+## `APP_LIMITATIONS.md` — missing features
+
+A separate human-maintained file for features that **don't exist** on the app under
+test. Unlike `APP_KNOWLEDGE.md` (which is synthesised and overwritten), this file is
+never touched by any tool — only read.
+
+When to add an entry:
+- A test concept fails because the feature genuinely isn't on the site (not a bug, just absent)
+- A feature is planned but not yet implemented and you're writing tests ahead of development
+
+When **not** to add an entry:
+- The feature exists but is broken → use the test registry (`test.fail()` + app_bug annotation)
+
+```markdown
+## Navigation
+- No cart item counter in nav bar — Cart link is plain text, no badge element.
+```
+
+All three consumer tools prepend the limitations as a "do NOT suggest tests for these
+features" block in Claude's prompt.
 
 ---
 

@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { readTestCases, readBrokenTests } from './test-registry.js';
-import { readAppKnowledge } from './generate-app-knowledge.js';
+import { readAppKnowledge, readAppLimitations } from './generate-app-knowledge.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -176,7 +176,7 @@ export async function analyzePrdTool(args: {
 
   // Load app knowledge base if it exists — enriches analysis with institutional
   // knowledge about known app bugs, recurring gaps, and risk patterns.
-  const appKnowledge = await readAppKnowledge();
+  const [appKnowledge, appLimitations] = await Promise.all([readAppKnowledge(), readAppLimitations()]);
 
   const client = new Anthropic({ apiKey });
 
@@ -185,11 +185,14 @@ export async function analyzePrdTool(args: {
   const knowledgeSection = appKnowledge
     ? `## App knowledge base (known bugs, risk patterns, recurring gaps)\n\n${appKnowledge}\n\n---\n\n`
     : '';
+  const limitationsSection = appLimitations
+    ? `## Known app limitations — do NOT suggest tests for these features\n\n${appLimitations}\n\n---\n\n`
+    : '';
 
   const userContent: Anthropic.MessageParam['content'] = [
     {
       type: 'text',
-      text: knowledgeSection + coverageList + '\n\n---\n\n## PRD to analyse' +
+      text: knowledgeSection + limitationsSection + coverageList + '\n\n---\n\n## PRD to analyse' +
         (args.prdContent ? '\n\n' + args.prdContent : '\n\n(see attached file)'),
     },
   ];
