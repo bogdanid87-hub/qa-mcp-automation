@@ -20,6 +20,7 @@ Run only the empty cart test in tests/ui/cart.spec.ts
 |-----------|----------|-------------|
 | `pattern` | no | File path or glob to target a file or folder — e.g. `"tests/ui/cart.spec.ts"` or `"tests/api/"` |
 | `grep` | no | Filter by test name — runs only tests whose name contains this string, e.g. `"should add two products"`. Combined with `pattern` to target one test inside one file. |
+| `browser` | no | Browser project to run: `chromium` (default), `firefox`, `webkit`, or `visual` (visual regression project). Use `visual` to run visual regression tests without triggering a full investigation. |
 
 **Run a single test by name:**
 ```

@@ -21,6 +21,7 @@ See [TOOLS.md](TOOLS.md) for a quick index and [docs/](docs/) for per-tool guide
   - `TOOLS.md` — add/update both the MCP tools table and the terminal commands table, with doc links
   - `CLAUDE.md` — update the tool count in the header and add to key commands if daily-use
   - `README.md` — update the tool count (header + tools section + architecture block), add to the tools table and terminal commands list
+- **After any session that adds features (not just tools):** also update `README.md` "What this project demonstrates" section and `TOOLS.md` terminal commands table — these are frequently missed when adding scripts, CI workflows, or capabilities like multi-browser or visual testing that span multiple files
 - **When a general improvement is made here:** ask before propagating to `mcp-qa-skeleton`; only propagate AFTER the tool has been tested on this project and any bugs found have been fixed — propagating untested or newly-fixed tools means the skeleton gets the broken version
 
 ---

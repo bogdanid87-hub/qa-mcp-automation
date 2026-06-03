@@ -15,7 +15,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 | `generate_test` | Generate a UI, API, E2E, or mixed Playwright test — type auto-detected from description and spec_file path. POM + spec + auto-run + auto-fix + registry update | [docs/generate-test.md](docs/generate-test.md) |
 | `inspect_page` | Navigate to a page headlessly and return all DOM elements with their best locator | [docs/inspect-page.md](docs/inspect-page.md) |
 | `investigate_and_fix` | Diagnose a failing test (code bug vs app bug), patch the file, and save a learned rule | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
-| `run_tests` | Run tests and return output — target a file with `pattern`, or a single test by name with `grep` | [docs/run-tests.md](docs/run-tests.md) |
+| `run_tests` | Run tests and return output — `pattern` targets a file, `grep` runs a single test by name, `browser` selects the project (`chromium`/`firefox`/`webkit`/`visual`) | [docs/run-tests.md](docs/run-tests.md) |
 | `list_resources` | List all existing page objects, fixtures, and spec files | [docs/list-resources.md](docs/list-resources.md) |
 | `generate_auth_fixture` | Generate a Playwright auth fixture for form or OAuth login — saves browser storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
 | `generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
@@ -38,8 +38,11 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 | `npm run tag_tests` | Insert `// [UI/API/E2E Describe #N]` comments before each test() call | [docs/tag-tests.md](docs/tag-tests.md) |
 | `npm run sync_registry` | Full reconciliation of all three registries against actual test results | [docs/test-registry.md](docs/test-registry.md) |
 | `npm run update_registry` | Re-check only recorded broken/app-bug entries | [docs/test-registry.md](docs/test-registry.md) |
-| `npm test` | Run all tests headless | [docs/run-tests.md](docs/run-tests.md) |
-| `npm run test:headed` | Run with browser visible | [docs/run-tests.md](docs/run-tests.md) |
+| `npm test` | Run all functional tests headless (Chromium) | [docs/run-tests.md](docs/run-tests.md) |
+| `npm run test:all-browsers` | Run functional tests on Chromium + Firefox + WebKit | [docs/run-tests.md](docs/run-tests.md) |
+| `npm run test:visual` | Run visual regression tests only (Chromium, `tests/visual/`) | [docs/run-tests.md](docs/run-tests.md) |
+| `npm run test:update-snapshots` | Regenerate visual baseline screenshots after intentional UI changes | [docs/run-tests.md](docs/run-tests.md) |
+| `npm run test:headed` | Run with browser visible (Chromium) | [docs/run-tests.md](docs/run-tests.md) |
 | `npm run test:report` | Open the HTML test report | [docs/run-tests.md](docs/run-tests.md) |
 
 ---

@@ -42,6 +42,17 @@ The fix tool classifies every failure as a **code bug** or an **app bug** before
 
 The fix tool also reads the Playwright screenshot and live DOM snapshot at point of failure (Claude is multimodal), so locator errors can be corrected from what was actually on screen rather than from source code alone.
 
+### Visual regression testing
+`generate_test` generates visual regression specs alongside functional tests — passing `type: 'visual'` (or describing a screenshot capture) routes to `tests/visual/` with `toHaveScreenshot()` assertions. Visual tests capture **layout structure**, not data content: nav bars, sidebar structure, form layouts. Dynamic content (product images, prices, user data) is masked so tests survive catalogue updates without false failures. A separate Playwright project (`visual`) keeps visual runs isolated from the functional suite.
+
+CI workflow: on first push, a self-healing GitHub Action generates Linux baselines (`-linux.png`), commits them, and re-runs to confirm. Subsequent pushes compare against the committed baselines — failures indicate a real CSS regression.
+
+### Cross-browser testing
+Firefox and WebKit projects sit alongside the default Chromium project. `npm test` runs Chromium only (fast iteration); `npm run test:all-browsers` runs all three. The `run_tests` MCP tool accepts a `browser` parameter to target a specific project from Claude Code. All tests are written to be browser-agnostic — browser selection is a runner concern, not a test concern.
+
+### App bug lifecycle
+When `investigate_and_fix` classifies a failure as an app bug, it writes `/* ⚠️ APP BUG */` into the spec and records in the registry. It also automatically inserts `test.fail()` as the first line of the test body so the CI suite passes despite the failing test. If the site later fixes the defect, `test.fail()` detects the unexpected pass, CI fails, and `npm run update_registry` strips the markers and promotes the test to passing — full lifecycle without manual intervention.
+
 ### PRD risk analysis with multi-format input
 `analyze_prd` accepts text, Markdown, PDFs (passed natively to the Claude API — no third-party parser), and images (wireframes, mockups via vision). It classifies features by risk tier (critical → revenue impact, high → trust/data, medium → conversion, low → content), generates test suggestions in a structured batch format, and filters against existing `TESTS_UI.md` coverage so the output is a genuine gap list. The `--tier` and `--focus` flags scope the output to a sprint without re-running the full analysis.
 
@@ -124,7 +135,7 @@ Ten tools are available in Claude Code chat and (most) from the terminal. See [d
 | `generate_test` | Generate a UI, API, E2E, or mixed Playwright test — type auto-detected; POM + spec + auto-run + auto-fix + registry | [docs/generate-test.md](docs/generate-test.md) |
 | `inspect_page` | See real DOM elements and locators on a page | [docs/inspect-page.md](docs/inspect-page.md) |
 | `investigate_and_fix` | Diagnose a failure (code bug vs app bug), patch, learn, re-run | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
-| `run_tests` | Run tests and return output — `pattern` targets a file, `grep` runs a single test by name | [docs/run-tests.md](docs/run-tests.md) |
+| `run_tests` | Run tests and return output — `pattern` targets a file, `grep` runs a single test by name, `browser` selects the project (`chromium`/`firefox`/`webkit`/`visual`) | [docs/run-tests.md](docs/run-tests.md) |
 | `list_resources` | List all existing POMs, fixtures, and spec files | [docs/list-resources.md](docs/list-resources.md) |
 | `generate_auth_fixture` | Generate a Playwright auth fixture — saves browser storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
 | `generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
