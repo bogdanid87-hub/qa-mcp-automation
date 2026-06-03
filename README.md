@@ -213,54 +213,68 @@ Separate multiple tests with `---` for batch mode (non-interactive, all run in s
 ```
 qa-mcp-automation/
 │
-├── src/                          ← MCP server + CLIs
-│   ├── index.ts                  ← MCP server entry point — 10 tools registered
-│   ├── cli.ts                    ← npm run generate
-│   ├── fix-cli.ts                ← npm run fix
-│   ├── analyze-prd-cli.ts        ← npm run analyze_prd
-│   ├── analyze-coverage-cli.ts   ← npm run analyze_coverage
-│   ├── generate-api-test-cli.ts  ← npm run generate_api
-│   ├── tag-tests-cli.ts          ← npm run tag_tests
-│   ├── sync-registry-cli.ts      ← npm run sync_registry
-│   ├── update-registry-cli.ts    ← npm run update_registry
-│   └── tools/
-│       ├── generate-test.ts      ← Claude for spec; local LLM for POM
-│       ├── generate-pom.ts       ← locator-only POM scaffolding
-│       ├── generate-api-test.ts  ← API test generation (local LLM first)
-│       ├── analyze-prd.ts        ← PRD risk analysis and test backlog
-│       ├── analyze-coverage.ts   ← coverage gap analysis with priority/risk split
-│       ├── investigate-fix.ts    ← failure diagnosis + fix (screenshot + DOM aware)
-│       ├── annotations.ts        ← writes APP BUG / BROKEN comments into specs
-│       ├── local-llm.ts          ← Ollama client with startup prompt
-│       ├── inspect-page.ts       ← headless DOM extraction
-│       ├── test-registry.ts      ← reads/writes TESTS_UI.md, TESTS_API.md, TESTS_E2E.md
-│       └── budget.ts             ← fix-loop token cost tracking
+├── .github/workflows/
+│   ├── ci.yml                        ← functional + visual CI (self-healing baselines)
+│   └── update-visual-baselines.yml   ← manual Linux baseline generation
 │
-├── docs/                         ← per-tool documentation
-├── pages/                        ← Page Object Models
-├── fixtures/index.ts             ← custom test + expect (ad-blocking, popups)
-├── utils/                        ← adBlocker, popupDismisser, randomData
+├── src/                              ← MCP server + CLIs
+│   ├── index.ts                      ← MCP server entry point — 10 tools registered
+│   ├── cli.ts                        ← npm run generate
+│   ├── fix-cli.ts                    ← npm run fix
+│   ├── generate-api-test-cli.ts      ← npm run generate_api
+│   ├── generate-auth-fixture-cli.ts  ← npm run generate_auth
+│   ├── generate-mock-cli.ts          ← npm run generate_mock
+│   ├── analyze-prd-cli.ts            ← npm run analyze_prd
+│   ├── analyze-coverage-cli.ts       ← npm run analyze_coverage
+│   ├── tag-tests-cli.ts              ← npm run tag_tests
+│   ├── sync-registry-cli.ts          ← npm run sync_registry
+│   ├── update-registry-cli.ts        ← npm run update_registry
+│   ├── status-cli.ts                 ← npm run status
+│   ├── site-audit-cli.ts             ← npm run audit_site
+│   └── tools/
+│       ├── generate-test.ts          ← unified test gen (UI/API/E2E/visual auto-detected)
+│       ├── generate-api-test.ts      ← API test generation (local LLM first)
+│       ├── generate-pom.ts           ← locator-only POM scaffolding
+│       ├── generate-auth-fixture.ts  ← auth storage state + named fixture
+│       ├── generate-mock.ts          ← page.route() network mock
+│       ├── analyze-prd.ts            ← PRD risk analysis and test backlog
+│       ├── analyze-coverage.ts       ← coverage gap analysis
+│       ├── investigate-fix.ts        ← failure diagnosis + fix + test.fail() for app bugs
+│       ├── annotations.ts            ← APP BUG / BROKEN comments + auto test.fail()
+│       ├── site-audit.ts             ← site crawl + POM hierarchy recommendation
+│       ├── inspect-page.ts           ← headless DOM extraction
+│       ├── test-registry.ts          ← reads/writes TESTS_*.md registries
+│       ├── local-llm.ts              ← Ollama client with startup prompt
+│       ├── llm-utils.ts              ← shared LLM output cleanup (fence stripping)
+│       ├── run-tests.ts              ← Playwright runner (pattern + grep + browser)
+│       ├── list-resources.ts         ← list POMs, fixtures, specs
+│       ├── tag-tests.ts              ← spec file tagging logic
+│       └── budget.ts                 ← session cost tracking
+│
+├── docs/                             ← per-tool documentation
+├── pages/                            ← Page Object Models (BasePage → SitePage → ...)
+├── fixtures/
+│   ├── index.ts                      ← custom test + expect (ad-blocking, popups)
+│   └── mocks/                        ← generated page.route() mock fixtures
+├── utils/                            ← adBlocker, popupDismisser, randomData
 │
 ├── tests/
-│   ├── global.setup.ts           ← saves guest browser state
-│   ├── ui/                       ← single-feature browser tests
-│   │   ├── cart.spec.ts
-│   │   ├── contact.spec.ts
-│   │   ├── search.spec.ts
-│   │   └── subscription.spec.ts
-│   ├── e2e/                      ← full user journeys
-│   │   └── place-order.spec.ts
-│   └── api/                      ← direct HTTP tests (no browser)
-│       ├── auth.spec.ts
-│       └── products.spec.ts
+│   ├── global.setup.ts               ← saves guest + logged-in browser state
+│   ├── ui/                           ← single-feature browser tests
+│   ├── e2e/                          ← full user journeys (multi-page)
+│   ├── api/                          ← direct HTTP tests (no browser)
+│   └── visual/                       ← visual regression tests (Chromium only)
+│       ├── products.spec.ts          ← nav bar, sidebar, search bar baselines
+│       └── cart.spec.ts              ← cart table structure with content masked
 │
-├── CLAUDE.md                     ← auto-loaded by Claude Code — project context
-├── TOOLS.md                      ← quick tool index
-├── TESTS_UI.md                   ← auto-updated registry for UI tests
-├── TESTS_API.md                  ← auto-updated registry for API tests
-├── TESTS_E2E.md                  ← auto-updated registry for E2E tests
-├── prd.md.example                ← template for PRD analysis (copy to prd.md)
-└── playwright.config.ts          ← Chromium only, baseURL, storageState
+├── CLAUDE.md                         ← auto-loaded by Claude Code — project context
+├── TOOLS.md                          ← quick tool index
+├── TESTS_UI.md                       ← auto-updated registry for UI tests
+├── TESTS_API.md                      ← auto-updated registry for API tests
+├── TESTS_E2E.md                      ← auto-updated registry for E2E tests
+├── TESTS_VISUAL.md                   ← auto-updated registry for visual tests
+├── prd.md.example                    ← template for PRD analysis
+└── playwright.config.ts              ← Chromium/Firefox/WebKit + visual project
 ```
 
 ---
@@ -271,7 +285,7 @@ Enforced via `src/prompts/system.ts`; lessons from failures auto-appended to `sr
 
 | Rule | Detail |
 |------|--------|
-| Chromium only | No Firefox or WebKit |
+| Browser-agnostic tests | Tests run on Chromium by default; Firefox/WebKit via `npm run test:all-browsers` |
 | Relative URLs | `page.goto('/login')`, never a full URL |
 | POM pattern | Every page has its own class in `pages/` extending `BasePage` |
 | Named exports | `export class LoginPage` — never `export default class` |
