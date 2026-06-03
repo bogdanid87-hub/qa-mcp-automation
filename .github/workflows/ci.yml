@@ -87,14 +87,15 @@ jobs:
         env:
           CI: true
 
-      - name: Generate missing Linux baselines (first run only)
-        # Runs only when visual tests failed — almost always because baselines
-        # don't exist yet. Generates them and commits so the next run compares.
-        if: steps.visual_tests.outcome == 'failure'
+      - name: Generate missing Linux baselines (main push only)
+        # Self-healing only runs on direct pushes to main — not on PRs.
+        # On PRs a visual failure means a genuine regression that should block merge.
+        # On main it most likely means baselines don't exist yet for the Linux runner.
+        if: steps.visual_tests.outcome == 'failure' && github.event_name == 'push'
         run: npm run test:update-snapshots
 
       - name: Commit generated baselines
-        if: steps.visual_tests.outcome == 'failure'
+        if: steps.visual_tests.outcome == 'failure' && github.event_name == 'push'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -104,12 +105,11 @@ jobs:
             exit 1
           else
             git commit -m "chore: generate Linux visual baselines [skip ci]"
-            git push
+            git push origin HEAD:${{ github.ref_name }}
           fi
 
       - name: Re-run visual tests against new baselines
-        # Verify the newly committed baselines pass comparison immediately.
-        if: steps.visual_tests.outcome == 'failure'
+        if: steps.visual_tests.outcome == 'failure' && github.event_name == 'push'
         run: npm run test:visual
         env:
           CI: true
