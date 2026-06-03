@@ -24,6 +24,10 @@ You generate TypeScript test code that follows EVERY rule below — no exception
 - After clicking a link that navigates to a new page, always call:
     await this.page.waitForLoadState('load');
   inside the POM method before returning, to ensure inline scripts are attached
+- For search or form submission that triggers navigation: wrap the submit and the wait together —
+    await Promise.all([page.waitForLoadState('load'), searchInput.press('Enter')]);
+  Prefer press('Enter') over clicking a submit button unless DOM inspection shows Enter does not work.
+  Always verify the actual submit mechanism before writing the POM method.
 
 ### Popup dismissal
 - Popups (cookie banners, consent overlays) must be dismissed after the FIRST navigation or page load of a test, and only once
@@ -62,11 +66,22 @@ Locator priority (strict order):
     4. getByPlaceholder(...)
     5. getByText(...)
     6. #id
+
+Locator rules:
+- Only use a strategy if the attribute actually exists in the DOM — never assume data-qa, roles, or label text are present. Inspect the live page first.
+- When using a CSS class selector, always scope it by element type to prevent strict-mode violations: write \`h1.title\` not \`.title\`, \`a.btn-primary\` not \`.btn-primary\`. A bare class often matches multiple unrelated elements.
 - Never use .first() or .last() as the only way to distinguish between elements that share the same selector — scope the locator to a unique parent container instead:
     // Wrong:
     page.locator('[data-qa="submit"]').first()
     // Right:
     page.locator('#registration-form [data-qa="submit"]')
+
+### Dynamic elements (AJAX)
+- For dropdowns that repopulate via AJAX (e.g. zone/state after country selection): first check
+  whether the target option already exists. If yes, select immediately. If no, wait for options
+  to clear (count ≤ 1) then repopulate (count > 1) before calling selectOption().
+- Never hardcode dropdown option labels — always inspect the live <select> options before writing
+  selectOption() calls. Region/zone naming varies widely across stores and locales.
 
 ### Fixtures
 - Custom fixtures live in fixtures/index.ts
@@ -80,6 +95,16 @@ Locator priority (strict order):
 - Every test MUST contain at least one expect() assertion
 - If a spec file already exists for the same feature area, ADD the new test inside that file — do not create a new spec file
 - Only create a new spec file when no existing file covers that feature area
+
+test.describe() naming — name the FEATURE AREA or user goal, never the specific scenario:
+  CORRECT: test.describe('Cart', ...)  /  test.describe('Place Order', ...)
+  WRONG:   test.describe('Add product to cart and verify total', ...)
+This allows multiple test() variants to share one describe block without misleading names.
+
+Imports — always match the import style to the export style:
+  Named export  → import { ClassName } from './ClassName'
+  Default export → import ClassName from './ClassName'
+Mismatched import style silently makes the imported value undefined and breaks class inheritance.
 
 ### Test isolation — critical
 Every test must be fully independent:
@@ -157,6 +182,9 @@ Rules:
 - Use Playwright's built-in assertions (expect from fixtures)
 - Prefer auto-retrying assertions: toBeVisible(), toHaveText(), toContainText(), toHaveURL()
 - Add await before every assertion
+- Never use || between expect() calls — expect() returns void, not boolean:
+    CORRECT: expect(a.includes('x') || b.includes('x')).toBe(true);
+    WRONG:   expect(a).toContain('x') || expect(b).toContain('x');  // TypeScript error: void || void
 - Before writing a test that asserts the site REJECTS or BLOCKS something (duplicate email,
   invalid state, out-of-stock), verify the site actually enforces that constraint.
   If it does not, write the test to document the real behavior instead of the assumed ideal.
