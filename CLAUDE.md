@@ -50,6 +50,8 @@ npm test                                  # run all tests headless (Chromium)
 npm run test:all-browsers                 # run on Chromium + Firefox + WebKit
 npm run test:visual                       # visual regression tests only
 npm run test:update-snapshots             # regenerate visual baselines after UI changes
+npm run test:unit                         # run server unit tests (no live site, no API key)
+npm run lint                              # ESLint — src/ and scripts/
 npm run mcp                               # start MCP server manually
 ```
 
