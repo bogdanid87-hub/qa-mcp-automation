@@ -11,7 +11,7 @@ Describe a test scenario in plain English. The server uses **Claude Sonnet 4.6**
 ## What this project demonstrates
 
 ### MCP server architecture
-A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes ten AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
+A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes eleven AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
 
 ### Dual-model routing with local LLM fallback
 The project uses two AI models for different tasks based on what each does best and what it costs:
@@ -125,7 +125,7 @@ NO_LOCAL_LLM=1 npm run generate -- --file my-test.txt   # same via env var
 
 ## Tools
 
-Ten tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
+Eleven tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
 
 | Tool | One-liner | Guide |
 |------|-----------|-------|
@@ -139,6 +139,7 @@ Ten tools are available in Claude Code chat and (most) from the terminal. See [d
 | `list_resources` | List all existing POMs, fixtures, and spec files | [docs/list-resources.md](docs/list-resources.md) |
 | `generate_auth_fixture` | Generate a Playwright auth fixture — saves browser storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
 | `generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
+| `generate_app_knowledge` | Synthesise app bugs, gaps, and coverage report into `APP_KNOWLEDGE.md` — enriches `analyze_prd` and `analyze_coverage` | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
 
 ---
 
@@ -174,6 +175,7 @@ npm run generate_mock -- --name stripe --url 'https://api.stripe.com/**' --respo
 npm run analyze_prd -- --file prd.md     # generate test backlog from PRD
 npm run analyze_coverage                  # find coverage gaps
 npm run audit_site -- --url https://...  # crawl site and recommend POM hierarchy
+npm run generate_knowledge               # synthesise APP_KNOWLEDGE.md from accumulated data
 npm run fix                               # investigate and fix failing tests
 npm run status                            # suite health at a glance
 npm run tag_tests                         # tag spec files with registry IDs
@@ -218,7 +220,7 @@ qa-mcp-automation/
 │   └── update-visual-baselines.yml   ← manual Linux baseline generation
 │
 ├── src/                              ← MCP server + CLIs
-│   ├── index.ts                      ← MCP server entry point — 10 tools registered
+│   ├── index.ts                      ← MCP server entry point — 11 tools registered
 │   ├── cli.ts                        ← npm run generate
 │   ├── fix-cli.ts                    ← npm run fix
 │   ├── generate-api-test-cli.ts      ← npm run generate_api
@@ -231,6 +233,7 @@ qa-mcp-automation/
 │   ├── update-registry-cli.ts        ← npm run update_registry
 │   ├── status-cli.ts                 ← npm run status
 │   ├── site-audit-cli.ts             ← npm run audit_site
+│   ├── generate-app-knowledge-cli.ts ← npm run generate_knowledge
 │   └── tools/
 │       ├── generate-test.ts          ← unified test gen (UI/API/E2E/visual auto-detected)
 │       ├── generate-api-test.ts      ← API test generation (local LLM first)
@@ -242,6 +245,7 @@ qa-mcp-automation/
 │       ├── investigate-fix.ts        ← failure diagnosis + fix + test.fail() for app bugs
 │       ├── annotations.ts            ← APP BUG / BROKEN comments + auto test.fail()
 │       ├── site-audit.ts             ← site crawl + POM hierarchy recommendation
+│       ├── generate-app-knowledge.ts ← app bug/gap synthesis → APP_KNOWLEDGE.md
 │       ├── inspect-page.ts           ← headless DOM extraction
 │       ├── test-registry.ts          ← reads/writes TESTS_*.md registries
 │       ├── local-llm.ts              ← Ollama client with startup prompt

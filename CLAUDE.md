@@ -1,9 +1,9 @@
 # qa-mcp-automation
 
 MCP server that generates Playwright tests for automationexercise.com using the
-Claude API and a local LLM. Ten tools cover the full QA workflow from PRD
+Claude API and a local LLM. Eleven tools cover the full QA workflow from PRD
 analysis through test generation, auth fixture setup, network mocking, failure
-investigation, and registry maintenance.
+investigation, registry maintenance, and app knowledge synthesis.
 
 See [TOOLS.md](TOOLS.md) for a quick index and [docs/](docs/) for per-tool guides.
 
@@ -40,6 +40,7 @@ npm run tag_tests                         # tag spec files with registry IDs
 npm run audit_site -- --url https://...   # crawl site, build component matrix, recommend POM hierarchy
 npm run generate_auth -- --name loggedIn --login-url /login  # generate auth fixture + storage state
 npm run generate_mock -- --name stripe --url 'https://api.stripe.com/**' --response "..."  # network mock
+npm run generate_knowledge                # synthesise APP_KNOWLEDGE.md (enriches analyze_prd + analyze_coverage)
 npm run sync_registry                     # reconcile all three registries with reality
 npm run update_registry                   # re-check known broken/app-bug entries
 npm test                                  # run all tests headless (Chromium)
@@ -55,7 +56,7 @@ npm run mcp                               # start MCP server manually
 
 ```
 src/
-  index.ts              — MCP server entry point, 10 tools registered
+  index.ts              — MCP server entry point, 11 tools registered
   cli.ts                — npm run generate (interactive, cost-tracked)
   fix-cli.ts            — npm run fix
   analyze-prd-cli.ts    — npm run analyze_prd
@@ -74,6 +75,7 @@ src/
     run-tests.ts        — shells out to Playwright
     test-registry.ts    — shared read/write logic for TESTS_UI.md, TESTS_API.md and TESTS_E2E.md
     local-llm.ts        — Ollama client (qwen2.5-coder:14b, falls back to Claude)
+    generate-app-knowledge.ts — synthesises APP_KNOWLEDGE.md from bugs, gaps, coverage report
     annotations.ts      — writes /* ⚠️ APP BUG */ and /* ⚠️ BROKEN */ into specs
     budget.ts           — token cost tracking per session
   prompts/

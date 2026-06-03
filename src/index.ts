@@ -13,6 +13,7 @@ import { investigateFixTool } from './tools/investigate-fix.js';
 import { inspectPageTool } from './tools/inspect-page.js';
 import { generateAuthFixtureTool } from './tools/generate-auth-fixture.js';
 import { generateMockTool } from './tools/generate-mock.js';
+import { generateAppKnowledgeTool } from './tools/generate-app-knowledge.js';
 
 const server = new McpServer({ name: 'qa-mcp-automation', version: '1.0.0' });
 
@@ -201,6 +202,21 @@ server.registerTool(
     },
   },
   (args) => generateMockTool(args as any),
+);
+
+server.registerTool(
+  'generate_app_knowledge',
+  {
+    description:
+      'Synthesise accumulated knowledge about the app into APP_KNOWLEDGE.md — a per-feature ' +
+      'risk document covering known app bugs, recurring coverage gaps, and risk patterns. ' +
+      'Once generated, analyze_prd and analyze_coverage automatically read it to enrich ' +
+      'their analysis with institutional knowledge about this specific application.',
+    inputSchema: {
+      output: z.string().optional().describe('Output file path (default: APP_KNOWLEDGE.md in project root)'),
+    },
+  },
+  (args) => generateAppKnowledgeTool(args),
 );
 
 async function main() {

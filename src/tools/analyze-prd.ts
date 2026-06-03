@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { readTestCases, readBrokenTests } from './test-registry.js';
+import { readAppKnowledge } from './generate-app-knowledge.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -173,14 +174,22 @@ export async function analyzePrdTool(args: {
     coverageList = buildCoverageList(passing, broken, backlogNames);
   } catch { /* proceed without coverage */ }
 
+  // Load app knowledge base if it exists — enriches analysis with institutional
+  // knowledge about known app bugs, recurring gaps, and risk patterns.
+  const appKnowledge = await readAppKnowledge();
+
   const client = new Anthropic({ apiKey });
 
   // Build the user message content — text first, then document (PDF), then images.
   // Claude reads all provided media before generating suggestions.
+  const knowledgeSection = appKnowledge
+    ? `## App knowledge base (known bugs, risk patterns, recurring gaps)\n\n${appKnowledge}\n\n---\n\n`
+    : '';
+
   const userContent: Anthropic.MessageParam['content'] = [
     {
       type: 'text',
-      text: coverageList + '\n\n---\n\n## PRD to analyse' +
+      text: knowledgeSection + coverageList + '\n\n---\n\n## PRD to analyse' +
         (args.prdContent ? '\n\n' + args.prdContent : '\n\n(see attached file)'),
     },
   ];

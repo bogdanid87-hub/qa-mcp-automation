@@ -16,6 +16,7 @@
     "generate_auth": "tsx src/generate-auth-fixture-cli.ts",
     "generate_mock": "tsx src/generate-mock-cli.ts",
     "audit_site": "tsx src/site-audit-cli.ts",
+    "generate_knowledge": "tsx src/generate-app-knowledge-cli.ts",
     "mcp": "tsx src/index.ts",
     "test": "playwright test --project=setup --project=chromium",
     "test:all-browsers": "playwright test --project=setup --project=chromium --project=firefox --project=webkit",

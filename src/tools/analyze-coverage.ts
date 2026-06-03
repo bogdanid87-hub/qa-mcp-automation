@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { readFile, readdir, writeFile } from 'fs/promises';
 import { join, extname } from 'path';
 import { readTestCases, readBrokenTests, TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH, registryForSpec } from './test-registry.js';
+import { readAppKnowledge } from './generate-app-knowledge.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { chromium } from '@playwright/test';
 
@@ -388,6 +389,13 @@ export async function analyzeCoverageTool(args: {
   // ── Gather context ───────────────────────────────────────────────────────────
   const contextParts: string[] = [];
   const labels: string[] = [];
+
+  // Include app knowledge base if it exists — gives Claude context about known
+  // bugs and risk patterns so gaps are prioritised against real app behaviour.
+  const appKnowledge = await readAppKnowledge();
+  if (appKnowledge) {
+    contextParts.push(`## App knowledge base (known bugs, risk patterns)\n\n${appKnowledge}`);
+  }
 
   // True when a single spec file is given (not a folder or registry)
   const isSingleSpec = !!args.specPath && args.specPath.endsWith('.spec.ts');

@@ -19,6 +19,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 | `list_resources` | List all existing page objects, fixtures, and spec files | [docs/list-resources.md](docs/list-resources.md) |
 | `generate_auth_fixture` | Generate a Playwright auth fixture for form or OAuth login — saves browser storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
 | `generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
+| `generate_app_knowledge` | Synthesise app bugs, coverage gaps, and coverage report into `APP_KNOWLEDGE.md` — enriches subsequent `analyze_prd` and `analyze_coverage` calls | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
 
 ---
 
@@ -32,6 +33,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 | `npm run generate_auth` | Generate a Playwright auth fixture for form or OAuth login — saves storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
 | `npm run generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
 | `npm run audit_site` | Crawl a site, build a page-type × UI-component matrix, and recommend a POM hierarchy | [docs/audit-site.md](docs/audit-site.md) |
+| `npm run generate_knowledge` | CLI version of `generate_app_knowledge` — synthesises `APP_KNOWLEDGE.md` from registries, backlog, and coverage report | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
 | `npm run generate` | Generate a test from `my-test.txt` (or any batch `.txt` file) | [docs/generate-test.md](docs/generate-test.md) |
 | `npm run fix` | Interactive fix loop for failing tests | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
 | `npm run status` | Suite health at a glance: registry counts, tagging ratio, open backlog gaps, spec file counts | — |
