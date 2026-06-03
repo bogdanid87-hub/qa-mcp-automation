@@ -117,4 +117,13 @@ This waits up to 5 seconds for the element to appear; if it does, the test corre
 ## Rule 028 — Asserting the wrong field name on an API response object without verifying the actual response shape first
 **Problem class**: Asserting the wrong field name on an API response object without verifying the actual response shape first.
 **Rule**: Before asserting specific field names on an API response, inspect a real response to confirm the exact field names. For the automationexercise.com `/api/brandsList` endpoint, each brand object uses the field `brand` (not `name`) to hold the brand name string.
+## Rule 026 — test.fail() only intercepts assertion errors, not test-level timeouts
+**Problem class**: Using `test.fail()` to mark a test as an expected failure has no effect when the test fails due to a **test-level timeout** rather than an assertion error. A locator operation such as `locator.fill()` or `locator.click()` that waits for a non-existent element will hit the test timeout (Playwright forcibly kills the test externally) — `test.fail()` never sees this as an error inside the test body, so it cannot intercept it.
+**Rule**: When marking an app-bug test with `test.fail()`, immediately follow with an explicit assertion that will fail as an assertion error (not a timeout):
+```typescript
+test.fail(); // APP BUG: expected to fail
+await expect(page.locator('.the-missing-selector')).toBeVisible({ timeout: 2000 });
+// Continue with full flow verification below — runs only when bug is fixed
+```
+This fails in 2 s as an assertion error (caught by `test.fail()`), while preserving the full verification code for when the site fixes the bug. When the bug is fixed: the assertion passes, the full flow runs, and `test.fail()` detects the unexpected pass — signalling to remove the marker.
 <!-- rules-end -->

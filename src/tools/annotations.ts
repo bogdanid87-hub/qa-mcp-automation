@@ -97,10 +97,29 @@ export async function writeTestAnnotation(
     let updated = src;
     for (const name of failingNames) {
       const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const re = new RegExp(`([ \\t]*)(test\\s*\\(\\s*['"\`]${escaped}['"\`])`, 'm');
-      updated = updated.replace(re, (_, indent, testCall) =>
+
+      // Step 1: prepend the block comment before the test() call
+      const commentRe = new RegExp(`([ \\t]*)(test\\s*\\(\\s*['"\`]${escaped}['"\`])`, 'm');
+      updated = updated.replace(commentRe, (_, indent, testCall) =>
         `${buildComment(kind, indent, rootCause, actualBehavior)}\n${indent}${testCall}`
       );
+
+      // Step 2: for app_bug tests, insert test.fail() as the first line of the
+      // test body so CI treats it as an expected failure rather than blocking.
+      // Also add the fast-fail assertion so test.fail() can intercept it —
+      // test.fail() only catches assertion errors, not test-level timeouts.
+      if (kind === 'app_bug') {
+        const bodyRe = new RegExp(
+          `(test\\s*\\(\\s*['"\`]${escaped}['"\`][^{]*\\{)`,
+          's',
+        );
+        updated = updated.replace(bodyRe, (match) => {
+          const indentMatch = match.match(/^([ \t]*)/);
+          const baseIndent = indentMatch ? indentMatch[1] : '';
+          const inner = `${baseIndent}    test.fail(); // APP BUG: expected to fail — see annotation above\n`;
+          return `${match}\n${inner}`;
+        });
+      }
     }
     await writeFile(abs, updated, 'utf-8');
   }

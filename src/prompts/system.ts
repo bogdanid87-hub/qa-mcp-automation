@@ -160,6 +160,11 @@ Rules:
 - Before writing a test that asserts the site REJECTS or BLOCKS something (duplicate email,
   invalid state, out-of-stock), verify the site actually enforces that constraint.
   If it does not, write the test to document the real behavior instead of the assumed ideal.
+- When a test is marked with \`test.fail()\` (e.g. for an app-bug), also add an explicit assertion immediately after that will fail as an assertion error — NOT rely on the test to hit its timeout:
+    test.fail(); // APP BUG
+    await expect(page.locator('.missing-element')).toBeVisible({ timeout: 2000 }); // fails fast as assertion
+    // Full verification below — runs only when bug is fixed
+  test.fail() intercepts assertion errors thrown inside the test body. It does NOT intercept test-level timeouts (when Playwright kills the test after N seconds) — those bypass test.fail() entirely.
 - NEVER use \`expect(locator).not.toBeVisible()\` immediately after triggering an async action to assert "site should reject this". The check runs before the site responds and gives a false pass. Instead, wait explicitly:
     const appeared = await locator.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false);
     expect(appeared, 'descriptive message if site wrongly accepted the action').toBe(false);

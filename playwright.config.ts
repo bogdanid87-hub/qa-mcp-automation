@@ -40,6 +40,7 @@ export default defineConfig({
     // npm test / npm run test:chromium — default fast run
     {
       name: 'chromium',
+      testIgnore: /tests\/visual\/.*/,
       use: {
         ...devices['Desktop Chrome'],
         channel: 'chromium',
@@ -50,6 +51,7 @@ export default defineConfig({
     // npm run test:firefox — cross-browser functional validation
     {
       name: 'firefox',
+      testIgnore: /tests\/visual\/.*/,
       use: {
         ...devices['Desktop Firefox'],
         storageState: 'test-data/.auth/guest.json',
@@ -59,6 +61,7 @@ export default defineConfig({
     // npm run test:webkit — Safari (WebKit) functional validation
     {
       name: 'webkit',
+      testIgnore: /tests\/visual\/.*/,
       use: {
         ...devices['Desktop Safari'],
         storageState: 'test-data/.auth/guest.json',

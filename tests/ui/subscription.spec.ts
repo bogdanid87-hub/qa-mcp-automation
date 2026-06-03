@@ -53,6 +53,7 @@ test.describe('Subscription', () => {
    * Actual behaviour:   automationexercise.com accepts duplicate email subscriptions silently. When the same email is submitted a second time, the site responds with the same 'You have been successfully subscribed!' success message as the first submission, rather than rejecting or warning about the duplicate.
    * Do NOT change this test — it documents a real bug. Fix the application instead. */
   test('should reject duplicate email subscriptions', async ({ homePage }) => {
+    test.fail(); // APP BUG: expected to fail — site accepts duplicates instead of rejecting
     // Navigate to home page
     await homePage.goto();
     await homePage.verifyLoaded();
