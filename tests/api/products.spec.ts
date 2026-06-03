@@ -53,15 +53,6 @@ test.describe('Products API', () => {
     expect(body.message).toBe('This request method is not supported.');
   });
 
-  // [API Products API #7]
-  test('should return products matching search term', async ({ request }) => {
-    const body = await parseApiResponse(await request.post(SEARCH_PRODUCT_ENDPOINT, { form: { search_product: 'top' } }));
-    expect(body.responseCode).toBe(200);
-    // category is a nested object { usertype: {...}, category: '...' } — do not stringify and compare
-    expect(Array.isArray(body.products)).toBe(true);
-    expect(body.products.length).toBeGreaterThan(0);
-  });
-
   // [API Products API #5]
   test('should return bad request for missing search_product parameter', async ({ request }) => {
     const body = await parseApiResponse(await request.post(SEARCH_PRODUCT_ENDPOINT));
@@ -76,6 +67,14 @@ test.describe('Products API', () => {
     expect(typeof body.responseCode).toBe('number');
   });
 
+  // [API Products API #7]
+  test('should return products matching search term', async ({ request }) => {
+    const body = await parseApiResponse(await request.post(SEARCH_PRODUCT_ENDPOINT, { form: { search_product: 'top' } }));
+    expect(body.responseCode).toBe(200);
+    // category is a nested object { usertype: {...}, category: '...' } — do not stringify and compare
+    expect(Array.isArray(body.products)).toBe(true);
+    expect(body.products.length).toBeGreaterThan(0);
+  });
 
   // [API Products API #8]
   test('should return at least 20 products', async ({ request }) => {

@@ -387,36 +387,6 @@ test.describe('Auth API', () => {
     expect(user.email).toBe(getUserEmail);
   });
 
-  // api-11-register-user-with-existing-email
-  // [API Auth API #14]
-  test('should return 400 when registering with an already existing email', async ({ request }) => {
-    const body = await parseApiResponse(
-      await request.post(CREATE_ACCOUNT_ENDPOINT, {
-        form: {
-          name: 'Duplicate User',
-          email: existingEmail,
-          password: existingPassword,
-          title: 'Mr',
-          birth_date: '1',
-          birth_month: '1',
-          birth_year: '2000',
-          firstname: 'Duplicate',
-          lastname: 'User',
-          company: 'DupCo',
-          address1: '1 Dup St',
-          address2: '',
-          country: 'United States',
-          zipcode: '10001',
-          state: 'New York',
-          city: 'New York',
-          mobile_number: '5551234567'
-        }
-      })
-    );
-    expect(body.responseCode).toBe(400);
-    expect(body.message).toBe('Email already exists!');
-  });
-
   // api-7-verify-login-missing-password-parameter
   // [API Auth API #9]
   test('should return 400 when password parameter is missing from verifyLogin', async ({ request }) => {
@@ -498,6 +468,36 @@ test.describe('Auth API', () => {
     );
     expect(body.responseCode).toBe(404);
     expect(body.message).not.toBe('User updated!');
+  });
+
+  // api-11-register-user-with-existing-email
+  // [API Auth API #14]
+  test('should return 400 when registering with an already existing email', async ({ request }) => {
+    const body = await parseApiResponse(
+      await request.post(CREATE_ACCOUNT_ENDPOINT, {
+        form: {
+          name: 'Duplicate User',
+          email: existingEmail,
+          password: existingPassword,
+          title: 'Mr',
+          birth_date: '1',
+          birth_month: '1',
+          birth_year: '2000',
+          firstname: 'Duplicate',
+          lastname: 'User',
+          company: 'DupCo',
+          address1: '1 Dup St',
+          address2: '',
+          country: 'United States',
+          zipcode: '10001',
+          state: 'New York',
+          city: 'New York',
+          mobile_number: '5551234567'
+        }
+      })
+    );
+    expect(body.responseCode).toBe(400);
+    expect(body.message).toBe('Email already exists!');
   });
 
 });

@@ -86,7 +86,7 @@ jobs:
             exit 1
           else
             git commit -m "chore: generate Linux visual baselines [skip ci]"
-            git push origin HEAD:${{ github.ref_name }}
+            git push --no-verify origin HEAD:${{ github.ref_name }}
           fi
 
       - name: Re-run visual tests against new baselines
