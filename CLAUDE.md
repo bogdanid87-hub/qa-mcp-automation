@@ -41,7 +41,10 @@ npm run generate_auth -- --name loggedIn --login-url /login  # generate auth fix
 npm run generate_mock -- --name stripe --url 'https://api.stripe.com/**' --response "..."  # network mock
 npm run sync_registry                     # reconcile all three registries with reality
 npm run update_registry                   # re-check known broken/app-bug entries
-npm test                                  # run all tests headless
+npm test                                  # run all tests headless (Chromium)
+npm run test:all-browsers                 # run on Chromium + Firefox + WebKit
+npm run test:visual                       # visual regression tests only
+npm run test:update-snapshots             # regenerate visual baselines after UI changes
 npm run mcp                               # start MCP server manually
 ```
 
