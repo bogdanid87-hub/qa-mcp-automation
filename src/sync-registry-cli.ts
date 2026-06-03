@@ -108,8 +108,8 @@ async function main(): Promise<void> {
     return passingKeys.has(key) && !brokenKeys.has(key);
   });
 
-  let toFlag: FailingTestResult[] = [];
-  let flaky: FailingTestResult[] = [];
+  const toFlag: FailingTestResult[] = [];
+  const flaky: FailingTestResult[] = [];
 
   if (candidateRegressions.length > 0) {
     // Group candidates by spec so we run each spec file at most once
@@ -172,7 +172,7 @@ async function main(): Promise<void> {
       if (!addByRegistry.has(reg)) addByRegistry.set(reg, []);
       addByRegistry.get(reg)!.push(t);
     }
-    for (const [reg, tests] of addByRegistry) await recordPassingTests(tests);
+    for (const [, tests] of addByRegistry) await recordPassingTests(tests);
     changed += toAdd.length;
     console.log('');
   }
@@ -187,7 +187,7 @@ async function main(): Promise<void> {
       if (!promoteByRegistry.has(reg)) promoteByRegistry.set(reg, []);
       promoteByRegistry.get(reg)!.push(t);
     }
-    for (const [reg, tests] of promoteByRegistry) await recordPassingTests(tests);
+    for (const [, tests] of promoteByRegistry) await recordPassingTests(tests);
     // Remove from broken in each registry
     const promoteByBrokenRegistry = new Map<string, Set<string>>();
     for (const e of toPromote) {

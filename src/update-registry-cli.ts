@@ -37,7 +37,6 @@ function detectUnexpectedPasses(output: string): string[] {
 
   // Pattern 2: scan for the error phrase and extract the preceding test name line
   if (names.length === 0 && output.includes('Expected to fail')) {
-    const re2 = /›\s+([^›\n]+)\s*\(\d+/gm;
     const errorLines = output.split('\n');
     for (let i = 0; i < errorLines.length; i++) {
       if (errorLines[i].includes('Expected to fail')) {

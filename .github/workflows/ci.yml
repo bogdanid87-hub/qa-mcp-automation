@@ -43,6 +43,9 @@ jobs:
       - name: Unit tests
         run: npm run test:unit
 
+      - name: ESLint
+        run: npm run lint
+
   # ── Visual regression — browser-based, no API calls, separate runner ─────────
   visual:
     name: Visual regression tests
