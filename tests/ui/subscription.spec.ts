@@ -48,6 +48,54 @@ test.describe('Subscription', () => {
   });
 
   // [UI Subscription #3]
+  test('should subscribe via the footer subscription form on the Cart page', async ({ page }) => {
+    // Navigate to the cart page
+    await page.goto('/view_cart', { waitUntil: 'domcontentloaded' });
+
+    // Scroll to the footer subscription section
+    await page.locator('#footer').scrollIntoViewIfNeeded();
+    await page.locator('#susbscribe_email').waitFor({ state: 'visible' });
+
+    // Enter a valid email and click the subscribe button
+    const email = randomEmail();
+    await page.locator('#susbscribe_email').fill(email);
+    await page.locator('#subscribe').click();
+
+    // Verify the success message appears
+    await expect(
+      page.locator('#success-subscribe'),
+      'Success message should be visible after subscribing',
+    ).toBeVisible({ timeout: 5000 });
+  });
+
+  // [UI Subscription #4]
+  test('subscribe with empty email on cart page shows native validation and no success message', async ({ page }) => {
+    // Navigate directly to the cart page
+    await page.goto('/view_cart', { waitUntil: 'domcontentloaded' });
+
+    // Scroll to the footer subscription section
+    await page.locator('#footer').scrollIntoViewIfNeeded();
+    await page.locator('#susbscribe_email').waitFor({ state: 'visible' });
+
+    // Leave the email input empty and click subscribe
+    await page.locator('#susbscribe_email').fill('');
+    await page.locator('#subscribe').click();
+
+    // Assert the success message does NOT appear
+    const appeared = await page
+      .locator('.alert-success.alert')
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+    expect(appeared, 'Success message should not appear when email is empty').toBe(false);
+
+    // Assert browser native validation fires on the empty email field
+    const isInvalid = await page.locator('#susbscribe_email').evaluate(
+      (el) => !(el as HTMLInputElement).validity.valid
+    );
+    expect(isInvalid, 'Email input should be marked invalid by native browser validation').toBe(true);
+  });
+
   /* ⚠️  APP BUG — This test is correct; the application under test has a defect.
    * Expected behaviour: The test asserts that subscribing with the same email twice should not show a success message on the second attempt. However, the screenshot confirms that the application does show 'You have been successfully subscribed!' for the duplicate email — the site accepts duplicate subscriptions without any error or rejection.
    * Actual behaviour:   automationexercise.com accepts duplicate email subscriptions silently. When the same email is submitted a second time, the site responds with the same 'You have been successfully subscribed!' success message as the first submission, rather than rejecting or warning about the duplicate.

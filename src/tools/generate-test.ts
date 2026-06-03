@@ -246,6 +246,19 @@ export async function generateTestTool(args: {
 
   let existingContext = await readFocusedContextForFeature(featureKeywords);
 
+  // When spec_file is explicitly provided, always include it in context — keyword
+  // matching may miss the file when the test description shares no words with the
+  // filename, causing Claude to write the test in isolation and overwrite the file.
+  if (args.spec_file) {
+    try {
+      const specAbs = join(ROOT, args.spec_file);
+      const specContent = await readFile(specAbs, 'utf-8');
+      if (!existingContext.includes(args.spec_file)) {
+        existingContext = `### ${args.spec_file}\n\`\`\`typescript\n${specContent}\n\`\`\`\n\n${existingContext}`;
+      }
+    } catch { /* file doesn't exist yet — no existing content to inject */ }
+  }
+
   let domContext = '';
   if (args.page_paths && args.page_paths.length > 0) {
     try {

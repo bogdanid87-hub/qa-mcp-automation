@@ -1,6 +1,6 @@
 # Test Cases
 
-**Total: 10 tests**
+**Total: 12 tests**
 
 ---
 
@@ -22,6 +22,8 @@
 |---|------|
 | 1 | should subscribe via the footer subscription form on the home page |
 | 2 | should show an error when subscribing with an invalid email format |
+| 3 | should subscribe via the footer subscription form on the Cart page |
+| 4 | subscribe with empty email on cart page shows native validation and no success message |
 
 ---
 

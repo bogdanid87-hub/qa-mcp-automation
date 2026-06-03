@@ -23,6 +23,7 @@ See [TOOLS.md](TOOLS.md) for a quick index and [docs/](docs/) for per-tool guide
   - `README.md` — update the tool count (header + tools section + architecture block), add to the tools table and terminal commands list
 - **After any session that adds features (not just tools):** also update `README.md` "What this project demonstrates" section and `TOOLS.md` terminal commands table — these are frequently missed when adding scripts, CI workflows, or capabilities like multi-browser or visual testing that span multiple files
 - **When a general improvement is made here:** ask before propagating to `mcp-qa-skeleton`; only propagate AFTER the tool has been tested on this project and any bugs found have been fixed — propagating untested or newly-fixed tools means the skeleton gets the broken version
+- **After every `generate_test` call that returns proposed additional tests:** present them as a numbered list and invite the user to pick any, with or without modifications — e.g. "generate 2 but start from the home page instead". Apply any natural-language adjustments to the description before calling the tool again. This is strictly better than the CLI prompt because the user can tweak proposals rather than only accepting them verbatim.
 
 ---
 
