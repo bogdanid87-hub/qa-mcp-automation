@@ -49,7 +49,7 @@ async function readRegistryContext(registryPath: string): Promise<string> {
  * Extract only the section for a specific spec file from a registry.
  * This keeps the context focused when analysing a single spec.
  */
-function extractRegistrySection(content: string, specPath: string): string {
+export function extractRegistrySection(content: string, specPath: string): string {
   const header = `## ${specPath}`;
   const start = content.indexOf(header);
   if (start === -1) return `(no registry entries found for ${specPath} — it may not have passed tests yet)`;

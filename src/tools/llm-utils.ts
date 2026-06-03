@@ -54,3 +54,18 @@ export function cleanLlmCode(raw: string, opts: CleanCodeOptions = {}): string {
   if (opts.stripImports) code = stripImports(code);
   return code.trim();
 }
+
+/**
+ * Extract the first JSON object from an LLM response.
+ * Handles markdown fences (```json ... ```) and preamble prose before the object.
+ * Throws if no JSON object is found.
+ */
+export function extractJson(raw: string): string {
+  const stripped = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
+  try { JSON.parse(stripped); return stripped; } catch { /* fall through */ }
+  const lineStart = stripped.search(/(?:^|\n)\s*\{/);
+  const start = lineStart !== -1 ? stripped.indexOf('{', lineStart) : stripped.indexOf('{');
+  const end = stripped.lastIndexOf('}');
+  if (start !== -1 && end > start) return stripped.slice(start, end + 1);
+  throw new Error('No JSON object found in response');
+}

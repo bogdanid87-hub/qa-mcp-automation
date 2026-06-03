@@ -40,6 +40,9 @@ jobs:
       - name: Validate MCP tool exports
         run: npx tsx scripts/validate-mcp.ts
 
+      - name: Unit tests
+        run: npm run test:unit
+
   # ── Visual regression — browser-based, no API calls, separate runner ─────────
   visual:
     name: Visual regression tests

@@ -73,7 +73,7 @@ export function parsePassingTests(output: string): PassingTest[] {
   return results;
 }
 
-function parseTestCases(content: string): TestEntry[] {
+export function parseTestCases(content: string): TestEntry[] {
   const entries: TestEntry[] = [];
   let currentSpec = '';
   let currentDescribe = '';
@@ -143,7 +143,7 @@ function parseTableRows(section: string): string[][] {
   return rows;
 }
 
-function parseBrokenTests(content: string): BrokenEntry[] {
+export function parseBrokenTests(content: string): BrokenEntry[] {
   const entries: BrokenEntry[] = [];
 
   for (const row of parseTableRows(extractSection(content, '## ⚠️ Application Bugs'))) {
@@ -175,7 +175,7 @@ function parseBrokenTests(content: string): BrokenEntry[] {
 
 // ─── File builder ─────────────────────────────────────────────────────────────
 
-function buildContent(entries: TestEntry[], broken: BrokenEntry[] = []): string {
+export function buildContent(entries: TestEntry[], broken: BrokenEntry[] = []): string {
   const lines: string[] = ['# Test Cases', ''];
 
   if (entries.length === 0) {
@@ -199,7 +199,7 @@ function buildContent(entries: TestEntry[], broken: BrokenEntry[] = []): string 
         lines.push('|---|------|');
         let n = 1;
         for (const t of tests) {
-          lines.push(`| ${n++} | ${t.name} |`);
+          lines.push(`| ${n++} | ${sanitizeCell(t.name)} |`);
         }
         lines.push('');
       }

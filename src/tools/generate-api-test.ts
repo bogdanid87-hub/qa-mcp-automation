@@ -9,6 +9,7 @@ import { tagSpecAfterRecording } from './tag-tests.js';
 import { markBacklogEntriesCovered } from './analyze-coverage.js';
 import { autoFixFailure } from './investigate-fix.js';
 import { writeTestAnnotation } from './annotations.js';
+import { extractJson } from './llm-utils.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -232,15 +233,6 @@ function mergeTestBlocks(existing: string, generated: string): string {
   );
 }
 
-function extractJson(raw: string): string {
-  const stripped = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
-  try { JSON.parse(stripped); return stripped; } catch { /* */ }
-  const lineStart = stripped.search(/(?:^|\n)\s*\{/);
-  const start = lineStart !== -1 ? stripped.indexOf('{', lineStart) : stripped.indexOf('{');
-  const end = stripped.lastIndexOf('}');
-  if (start !== -1 && end > start) return stripped.slice(start, end + 1);
-  throw new Error('No JSON object found');
-}
 
 async function callClaude(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string> {
   const client = new Anthropic({ apiKey });

@@ -141,7 +141,7 @@ async function readBacklogTestNames(): Promise<string[]> {
   }
 }
 
-function buildCoverageList(
+export function buildCoverageList(
   passing: Awaited<ReturnType<typeof readTestCases>>,
   broken: Awaited<ReturnType<typeof readBrokenTests>>,
   backlogNames: string[] = [],
