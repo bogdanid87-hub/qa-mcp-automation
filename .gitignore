@@ -17,6 +17,7 @@ prd.md
 prd-tests.txt
 coverage-report.md
 coverage-gaps.txt
+GAPS_BACKLOG.md
 
 # macOS
 .DS_Store

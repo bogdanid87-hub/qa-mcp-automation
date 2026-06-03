@@ -78,9 +78,13 @@ spec_file rules:
 1. Output all direct blocks first, then all suggested blocks.
 
 2. Within the direct group:
-   - If the source document contains numbered items (e.g. "API 1:", "API 2:", "Test Case 3:",
-     "US-01:"), preserve that numbering order exactly. Do NOT re-sort by risk or priority.
-   - If the source has no inherent numbering, order by priority: critical → high → medium → low.
+   - A source is "numbered" ONLY when items carry an explicit numeric prefix in the
+     original text: "API 1:", "API 2:", "Test Case 3:", "US-01:", "Req-4:", etc.
+   - When the source IS numbered: preserve that numbering order exactly.
+     Do NOT re-sort by risk or priority — traceability back to the source takes priority.
+   - When the source is NOT numbered (e.g. named sections like "UI Placement:",
+     "The List:", "Move Back:", prose paragraphs, bullet lists without numeric labels):
+     order by priority: critical → high → medium → low.
 
 3. Within the suggested group: always order by priority: critical → high → medium → low.
    Suggested tests never follow source numbering because they are not derived from a
@@ -115,14 +119,13 @@ async function readBacklogTestNames(): Promise<string[]> {
     const content = await readFile(BACKLOG_PATH, 'utf-8');
     const names: string[] = [];
     for (const line of content.split('\n')) {
-      if (!line.startsWith('|')) continue;
-      const cells = line.split('|').slice(1, -1).map(c => c.trim());
-      if (cells.length < 4) continue;
-      const [priority, testName] = cells;
-      // Skip resolved entries (marked ✅) and header/separator rows
-      if (!testName || priority === 'Priority' || /^[-: ]+$/.test(priority)) continue;
-      if (priority.includes('✅') || testName.includes('~~')) continue;
-      names.push(testName.trim());
+      // Format written by analyze_prd / analyze_coverage: "- test-name-in-kebab-case"
+      // Resolved entries are struck through: "- ~~test-name~~"
+      const m = line.match(/^- (.+)$/);
+      if (!m) continue;
+      const name = m[1].trim();
+      if (name.startsWith('~~')) continue; // resolved — skip
+      names.push(name);
     }
     return names;
   } catch {
@@ -284,18 +287,22 @@ export async function analyzePrdTool(args: {
 
   await writeFile(outputPath, header + raw.trim() + '\n', 'utf-8');
 
-  // Append to persistent gap backlog so identified gaps survive between sessions
+  // Append to persistent gap backlog so identified gaps survive between sessions.
+  // Each test_name is written as a "- name" bullet so readBacklogTestNames() can
+  // load them on the next run and exclude them from Claude's "already covered" list.
+  // Mark resolved by changing "- name" to "- ~~name~~" (strikethrough).
   const BACKLOG_PATH = join(ROOT, 'GAPS_BACKLOG.md');
-  const BACKLOG_HEADER = '# Gaps Backlog\n\nGaps identified by analyze_coverage and analyze_prd that have not yet been generated.\nDelete rows or mark ✅ when addressed.\n\n';
+  const BACKLOG_HEADER = '# Gaps Backlog\n\nGaps identified by analyze_coverage and analyze_prd that have not yet been generated.\nMark resolved with ~~strikethrough~~ or delete the line.\n\n';
   const date = new Date().toISOString().slice(0, 10);
   const sourceLabel = args.prdContent
     ? args.prdContent.slice(0, 60).replace(/\n/g, ' ').trim() + '…'
     : 'file/url input';
+  const testNames = [...raw.matchAll(/^# test_name:\s*(.+)$/gm)].map(m => m[1].trim());
   const backlogSection = [
     `## ${date} — analyze_prd — ${sourceLabel} (${testCount} suggestion${testCount === 1 ? '' : 's'})`,
     '',
     `${criticalCount} critical · ${highCount} high · ${testCount - criticalCount - highCount} medium/low`,
-    `Output: prd-tests.txt`,
+    ...testNames.map(n => `- ${n}`),
     '',
     '---',
     '',
