@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+# Cancel any in-progress run for the same branch when a new push arrives.
+# Prevents queued runs from executing against stale code.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   functional:
     name: Functional tests (Chromium)
