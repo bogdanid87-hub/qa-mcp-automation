@@ -12,21 +12,28 @@ async function parseApiResponse(response: APIResponse): Promise<any> {
   return response.json();
 }
 
-// HTTP codes that indicate a transient server/CDN issue on the demo site
-// (503 = Service Unavailable, 521/522/524 = Cloudflare origin unreachable).
-// Retrying after a short pause recovers in most cases.
+// HTTP codes that indicate a transient server/CDN issue on the demo site.
+// 302 redirect loops (site returning 302 → 302) throw an exception rather than
+// returning a status code, so those are caught in the try/catch block below.
 const TRANSIENT_CODES = new Set([502, 503, 521, 522, 524]);
 
 async function requestWithRetry(
   requestFn: () => Promise<APIResponse>,
   maxAttempts = 3,
 ): Promise<APIResponse> {
+  let lastErr: Error | undefined;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const response = await requestFn();
-    if (!TRANSIENT_CODES.has(response.status()) || attempt === maxAttempts) return response;
-    await new Promise(r => setTimeout(r, 3000 * attempt));
+    try {
+      const response = await requestFn();
+      if (!TRANSIENT_CODES.has(response.status()) || attempt === maxAttempts) return response;
+    } catch (err: any) {
+      // Catches redirect loops, connection resets, and similar thrown errors
+      lastErr = err;
+      if (attempt === maxAttempts) throw err;
+    }
+    await new Promise(r => setTimeout(r, 2000 * attempt));
   }
-  throw new Error('unreachable');
+  throw lastErr ?? new Error('unreachable');
 }
 
 // Shared test account created in beforeAll and deleted in afterAll
@@ -50,6 +57,9 @@ const existingEmail = `api_existing_${Date.now()}@example.com`;
 const existingPassword = 'Test@1234';
 
 test.describe('Auth API', () => {
+  // Allow extra time for beforeAll account setup: 5 accounts × up to 3 retries
+  // with 2s/4s backoff each = up to ~90s in the worst case on a flaky demo site.
+  test.describe.configure({ timeout: 120_000 });
 
   // Create the shared account used by verifyLogin (valid login) and getUserDetail tests
   test.beforeAll(async ({ request }) => {
