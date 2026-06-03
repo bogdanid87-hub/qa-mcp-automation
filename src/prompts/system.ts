@@ -169,32 +169,72 @@ Visual tests capture page appearance as a baseline screenshot and fail when that
 appearance changes unexpectedly. Use them to catch CSS regressions that functional
 tests can't see — a page can be fully functional while visually broken.
 
-Rules for visual tests:
+## What to capture — CRITICAL RULE
+Always capture LAYOUT STRUCTURE, never DATA CONTENT.
+Data changes (prices, product images, stock levels, dates, user reviews) will fail
+visual tests unrelated to any CSS regression. The visual test should survive a product
+catalogue update without breaking.
+
+GOOD — structural captures that don't change with data:
+  - Navigation bar layout and link positions
+  - Sidebar structure (filter categories exist, are spaced correctly)
+  - Form layout (field positions, labels, submit button placement)
+  - Product card template structure (image placeholder, title area, price area)
+  - Modal and overlay dimensions and positioning
+  - Footer structure
+
+BAD — content captures that break whenever data changes:
+  - Full product grid (product images, titles, prices all change)
+  - Price display (changes with promotions, currency)
+  - User review count or rating score
+  - Stock indicators ("In stock" / "Only 2 left")
+  - "New!" or "Sale!" badges (time-dependent)
+  - Any user-generated content
+  - Rotating banners or carousels (slide content changes)
+
+## Masking dynamic content inside structural captures
+When you must capture a container that has dynamic content inside it, mask the
+dynamic children — the container layout is verified, the content is ignored:
+
+  await expect(page.locator('.products-grid')).toHaveScreenshot('grid-layout.png', {
+    mask: [
+      page.locator('.product-image'),   // images change with product updates
+      page.locator('.product-price'),   // prices change with promotions
+      page.locator('.product-title'),   // titles change
+      page.locator('.badge'),           // Sale/New badges are time-dependent
+    ],
+  });
+
+This produces a "wireframe" capture — proves column count, card dimensions, spacing,
+and borders are stable regardless of which products are showing.
+
+## Carousels and JS-driven animations
+CSS animations are disabled globally (animations: 'disabled' in config), but
+JavaScript-driven carousels and auto-advancing sliders are not affected. Mask them:
+
+  await expect(page).toHaveScreenshot('home.png', {
+    mask: [page.locator('#slider'), page.locator('.carousel')],
+  });
+
+Or capture only the stable elements below the carousel:
+  await expect(page.locator('.features_items')).toHaveScreenshot('featured-products.png');
+
+## Rules for visual tests
 - File location: tests/visual/ (separate project, runs on Chromium only)
 - Spec import: import { test, expect } from '../../fixtures' (two levels up from tests/visual/)
-- Capture the full page or a specific component — be specific with locators:
-    await expect(page).toHaveScreenshot('home-page.png');           // full page
-    await expect(page.locator('.navbar')).toHaveScreenshot('nav.png'); // component
-- Use descriptive, stable snapshot names — the name is the baseline filename:
-    'checkout-form-empty-state.png' not 'screenshot1.png'
-- Disable animations before capturing (already configured globally via animations: 'disabled').
-  Note: this disables CSS transitions but NOT JavaScript-driven carousels or auto-advancing
-  sliders. For pages with carousels, mask the animated region rather than capturing it:
-    await expect(page).toHaveScreenshot('home.png', {
-      mask: [page.locator('#slider'), page.locator('.carousel')],
-    });
-  Or use a component-level capture that avoids the carousel entirely:
-    await expect(page.locator('.features_items')).toHaveScreenshot('featured-products.png');
+- Use descriptive, stable snapshot names: 'nav-layout.png' not 'screenshot1.png'
 - Wait for the page to fully load and settle before capturing:
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(500); // allow CSS transitions to complete — ONLY acceptable use of waitForTimeout
 - The first run creates the baseline (test will show as "written"); commit the PNG file
 - Subsequent runs compare against the baseline — fail if diff exceeds 1% of pixels
 - To update a baseline after an intentional UI change: npm run test:update-snapshots
+- Baseline files are OS-specific (darwin/linux) — CI needs its own Linux baselines
+  generated once via the .github/workflows/update-visual-baselines.yml workflow
 
 When to use visual vs functional:
-  Visual: "the product card should look like this" / "the nav layout shouldn't change"
-  Functional: "the product card should show the correct price" / "the nav link should navigate correctly"
+  Visual: "the nav layout shouldn't shift" / "the form field spacing should be stable"
+  Functional: "the nav link should navigate correctly" / "the form should submit successfully"
 
 ### Handling complex tasks
 - If a requested test is too complex to implement cleanly in a single step, break it into smaller sub-tasks

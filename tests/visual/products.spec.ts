@@ -1,56 +1,49 @@
 import { test, expect } from '../../fixtures';
 
-test.describe('Products Page Visual', () => {
-  // [Visual Products Page Visual #3]
-  test('should match the products page layout baseline', async ({ page }) => {
-    // Navigate to the products page and wait for it to fully settle
+/**
+ * Visual regression tests — products page static elements.
+ *
+ * These tests capture LAYOUT STRUCTURE of elements whose content
+ * does not change with catalogue data. They will pass regardless
+ * of which products are in the catalogue, their prices, or their images.
+ *
+ * For visual tests on data-driven areas (product grid, search results),
+ * use page.route() to mock the API response — see the skeleton's
+ * tests/visual/mocked-content.spec.ts.example for the pattern.
+ */
+
+test.describe('Products Page — Static Layout', () => {
+  // [Visual Products Page — Static Layout #1]
+  test('should match the navigation bar layout', async ({ page }) => {
     await page.goto('/products', { waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('domcontentloaded');
-
-    // Wait for the product grid and sidebar to be visible before capturing
-    await page.locator('.features_items').waitFor({ state: 'visible' });
-    await page.locator('.left-sidebar').waitFor({ state: 'visible' });
-
-    // Allow CSS transitions to complete
+    await page.locator('#header .navbar-nav').waitFor({ state: 'visible' });
     await page.waitForTimeout(500);
 
-    // Capture the full page layout as a baseline — mask the sales banner image
-    // which may change independently of layout, and the subscription alert
-    await expect(page).toHaveScreenshot('products-page-full.png', {
-      fullPage: true,
-      mask: [
-        page.locator('img[src="/static/images/shop/sale.jpg"]'),
-        page.locator('.alert-success.alert'),
-      ],
-    });
+    // Nav links are fixed — this catches font, spacing, or order changes.
+    await expect(page.locator('#header')).toHaveScreenshot('products-header-nav.png');
   });
 
-  // [Visual Products Page Visual #1]
-  test('should match the products left sidebar layout baseline', async ({ page }) => {
-    // Navigate to the products page
+  // [Visual Products Page — Static Layout #2]
+  test('should match the left sidebar structure', async ({ page }) => {
     await page.goto('/products', { waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('domcontentloaded');
-
-    // Wait for the sidebar to be visible
     await page.locator('.left-sidebar').waitFor({ state: 'visible' });
     await page.waitForTimeout(500);
 
-    // Capture only the left sidebar (category and brand filters)
-    await expect(page.locator('.left-sidebar')).toHaveScreenshot('products-left-sidebar.png');
+    // Category and brand taxonomy is fixed — sidebar structure doesn't
+    // change with catalogue updates.
+    await expect(page.locator('.left-sidebar')).toHaveScreenshot('products-sidebar.png');
   });
 
-  // [Visual Products Page Visual #2]
-  test('should match the products grid layout baseline', async ({ page }) => {
-    // Navigate to the products page
+  // [Visual Products Page — Static Layout #3]
+  test('should match the search bar layout', async ({ page }) => {
     await page.goto('/products', { waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('domcontentloaded');
-
-    // Wait for the product grid to be populated
-    await page.locator('.features_items').waitFor({ state: 'visible' });
-    await page.locator('.features_items .product-image-wrapper').first().waitFor({ state: 'visible' });
+    await page.locator('#search_product').waitFor({ state: 'visible' });
     await page.waitForTimeout(500);
 
-    // Capture the featured product cards grid
-    await expect(page.locator('.features_items')).toHaveScreenshot('products-grid.png');
+    // The search form (input + button) is structural — catches layout regressions
+    // independently of what the search results contain.
+    await expect(
+      page.locator('#search_product').locator('..').locator('..'),
+    ).toHaveScreenshot('products-search-bar.png');
   });
 });

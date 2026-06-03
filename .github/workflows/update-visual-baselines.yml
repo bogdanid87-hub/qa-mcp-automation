@@ -1,0 +1,67 @@
+name: Update visual regression baselines (Linux)
+
+# Run this workflow ONCE after first setting up the visual test suite,
+# and again whenever you make intentional UI changes and need to update
+# the Linux baseline screenshots.
+#
+# It runs the visual tests with --update-snapshots on Ubuntu (the same
+# OS GitHub Actions uses for CI), commits the resulting -linux.png files,
+# and pushes them. Subsequent CI runs then compare against these baselines.
+#
+# Usage:
+#   Go to Actions → Update visual regression baselines → Run workflow
+#   Select the branch you want to update baselines for.
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to update baselines on'
+        required: false
+        default: 'main'
+
+jobs:
+  update-baselines:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
+          # Use a PAT or GitHub App token if you need to push to a protected branch
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run global setup (save guest auth state)
+        # Saves browser storage state — no Claude API needed.
+        run: npx playwright test --project=setup
+
+      - name: Generate Linux visual baselines
+        # Runs toHaveScreenshot with --update-snapshots on Ubuntu/Linux.
+        # Produces *-linux.png files that CI compares against on every push.
+        # No Claude API needed — this just runs Playwright against the live site.
+        run: npm run test:update-snapshots
+
+      - name: Commit and push updated baselines
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add tests/visual/**/*.png
+          if git diff --staged --quiet; then
+            echo "No baseline changes to commit."
+          else
+            git commit -m "chore: update visual regression baselines (Linux/Ubuntu)"
+            git push
+          fi
