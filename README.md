@@ -56,6 +56,8 @@ When `investigate_and_fix` classifies a failure as an app bug, it writes `/* ⚠
 ### PRD risk analysis with multi-format input
 `analyze_prd` accepts text, Markdown, PDFs (passed natively to the Claude API — no third-party parser), and images (wireframes, mockups via vision). It classifies features by risk tier (critical → revenue impact, high → trust/data, medium → conversion, low → content), generates test suggestions in a structured batch format, and filters against existing `TESTS_UI.md` coverage so the output is a genuine gap list. The `--tier` and `--focus` flags scope the output to a sprint without re-running the full analysis.
 
+See `examples/` for two worked PRD analyses — a Save for Later cart feature and a Dynamic Cart Shipping Estimator — and a coverage gap analysis for the subscription spec. The examples show the tool identifying cross-feature risks not explicitly stated in the PRD, correctly handling out-of-scope constraints, and flagging test asymmetries.
+
 ### Test registry and reconciliation
 
 > **Format note:** Registries are intentionally stored as human-readable Markdown files (`TESTS_UI.md`, `TESTS_API.md`, `TESTS_E2E.md`). This works well at the scale of a typical automation project (hundreds of tests) and makes test status immediately visible without tooling. At very large scale (thousands of tests), SQLite would be the correct storage choice — indexed lookups, atomic writes, no full-file rewrites on every update — with Markdown generated on demand as a report. This portfolio project uses Markdown because human readability and zero-dependency simplicity are the right trade-offs here.
@@ -270,6 +272,13 @@ qa-mcp-automation/
 │   └── visual/                       ← visual regression tests (Chromium only)
 │       ├── products.spec.ts          ← nav bar, sidebar, search bar baselines
 │       └── cart.spec.ts              ← cart table structure with content masked
+│
+├── examples/                         ← sample tool outputs for portfolio reference
+│   ├── saveForLater.md               ← PRD input: Save for Later cart feature
+│   ├── saveForLater-analysis.txt     ← analyze_prd output: 5 critical / 2 high / 5 medium-low
+│   ├── dynamicCart.md                ← PRD input: Dynamic Cart Shipping Estimator
+│   ├── dynamicCart-analysis.txt      ← analyze_prd output: 8 critical / 1 high / 5 medium-low
+│   └── subscription-coverage-analysis.md  ← analyze_coverage output for subscription spec
 │
 ├── CLAUDE.md                         ← auto-loaded by Claude Code — project context
 ├── TOOLS.md                          ← quick tool index
