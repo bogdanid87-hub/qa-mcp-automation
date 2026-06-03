@@ -1,5 +1,7 @@
 # QA MCP Automation
 
+[![CI](https://github.com/bogdanid87-hub/qa-mcp-automation/actions/workflows/ci.yml/badge.svg)](https://github.com/bogdanid87-hub/qa-mcp-automation/actions/workflows/ci.yml)
+
 An AI-powered Playwright test generator built as a **Model Context Protocol (MCP) server**.
 
 Describe a test scenario in plain English. The server uses **Claude Sonnet 4.6** to inspect the live page, write the Playwright TypeScript code, and save it to disk — following every project convention automatically.
@@ -12,6 +14,15 @@ Describe a test scenario in plain English. The server uses **Claude Sonnet 4.6**
 
 ### MCP server architecture
 A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes eleven AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
+
+### Server-side quality engineering
+The MCP server itself is held to the same quality bar as the tests it generates:
+
+- **Unit tests (Vitest, 98 tests)** — the server's parser logic is tested with static fixtures, no live site or API keys required. Covered: `extractJson` (handles markdown fences, preamble prose, malformed responses), registry parsers (`parseTestCases`, `parseBrokenTests`, `buildContent`), test-output parsers (`parsePassingTests`, `parseFailingTestsFromOutput`), CLI directive parsers (`parseFileMetadata`, `parseMultipleSections`), coverage list builder, registry section extractor. Writing these tests surfaced a real bug: `buildContent` wasn't sanitising pipe characters in passing test names, which would silently corrupt the markdown registry table.
+
+- **MCP spec compliance validator** (`scripts/validate-mcp.ts`) — a two-pass CI check that runs without a live server or transport. Pass 1 verifies each tool module exports its handler function. Pass 2 checks every tool against the MCP protocol requirements: name is snake_case, description is non-empty, every `inputSchema` field carries a `.describe()` annotation (required for the AI client to understand each parameter), and `z.toJSONSchema()` round-trips cleanly. Tool schemas live in `src/tool-manifest.ts` as a single source of truth; the validator cross-checks the manifest against the handler list to catch drift when a tool is added to one but not the other.
+
+- **ESLint (typescript-eslint/recommended)** — scoped to `src/` and `scripts/`. The initial dry run surfaced genuine issues: dead functions (`extractWords`, `stem`) left from an older similarity-check approach, unused imports across multiple modules, and a `let` where `const` was correct. Zero errors in CI; intentional `any` casts at Claude API boundaries are configured as warnings.
 
 ### Dual-model routing with local LLM fallback
 The project uses two AI models for different tasks based on what each does best and what it costs:
