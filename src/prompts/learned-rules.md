@@ -126,4 +126,8 @@ await expect(page.locator('.the-missing-selector')).toBeVisible({ timeout: 2000 
 // Continue with full flow verification below — runs only when bug is fixed
 ```
 This fails in 2 s as an assertion error (caught by `test.fail()`), while preserving the full verification code for when the site fixes the bug. When the bug is fixed: the assertion passes, the full flow runs, and `test.fail()` detects the unexpected pass — signalling to remove the marker.
+
+## Rule 030 — Confirm nav/counter elements exist before testing them
+**Problem class**: Generating tests for nav badge or counter elements that may not exist on the specific site under test.
+**Rule**: Before writing assertions against nav counters, cart badges, or notification indicators, use inspect_page to confirm the element exists in the live DOM. Standard e-commerce badge patterns don't apply universally — always verify with real DOM output first.
 <!-- rules-end -->

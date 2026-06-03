@@ -133,4 +133,81 @@ test.describe('Cart', () => {
     const rowsAfter = await cartPage.cartRows.count();
     expect(rowsAfter).toBe(0);
   });
+
+  // [UI Cart #4]
+  test('adding same product twice increments quantity', async ({ productsPage, cartPage }) => {
+    // Navigate to the products page
+    await productsPage.goto();
+    await productsPage.verifyLoaded();
+
+    // Hover over the first product and add it to the cart, then continue shopping
+    await productsPage.hoverAndAddToCart(0);
+    await productsPage.continueShopping();
+
+    // Hover over the same first product again and add it a second time, then go to cart
+    await productsPage.hoverAndAddToCart(0);
+    await productsPage.clickViewCart();
+
+    // Verify the cart has exactly one row — the site merges duplicates
+    await cartPage.verifyLoaded();
+    const rowCount = await cartPage.getRowCount();
+    expect(rowCount).toBe(1);
+
+    // Verify that the single row shows a quantity of 2
+    const rows = await cartPage.getCartRows();
+    const qty = parseInt(rows[0].quantity, 10);
+    expect(qty).toBe(2);
+  });
+
+  // [UI Cart #5]
+  test('should show checkout modal with register/login option when guest clicks Proceed To Checkout', async ({ productsPage, cartPage, page }) => {
+    // Navigate to the products page and add the first product to the cart
+    await productsPage.goto();
+    await productsPage.verifyLoaded();
+    await productsPage.hoverAndAddToCart(0);
+
+    // Navigate to the cart via the modal View Cart link
+    await productsPage.clickViewCart();
+
+    // Verify the cart table is visible and contains at least one product
+    await cartPage.verifyLoaded();
+    const rowCount = await cartPage.getRowCount();
+    expect(rowCount).toBeGreaterThanOrEqual(1);
+
+    // Click Proceed To Checkout as a guest user
+    await cartPage.proceedToCheckoutBtn.click();
+
+    // Verify the checkout modal appears with the Register / Login option
+    await expect(cartPage.checkoutModal).toBeVisible({ timeout: 10000 });
+    await expect(cartPage.registerLoginLink).toBeVisible();
+  });
+
+  // [UI Cart #6]
+  test('should add product from detail page and verify it appears in cart via modal View Cart link', async ({ page, cartPage }) => {
+    // Navigate directly to the product detail page for product ID 1
+    await page.goto('/product_details/1', { waitUntil: 'domcontentloaded' });
+
+    // Wait for the product information section to be visible before interacting
+    await page.locator('.product-information').waitFor({ state: 'visible' });
+
+    // Click the Add to cart button on the product detail page
+    const addToCartBtn = page.locator('.product-information .btn.cart, .product-information button.btn').first();
+    await addToCartBtn.click();
+
+    // Wait for the cart modal to appear after clicking Add to cart
+    await page.locator('#cartModal').waitFor({ state: 'visible' });
+
+    // Click the View Cart link inside the modal to navigate to the cart page
+    await page.locator('p.text-center a[href="/view_cart"]').click();
+    await page.waitForLoadState('domcontentloaded');
+
+    // Verify the cart page loaded and the product is present in the cart table
+    await expect(page).toHaveURL(/\/view_cart/);
+    await expect(page.locator('#cart_info_table')).toBeVisible();
+    await page.locator('#cart_info_table tbody tr').first().waitFor({ state: 'visible' });
+
+    // Assert at least one product row is present in the cart
+    const rowCount = await cartPage.getRowCount();
+    expect(rowCount).toBeGreaterThanOrEqual(1);
+  });
 });

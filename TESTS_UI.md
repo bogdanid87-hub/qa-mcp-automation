@@ -1,6 +1,6 @@
 # Test Cases
 
-**Total: 7 tests**
+**Total: 10 tests**
 
 ---
 
@@ -34,6 +34,9 @@
 | 1 | should add two products to cart and verify prices, quantity and total |
 | 2 | should show empty cart when no products have been added |
 | 3 | should remove a product from the cart and update the cart |
+| 4 | adding same product twice increments quantity |
+| 5 | should show checkout modal with register/login option when guest clicks Proceed To Checkout |
+| 6 | should add product from detail page and verify it appears in cart via modal View Cart link |
 
 ---
 

@@ -255,17 +255,26 @@ async function runBatch(
 
     console.log(`⏳ Generating...\n`);
     const before = await snapshotFiles();
-    const result = await generateTestTool({
-      description: section.description,
-      test_name: section.testName,
-      page_paths: section.pagePaths,
-      spec_file: section.specFile,
-    });
+    let result: Awaited<ReturnType<typeof generateTestTool>>;
+    try {
+      result = await generateTestTool({
+        description: section.description,
+        test_name: section.testName,
+        page_paths: section.pagePaths,
+        spec_file: section.specFile,
+      });
+    } catch (err) {
+      const msg = (err as Error).message ?? String(err);
+      console.error(`\n❌ Generation failed: ${msg}\n`);
+      summary.push({ label, status: `❌ error: ${msg}` });
+      continue;
+    }
     console.log(result.content[0]?.text ?? '');
     const { created, edited } = await diffFiles(before);
     printDiff(created, edited);
 
-    const passing = result._meta?.passing !== false;
+    // _meta absent means the tool returned an early-exit error — treat as failure
+    const passing = result._meta?.passing === true;
     summary.push({ label, status: passing ? '✅' : '❌ failed' });
   }
 
@@ -565,7 +574,7 @@ async function main(): Promise<void> {
     let lastFailureOutput: string = result._meta.lastFailureOutput ?? '';
     let stillFailing = true;
     let fixAttempts = 1; // initial auto-fix in generate already counted as attempt 1
-    const maxFixAttempts = args.maxAttempts ?? 5;
+    const maxFixAttempts = args.maxAttempts ?? 2;
 
     while (stillFailing) {
       const budgetBar = '─'.repeat(48);
