@@ -13,6 +13,7 @@ See [TOOLS.md](TOOLS.md) for a quick index and [docs/](docs/) for per-tool guide
 
 - **Ask before updating `CLAUDE.md`** — notify the user first and wait for confirmation
 - **Never commit or push** without the user explicitly asking for it
+- **Never commit changes to test files without running them locally first** — run the affected spec with `npx playwright test --project=chromium <spec>` and confirm it passes before staging. This applies to any edit to `tests/`, `pages/`, `fixtures/`, and `src/prompts/`. No exceptions.
 - **Use PRs for all changes to `qa-mcp-automation`** — never push directly to `main`. Work on a feature branch, commit there, then create a PR with `gh pr create`. The PR description should summarise what changed and why. Only push to main on the skeleton (`mcp-qa-skeleton`).
 - **Never run token-consuming operations** (Claude API calls, Playwright test runs, Ollama inference, `npm run fix`, `npm run generate`, `npm run analyze_prd`, etc.) without first notifying the user and receiving permission
 - **Never fix test files directly** without first telling the user the fix is happening outside the tool flow — explain what is being changed and why before touching the file
