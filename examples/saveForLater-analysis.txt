@@ -1,0 +1,206 @@
+# ─────────────────────────────────────────────────────────────────────────
+# PRD Test Analysis — 2026-06-03
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Review: keep the tests you want, delete the ones you don't.
+# Run:    npm run generate -- --file prd-tests.txt
+#
+# risk levels: critical | high | medium | low
+# ─────────────────────────────────────────────────────────────────────────
+
+# test_name: save-for-later-button-visible-next-to-remove-button
+# spec_file: tests/ui/save-for-later.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: medium
+# priority: medium
+# reason: Feature discoverability — the "Save for Later" button must render in the correct position next to each item's "Remove" button for the feature to be usable at all.
+
+1. Add at least one product to the cart (via product detail page).
+2. Navigate to /view_cart.
+3. For each cart row, assert that a "Save for Later" button is visible.
+4. Assert that the "Save for Later" button is positioned adjacent to the "Remove" button within the same row (e.g. both present inside the same table cell or action container).
+
+---
+
+# test_name: saved-for-later-section-renders-below-cart-summary
+# spec_file: tests/ui/save-for-later.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: medium
+# priority: medium
+# reason: Feature discoverability — the "Saved for Later" section must appear directly below the active cart summary; if it is absent or misplaced, users cannot access saved items.
+
+1. Add at least one product to the cart (via product detail page).
+2. Navigate to /view_cart.
+3. Assert that a "Saved for Later" section element is present on the page.
+4. Assert that the "Saved for Later" section is positioned below the active cart summary block (verify DOM order or visual position).
+5. When no items have been saved yet, assert that the section renders in an empty/placeholder state rather than being hidden entirely.
+
+---
+
+# test_name: move-item-to-saved-for-later-removes-from-cart
+# spec_file: tests/ui/save-for-later.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: critical
+# priority: critical
+# reason: Moving an item out of the active cart directly changes what the user would be charged at checkout; a failure here could cause revenue loss or overcharging.
+
+1. Add two distinct products to the cart via their product detail pages.
+2. Navigate to /view_cart.
+3. Record the initial cart total displayed on the page.
+4. Click the "Save for Later" button on the first product's row.
+5. Assert that the first product's row is no longer present in the active cart table.
+6. Assert that the cart total updates to reflect only the remaining product (i.e. the saved item's price is subtracted from the total).
+7. Assert that the cart now contains exactly one item row.
+
+---
+
+# test_name: saved-item-appears-in-saved-for-later-section
+# spec_file: tests/ui/save-for-later.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: high
+# priority: high
+# reason: If the saved item silently disappears after being moved, the user loses data they intended to keep — eroding trust and causing item loss equivalent to silent deletion.
+
+1. Add a product to the cart via its product detail page; note its name and price.
+2. Navigate to /view_cart.
+3. Click "Save for Later" on that product's row.
+4. Assert that the product (matched by name) appears as an entry in the "Saved for Later" section below the cart summary.
+5. Assert that the product's name and price are displayed correctly in the saved section.
+
+---
+
+# test_name: move-to-cart-button-visible-in-saved-section
+# spec_file: tests/ui/save-for-later.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: medium
+# priority: medium
+# reason: The "Move to Cart" button must be discoverable within the Saved section; if it is absent, users cannot restore items and the feature becomes a one-way deletion.
+
+1. Add a product to the cart via its product detail page.
+2. Navigate to /view_cart and click "Save for Later" to move the item to the saved section.
+3. Locate the product's entry in the "Saved for Later" section.
+4. Assert that a "Move to Cart" button is visible within that entry.
+
+---
+
+# test_name: move-to-cart-restores-item-to-active-cart
+# spec_file: tests/ui/save-for-later.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: critical
+# priority: critical
+# reason: Restoring a saved item to the active cart changes what the user will be charged at checkout; an incorrect total after restore is a direct revenue/overcharge risk.
+
+1. Add two products to the cart via their product detail pages.
+2. Navigate to /view_cart; record the full cart total.
+3. Click "Save for Later" on one product; note that item's name and price.
+4. Confirm the cart total decreased by that item's price.
+5. In the "Saved for Later" section, click the "Move to Cart" button for that item.
+6. Assert that the item's row reappears in the active cart table with the correct name, quantity, and price.
+7. Assert that the "Saved for Later" section no longer contains that item.
+8. Assert that the cart total returns to the original full amount (within expected rounding).
+
+---
+
+# test_name: price-drop-badge-displayed-on-saved-item
+# spec_file: tests/ui/save-for-later.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: medium
+# priority: medium
+# reason: The visual badge for price drops on saved items is a conversion-driving signal; if it does not render when price changes occur, users miss a purchase prompt.
+
+1. Add a product to the cart and move it to the "Saved for Later" section.
+2. Simulate or trigger a price reduction on that product (via API or test data setup).
+3. Reload /view_cart.
+4. Assert that the saved item's entry displays a visual badge indicating the price drop (e.g. a "Price dropped!" label or equivalent indicator).
+5. Assert that the updated (lower) price is shown alongside the badge.
+
+---
+
+# test_name: low-stock-badge-displayed-on-saved-item
+# spec_file: tests/ui/save-for-later.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: medium
+# priority: medium
+# reason: The visual badge for low stock on saved items is a conversion urgency signal; failure to display it reduces purchase likelihood without blocking checkout.
+
+1. Add a product to the cart and move it to the "Saved for Later" section.
+2. Simulate or trigger a low-stock state on that product (via API or test data setup).
+3. Reload /view_cart.
+4. Assert that the saved item's entry displays a visual badge indicating low stock (e.g. a "Low stock!" label or equivalent indicator).
+5. Assert the badge is visually distinct from the normal saved-item state.
+
+---
+
+# test_name: saved-for-later-list-persists-across-sessions
+# spec_file: tests/ui/save-for-later.spec.ts
+# page_paths: /login, /view_cart
+# source: suggested
+# risk: high
+# priority: high
+# reason: Silent loss of a user's saved list across sessions would erode trust and constitutes data corruption of a user-created list — matching the high-risk persistence pattern in the knowledge base.
+
+1. Log in with a valid registered account.
+2. Add a product to the cart via its product detail page.
+3. Navigate to /view_cart and click "Save for Later" on that product.
+4. Confirm the item appears in the "Saved for Later" section with correct name and price.
+5. Log out, then log back in with the same credentials.
+6. Navigate to /view_cart.
+7. Assert that the "Saved for Later" section still contains the previously saved item with the correct name and price.
+
+---
+
+# test_name: cart-total-is-zero-when-all-items-moved-to-saved
+# spec_file: tests/ui/save-for-later.spec.ts
+# page_paths: /view_cart
+# source: suggested
+# risk: critical
+# priority: critical
+# reason: If the cart total does not correctly reach zero (or show an empty cart state) when every item is saved for later, a user could be shown an incorrect amount they would be charged.
+
+1. Add exactly one product to the cart via its product detail page.
+2. Navigate to /view_cart.
+3. Click "Save for Later" on that product.
+4. Assert that the active cart table contains no item rows.
+5. Assert that the cart total displayed is £0.00 (or that an empty cart message is shown rather than a stale total).
+6. Assert the item is present in the "Saved for Later" section.
+
+---
+
+# test_name: saving-item-does-not-affect-other-cart-items
+# spec_file: tests/ui/save-for-later.spec.ts
+# page_paths: /view_cart
+# source: suggested
+# risk: critical
+# priority: critical
+# reason: Corrupting the price or quantity of remaining cart items when one is saved would cause the user to be charged the wrong amount — a direct financial error.
+
+1. Add three distinct products to the cart; record each product's name, unit price, and quantity.
+2. Navigate to /view_cart; record the full cart total.
+3. Click "Save for Later" on the second product only.
+4. Assert that the first and third products remain in the cart with their original names, prices, and quantities unchanged.
+5. Assert that the cart total equals the sum of only the first and third products' line totals.
+
+---
+
+# test_name: move-to-cart-when-cart-already-contains-same-item
+# spec_file: tests/ui/save-for-later.spec.ts
+# page_paths: /view_cart
+# source: suggested
+# risk: critical
+# priority: critical
+# reason: Restoring a saved item that already exists in the active cart must correctly merge or handle quantity — an incorrect merge would charge the user the wrong amount at checkout.
+
+1. Add a product to the cart twice (or add it once, save it, then add it again from the product detail page so the same product exists in both the cart and saved list).
+2. Navigate to /view_cart; note the current cart quantity and total for that product.
+3. Click "Move to Cart" on the saved instance of that product.
+4. Assert that the active cart reflects the combined quantity (e.g. 2) rather than duplicating the row or silently discarding one instance.
+5. Assert that the cart total correctly reflects the merged quantity at the correct unit price.
+6. Assert that the "Saved for Later" section no longer contains that item.
