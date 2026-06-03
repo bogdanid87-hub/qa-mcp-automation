@@ -39,9 +39,35 @@ Grouped by feature area. Each section includes:
 **Notes:** [one-line pattern or warning for future analysis]
 ```
 
-The file is auto-generated but human-editable. Re-running `generate_app_knowledge`
-overwrites it, so edit with care — add permanent notes directly to the file between
-regenerations.
+The file is auto-generated and **fully overwritten on every run**. Do not edit it
+directly — use the sidecar file instead (see below).
+
+---
+
+## Persistent manual notes: `APP_KNOWLEDGE_MANUAL.md`
+
+Create this file in the project root to add notes that survive every regeneration.
+The tool reads it after synthesis and appends it verbatim at the end of
+`APP_KNOWLEDGE.md`, separated by a `---` rule. The sidecar is **never touched** by
+the tool — only read.
+
+Use it for context that doesn't fit in a registry or backlog entry:
+- Architectural quirks ("the cart API is stateless — each test must add items fresh")
+- Cross-feature risk patterns ("checkout failures often originate in the auth flow")
+- Testing constraints ("the payment sandbox rejects amounts > £999 in headless browsers")
+
+```markdown
+# Manual notes
+
+## Checkout
+- Payment sandbox rejects amounts > £999 in headless — cap test amounts at £50.
+- Order confirmation email is async; allow up to 5s before asserting it was sent.
+```
+
+When the tool runs and finds `APP_KNOWLEDGE_MANUAL.md`, the output summary will show:
+```
+Manual notes: APP_KNOWLEDGE_MANUAL.md appended
+```
 
 ---
 

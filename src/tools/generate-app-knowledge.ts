@@ -12,6 +12,7 @@ import {
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
 export const APP_KNOWLEDGE_PATH = join(ROOT, 'APP_KNOWLEDGE.md');
+export const APP_KNOWLEDGE_MANUAL_PATH = join(ROOT, 'APP_KNOWLEDGE_MANUAL.md');
 const GAPS_BACKLOG_PATH = join(ROOT, 'GAPS_BACKLOG.md');
 const COVERAGE_REPORT_PATH = join(ROOT, 'coverage-report.md');
 
@@ -130,12 +131,22 @@ export async function generateAppKnowledgeTool(args: {
     messages: [{ role: 'user', content: SYNTHESIS_PROMPT(ctx) }],
   });
 
-  const content = message.content
+  const synthesised = message.content
     .filter(b => b.type === 'text')
     .map(b => (b as { type: 'text'; text: string }).text)
     .join('');
 
-  await writeFile(outputPath, content + '\n', 'utf-8');
+  // Append manual notes sidecar if it exists — never overwritten by this tool
+  let manualContent = '';
+  try {
+    manualContent = await readFile(APP_KNOWLEDGE_MANUAL_PATH, 'utf-8');
+  } catch { /* no sidecar yet */ }
+
+  const finalContent = manualContent.trim()
+    ? synthesised + '\n\n---\n\n' + manualContent.trim() + '\n'
+    : synthesised + '\n';
+
+  await writeFile(outputPath, finalContent, 'utf-8');
 
   const bugCount = ctx.appBugs === '(none recorded)' ? 0
     : ctx.appBugs.split('\n- [').length;
@@ -148,6 +159,7 @@ export async function generateAppKnowledgeTool(args: {
       text: [
         `✅ APP_KNOWLEDGE.md generated`,
         `   Sources: ${bugCount} app bug(s), ${gapCount} open gap(s), coverage report`,
+        ...(manualContent.trim() ? [`   Manual notes: APP_KNOWLEDGE_MANUAL.md appended`] : [`   Tip: add permanent notes to APP_KNOWLEDGE_MANUAL.md — never overwritten`]),
         `   Written to: ${outputPath}`,
         ``,
         `Feed into analysis:`,
