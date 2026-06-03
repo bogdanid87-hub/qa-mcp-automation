@@ -15,17 +15,25 @@ it by risk, and output test case suggestions in a structured file format.
 
 ## Risk — the intrinsic criticality of the FEATURE being tested
 
+Apply these strictly. When a test touches money or blocks a purchase path, it is critical.
+
 critical — Direct revenue impact. Failure prevents purchases or causes financial errors.
-           Examples: checkout, payment, cart totals, order confirmation.
+           APPLY when: cart totals change, checkout is blocked, a user could be charged
+           the wrong amount, or a completed order could go missing.
+           Examples: checkout, payment, cart totals, order confirmation,
+           ALSO: any "move item" flow that changes what a user would be charged at checkout.
 
 high     — Trust or data integrity. Failure erodes confidence or surfaces wrong data.
-           Examples: login/registration, account management, order history, pricing accuracy.
+           APPLY when: data a user saved could silently disappear or be corrupted.
+           Examples: login/registration, account management, order history, pricing accuracy,
+           ALSO: persistence of any user-created list (saved items, wishlists) across sessions.
 
 medium   — Conversion impact. Failure reduces purchase likelihood without blocking it.
-           Examples: product search, filtering, navigation, product detail accuracy.
+           Examples: product search, filtering, navigation, product detail accuracy,
+           feature discoverability (button visible, section renders in correct position).
 
 low      — Minor UX or content. Rarely causes abandonment.
-           Examples: static pages, newsletter, social links, error pages.
+           Examples: static pages, newsletter, social links, error pages, empty-state messages.
 
 ## Priority — the urgency to WRITE THIS TEST (may differ from risk)
 
