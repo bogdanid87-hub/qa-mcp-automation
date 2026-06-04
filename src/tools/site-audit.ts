@@ -519,7 +519,7 @@ ${existingContent}
    - invalid: string[] — 3-4 strings guaranteed to return ZERO results (nonsense like 'xyznotfound123', 'zzzzaaa', '!@#$%')
    - partial: string[] — 2-3 partial words (first 2-3 chars of product names) that return multiple results
 5. TEST_USER — registration/checkout test fixture:
-   - email: () => \`qa_\${Date.now()}@testmail.com\`  ← function, unique per call
+   - email: () => \`qa_\${Date.now()}_\${Math.random().toString(36).slice(2, 7)}@testmail.com\`  ← timestamp + random suffix, safe for parallel test runs
    - password, name, firstName, lastName, address, city, state, country, mobile, zipCode
    - dob: { day: '15', month: 'January', year: '1990' }
    - Use realistic but obviously fake values. Do NOT use "as const" (email is a function).

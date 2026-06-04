@@ -70,7 +70,7 @@ export const SEARCH = {
  */
 export const TEST_USER = {
   /** Returns a unique e-mail address on every invocation. */
-  email:     () => `qa_${Date.now()}@testmail.com`,
+  email:     () => `qa_${Date.now()}_${Math.random().toString(36).slice(2, 7)}@testmail.com`,
   password:  "Test@1234!",
   name:      "QA Tester",
   firstName: "QA",
