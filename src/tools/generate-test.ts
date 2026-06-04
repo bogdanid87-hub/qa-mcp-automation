@@ -158,6 +158,12 @@ export async function generateTestTool(args: {
   page_paths?: string[];
   spec_file?: string;
   proposalsOnly?: boolean;
+  /**
+   * When true: generate the test and POM code but do NOT write any files or run the test.
+   * Returns a preview showing the target spec file path and proposed code.
+   * Call again without dry_run (or dry_run: false) to write and run.
+   */
+  dry_run?: boolean;
   /** Override auto-detection. 'api' forces API path; 'visual' forces visual regression path; 'ui'/'e2e' forces browser path. */
   type?: 'auto' | 'ui' | 'e2e' | 'api' | 'visual';
 }): Promise<{ content: { type: 'text'; text: string }[]; _meta?: { specFile?: string; lastFailureOutput?: string; passing: boolean } }> {
@@ -445,7 +451,15 @@ Respond with the standard JSON:
   }
 
   // ── Call 2 (or only call): spec ───────────────────────────────────────────
-  const specDescription = description + proposalsHint + (doPomSpecSplit ? SPEC_ONLY_HINT : '');
+  // When a POM already has methods (doPomSpecSplit = false), the single call
+  // may still need to add new methods. Tell Claude explicitly.
+  const pomUpdateHint = !doPomSpecSplit ? `
+
+IMPORTANT — if this test needs POM methods that do not yet exist in the pages/ files shown \
+above, include the updated POM file in your response with the new methods added. \
+Never remove existing methods — only append new ones.` : '';
+
+  const specDescription = description + proposalsHint + pomUpdateHint + (doPomSpecSplit ? SPEC_ONLY_HINT : '');
   const userBlocks = buildUserBlocks({ description: specDescription, existingContext, domContext });
 
   let raw: string;
@@ -475,8 +489,46 @@ Respond with the standard JSON:
     };
   }
 
+  // ── Dry-run gate: show proposed output without writing or running ─────────
+  if (args.dry_run) {
+    const specFile = (parsed.files ?? []).find(
+      f => f.path.startsWith('tests/') && f.path.endsWith('.spec.ts'),
+    );
+    const pomFiles = (parsed.files ?? []).filter(f => f.path.startsWith('pages/'));
+    const lines: string[] = [
+      `**Dry run** — no files written, no tests run.`,
+      '',
+      `**Target spec:** \`${specFile?.path ?? '(none)'}\``,
+    ];
+    if (pomFiles.length > 0) {
+      lines.push('', '**POM files that would be written:**');
+      pomFiles.forEach(f => lines.push(`  - \`${f.path}\``));
+    }
+    if (parsed.fixture_additions) {
+      lines.push('', '**Fixture additions** (fixtures/index.ts would be updated)');
+    }
+    if (specFile) {
+      lines.push('', '**Proposed spec:**', '```typescript', specFile.content, '```');
+    }
+    lines.push('', 'Call `generate_test` again without `dry_run: true` to write files and run.');
+    return { content: [{ type: 'text', text: lines.join('\n') }] };
+  }
+
   for (const file of parsed.files ?? []) {
     const abs = join(ROOT, file.path);
+    if (file.path.startsWith('pages/')) {
+      // Guard: never write a POM update that drops existing async methods
+      try {
+        const existing = await readFile(abs, 'utf-8');
+        const missing = [...existing.matchAll(/async\s+(\w+)\s*(?:<[^>]*>)?\s*\(/g)]
+          .map(m => m[1])
+          .filter(name => !new RegExp(`async\\s+${name}[\\s<(]`).test(file.content));
+        if (missing.length > 0) {
+          process.stderr.write(`[generate-test] skipping POM update — would drop: ${missing.join(', ')}\n`);
+          continue;
+        }
+      } catch { /* new file — no guard needed */ }
+    }
     await mkdir(dirname(abs), { recursive: true });
     await writeFile(abs, file.content, 'utf-8');
     written.push(file.path);

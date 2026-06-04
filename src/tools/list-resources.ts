@@ -118,7 +118,12 @@ export async function pomExistsForFeature(keywords: string[]): Promise<boolean> 
   const lower = keywords.map((k) => k.toLowerCase()).filter((k) => k.length > 3);
   try {
     const entries = await readdir(join(ROOT, 'pages'));
-    return entries.some((f) => lower.some((k) => f.toLowerCase().includes(k)));
+    const match = entries.find((f) => lower.some((k) => f.toLowerCase().includes(k)));
+    if (!match) return false;
+    // Locators-only POMs (from generate_pom) have no async methods — treat them
+    // as "not ready" so generate_test still runs the POM step to add methods.
+    const content = await readFile(join(ROOT, 'pages', match), 'utf-8');
+    return /async\s+\w+\s*[(<]/.test(content);
   } catch {
     return false;
   }

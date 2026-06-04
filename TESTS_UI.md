@@ -1,6 +1,6 @@
 # Test Cases
 
-**Total: 12 tests**
+**Total: 13 tests**
 
 ---
 
@@ -38,7 +38,6 @@
 | 3 | should remove a product from the cart and update the cart |
 | 4 | adding same product twice increments quantity |
 | 5 | should show checkout modal with register/login option when guest clicks Proceed To Checkout |
-| 6 | should add product from detail page and verify it appears in cart via modal View Cart link |
 
 ---
 
@@ -49,6 +48,17 @@
 | # | Test |
 |---|------|
 | 1 | should submit the contact form and show success message |
+
+---
+
+## tests/ui/product-detail.spec.ts
+
+### Product Detail
+
+| # | Test |
+|---|------|
+| 1 | should add product to cart from detail page and verify it appears in cart |
+| 2 | should reflect custom quantity in cart when quantity is changed before adding to cart |
 
 ---
 

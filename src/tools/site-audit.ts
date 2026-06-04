@@ -1,6 +1,7 @@
+import Anthropic from '@anthropic-ai/sdk';
 import { chromium } from '@playwright/test';
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
+import { writeFile, mkdir } from 'fs/promises';
+import { dirname, join } from 'path';
 
 const ROOT = process.cwd();
 
@@ -8,6 +9,8 @@ export interface SiteAuditArgs {
   url: string;
   output?: string;
   maxPageTypes?: number;
+  /** structure = site-audit-report only; data = test-data/constants.ts only; all = both (default) */
+  mode?: 'structure' | 'data' | 'all';
 }
 
 export interface PageTypeInfo {
@@ -123,7 +126,6 @@ async function fingerprint(page: any): Promise<Omit<PageTypeInfo, 'pattern' | 'r
 }
 
 export async function runSiteAudit(args: SiteAuditArgs): Promise<AuditResult> {
-  const base = normaliseBase(args.url);
   const maxTypes = args.maxPageTypes ?? 20;
 
   const browser = await chromium.launch({ headless: true });
@@ -138,6 +140,7 @@ export async function runSiteAudit(args: SiteAuditArgs): Promise<AuditResult> {
   const crawlPage = await ctx.newPage();
   await crawlPage.goto(args.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await crawlPage.waitForTimeout(2000);
+  const actualBase = normaliseBase(crawlPage.url()); // resolve www/non-www redirects
 
   const allHrefs: string[] = await crawlPage.evaluate((base: string) => {
     return [...new Set(
@@ -145,16 +148,16 @@ export async function runSiteAudit(args: SiteAuditArgs): Promise<AuditResult> {
         .map(a => (a as HTMLAnchorElement).href)
         .filter(h => h && h.startsWith(base) && !h.includes('#') && !h.match(/\.(pdf|zip|png|jpg|gif|css|js)$/i))
     )];
-  }, base);
+  }, actualBase);
 
   await crawlPage.close();
   process.stdout.write(`  Found ${allHrefs.length} internal URLs\n`);
 
   // ── Step 2: Deduplicate into page-type patterns ────────────────────────────
   const patternMap = new Map<string, string>(); // pattern → first representative URL
-  patternMap.set('/', args.url);                 // always include root
+  patternMap.set('/', actualBase);               // always include root (post-redirect URL)
   for (const href of allHrefs) {
-    const pattern = toPattern(href, base);
+    const pattern = toPattern(href, actualBase);
     if (!patternMap.has(pattern)) {
       patternMap.set(pattern, href);
       if (patternMap.size >= maxTypes) break;
@@ -317,32 +320,276 @@ function buildReport(result: AuditResult): string {
   lines.push('> Run `inspect_page` on the URLs listed under each candidate group to verify');
   lines.push('> locator selectors before implementing the hierarchy.');
 
+  // Update the inspect_page tip now that generate_pom reads audit JSON automatically
+  lines.push('');
+  lines.push('> **generate_pom** reads `site-audit-report.json` automatically — audit hints are');
+  lines.push('> injected into every POM generation call for pages listed above. Run `inspect_page`');
+  lines.push('> only if you want to manually explore a page\'s DOM before generating a POM.');
+
   return lines.join('\n');
 }
 
+// ── JSON output ──────────────────────────────────────────────────────────────
+
+export interface SiteAuditJson {
+  generatedAt: string;
+  siteUrl: string;
+  pageTypes: number;
+  /** IDs present on EVERY page — owned by BasePage/SitePage, never re-declare in page POMs */
+  universalIds: string[];
+  universalClasses: string[];
+  pages: Array<{
+    /** URL pattern with :id / :slug wildcards, e.g. "/product_details/:id" */
+    pattern: string;
+    /** A real URL that represents this page type */
+    representative: string;
+    /** Page-specific IDs only — universals already excluded */
+    uniqueIds: string[];
+    /** Form input names unique to this page — universals + noise excluded */
+    uniqueFormInputs: string[];
+    headings: string[];
+    structuralClasses: string[];
+  }>;
+}
+
+// IDs / inputs that appear everywhere and are owned by parent classes.
+const JSON_NOISE = new Set([
+  'susbscribe_email', 'subscribe', 'success-subscribe',
+  'header', 'footer', 'scrollUp', 'aswift_0_host',
+  'csrfmiddlewaretoken',
+]);
+
+function isJsonNoise(s: string): boolean {
+  return JSON_NOISE.has(s) || /^fc-preference-|^fc-focus-trap|^aswift_/.test(s);
+}
+
+function buildJson(result: AuditResult): SiteAuditJson {
+  const { pageTypes, idPresence, classPresence } = result;
+  const total = pageTypes.length;
+
+  const universalIds = [...idPresence.entries()]
+    .filter(([, pages]) => pages.length === total)
+    .map(([id]) => id)
+    .sort();
+  const universalClasses = [...classPresence.entries()]
+    .filter(([, pages]) => pages.length === total)
+    .map(([cls]) => cls)
+    .sort();
+  const universalIdSet = new Set(universalIds);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    siteUrl: result.baseUrl,
+    pageTypes: total,
+    universalIds: universalIds.filter(id => !isJsonNoise(id)),
+    universalClasses: universalClasses.filter(c => !isJsonNoise(c)),
+    pages: pageTypes.map(pt => ({
+      pattern: pt.pattern,
+      representative: pt.representative,
+      uniqueIds: pt.ids.filter(id => !universalIdSet.has(id) && !isJsonNoise(id)),
+      uniqueFormInputs: pt.formInputIds.filter(f => !isJsonNoise(f)),
+      headings: pt.headings,
+      structuralClasses: pt.structuralClasses,
+    })),
+  };
+}
+
+// ── Test data collection ─────────────────────────────────────────────────────
+
+interface RawTestData {
+  baseUrl: string;
+  products: Array<{ id: number; name: string; price: string; category: string }>;
+  categories: string[];
+  subcategories: Record<string, string[]>;
+  searchExists: boolean;
+  registrationFields: Array<{ name: string; type: string; placeholder: string }>;
+}
+
+async function collectRawTestData(baseUrl: string): Promise<RawTestData> {
+  const browser = await chromium.launch({ headless: true });
+  const ctx = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
+               '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    ignoreHTTPSErrors: true,
+  });
+
+  try {
+    process.stdout.write('  Collecting product catalogue...\n');
+    const productsPage = await ctx.newPage();
+    await productsPage.goto(`${baseUrl}/products`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await productsPage.waitForTimeout(1500);
+
+    const { products, categories, subcategories, searchExists } = await productsPage.evaluate(() => {
+      const productCards: Array<{ id: number; name: string; price: string; category: string }> = [];
+      document.querySelectorAll('.productinfo.text-center').forEach(card => {
+        const wrapper = card.closest('.product-image-wrapper');
+        const link = wrapper?.querySelector('a[href*="/product_details/"]') as HTMLAnchorElement | null;
+        const idMatch = link?.getAttribute('href')?.match(/\/product_details\/(\d+)/);
+        const name = card.querySelector('p')?.textContent?.trim() ?? '';
+        const price = card.querySelector('h2')?.textContent?.trim() ?? '';
+        if (idMatch && name) productCards.push({ id: parseInt(idMatch[1]), name, price, category: '' });
+      });
+
+      const cats: string[] = [];
+      const subs: Record<string, string[]> = {};
+      document.querySelectorAll('#accordian .panel').forEach(panel => {
+        const catName = panel.querySelector('.panel-title a')?.textContent?.trim() ?? '';
+        if (!catName) return;
+        cats.push(catName);
+        subs[catName] = [];
+        panel.querySelectorAll('.panel-body a').forEach(a => {
+          const sub = a.textContent?.trim();
+          if (sub) subs[catName].push(sub);
+        });
+      });
+
+      return {
+        products: productCards.slice(0, 30),
+        categories: cats,
+        subcategories: subs,
+        searchExists: !!document.querySelector('#search_product'),
+      };
+    });
+
+    await productsPage.close();
+
+    process.stdout.write('  Collecting registration form fields...\n');
+    const loginPage = await ctx.newPage();
+    await loginPage.goto(`${baseUrl}/login`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await loginPage.waitForTimeout(1000);
+
+    const registrationFields = await loginPage.evaluate(() => {
+      const fields: Array<{ name: string; type: string; placeholder: string }> = [];
+      document.querySelectorAll('.signup-form input, .login-form input').forEach(el => {
+        const input = el as HTMLInputElement;
+        if (input.type === 'submit' || input.type === 'button') return;
+        const name = input.name || input.id || input.placeholder;
+        if (name) fields.push({ name, type: input.type || 'text', placeholder: input.placeholder || '' });
+      });
+      return fields;
+    });
+
+    await loginPage.close();
+    return { baseUrl, products, categories, subcategories, searchExists, registrationFields };
+  } finally {
+    await browser.close();
+  }
+}
+
+async function generateConstants(raw: RawTestData, apiKey: string): Promise<string> {
+  const client = new Anthropic({ apiKey });
+  const productNames = raw.products.map(p => p.name).filter(Boolean);
+
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 2048,
+    system: 'You are generating a TypeScript test data constants file. Output ONLY valid TypeScript — no markdown, no explanation, no code fences.',
+    messages: [{
+      role: 'user',
+      content: `Generate test-data/constants.ts for automated testing of: ${raw.baseUrl}
+
+## Crawled data
+Products (${raw.products.length} total):
+${JSON.stringify(raw.products.slice(0, 15), null, 2)}
+
+Categories: ${raw.categories.join(', ')}
+Subcategories: ${JSON.stringify(raw.subcategories)}
+Search feature present: ${raw.searchExists}
+Registration fields: ${raw.registrationFields.map(f => `${f.name}(${f.type})`).join(', ')}
+
+## Generate these exports
+
+1. PRODUCTS — all products as "as const" typed array, price as number (strip currency symbol)
+2. CATEGORIES — top-level category string array, "as const"
+3. SUBCATEGORIES — Record<string, readonly string[]> mapping category to subcategory list
+4. SEARCH — object with:
+   - valid: string[] — 3-5 single words from real product names (${productNames.slice(0, 3).join(', ')}...) that will return search results
+   - invalid: string[] — 3-4 strings guaranteed to return ZERO results (nonsense like 'xyznotfound123', 'zzzzaaa', '!@#$%')
+   - partial: string[] — 2-3 partial words (first 2-3 chars of product names) that return multiple results
+5. TEST_USER — registration/checkout test fixture:
+   - email: () => \`qa_\${Date.now()}@testmail.com\`  ← function, unique per call
+   - password, name, firstName, lastName, address, city, state, country, mobile, zipCode
+   - dob: { day: '15', month: 'January', year: '1990' }
+   - Use realistic but obviously fake values. Do NOT use "as const" (email is a function).
+6. PAYMENT — payment test data:
+   - valid: { name, number: '4111111111111111', cvv: '123', expiryMonth: '12' }
+   - valid.expiryYear: use a getter — get expiryYear() { return String(new Date().getFullYear() + 2); }
+     This MUST always be in the future — never hardcode a year.
+
+File must start with: // Auto-generated by audit_site — re-run with --mode data to refresh.
+Add JSDoc comments on each export.`,
+    }],
+  });
+
+  return message.content
+    .filter(b => b.type === 'text')
+    .map(b => (b as { type: 'text'; text: string }).text)
+    .join('')
+    .replace(/^```(?:typescript|ts)?\n?/m, '')
+    .replace(/\n?```$/m, '')
+    .trim();
+}
+
 export async function siteAuditTool(args: SiteAuditArgs): Promise<string> {
-  const outputPath = args.output ?? join(ROOT, 'site-audit-report.md');
+  const mdPath = args.output ?? join(ROOT, 'site-audit-report.md');
+  const jsonPath = mdPath.replace(/\.md$/, '.json');
+  const mode = args.mode ?? 'all';
+  const lines: string[] = [];
 
-  process.stdout.write(`\n🔍 Site audit: ${args.url}\n\n`);
-  const result = await runSiteAudit(args);
+  // ── Structure ────────────────────────────────────────────────────────────
+  if (mode === 'structure' || mode === 'all') {
+    process.stdout.write(`\n🔍 Site audit: ${args.url}\n\n`);
+    const result = await runSiteAudit(args);
 
-  const report = buildReport(result);
-  await writeFile(outputPath, report, 'utf-8');
+    const report = buildReport(result);
+    const json = buildJson(result);
+    await Promise.all([
+      writeFile(mdPath, report, 'utf-8'),
+      writeFile(jsonPath, JSON.stringify(json, null, 2), 'utf-8'),
+    ]);
 
-  // Console summary
-  const total = result.pageTypes.length;
-  const universalIds = [...result.idPresence.entries()]
-    .filter(([, p]) => p.length === total).map(([id]) => id);
-  const sharedGroups = [...new Set(
-    [...result.idPresence.entries()]
-      .filter(([, p]) => p.length >= 2 && p.length < total)
-      .map(([, p]) => p.sort().join(','))
-  )].length;
+    const total = result.pageTypes.length;
+    const universalIds = [...result.idPresence.entries()]
+      .filter(([, p]) => p.length === total).map(([id]) => id);
+    const sharedGroups = [...new Set(
+      [...result.idPresence.entries()]
+        .filter(([, p]) => p.length >= 2 && p.length < total)
+        .map(([, p]) => p.sort().join(','))
+    )].length;
 
-  return [
-    `\n✅ Audit complete — ${total} page types analysed`,
-    `   Universal elements (#${universalIds.slice(0, 4).join(', #')}${universalIds.length > 4 ? '...' : ''}) → SitePage candidate`,
-    sharedGroups > 0 ? `   ${sharedGroups} partial-overlap group(s) → intermediate class candidate(s)` : '',
-    `\n   Full report: ${outputPath}`,
-  ].filter(Boolean).join('\n');
+    lines.push(
+      `\n✅ Structure audit complete — ${total} page types analysed`,
+      `   Universal elements (#${universalIds.slice(0, 4).join(', #')}${universalIds.length > 4 ? '...' : ''}) → SitePage candidate`,
+      sharedGroups > 0 ? `   ${sharedGroups} partial-overlap group(s) → intermediate class candidate(s)` : '',
+      `\n   Markdown report : ${mdPath}`,
+      `   Machine-readable: ${jsonPath}`,
+    );
+  }
+
+  // ── Test data ─────────────────────────────────────────────────────────────
+  if (mode === 'data' || mode === 'all') {
+    const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
+    if (!apiKey) {
+      lines.push('\n⚠️  ANTHROPIC_API_KEY not set — skipping test data generation');
+    } else {
+      const base = normaliseBase(args.url);
+      process.stdout.write(`\n📦 Collecting test data from ${base}...\n`);
+
+      const raw = await collectRawTestData(base);
+      process.stdout.write(`  Found ${raw.products.length} products, ${raw.categories.length} categories\n`);
+      process.stdout.write('  Generating constants with Claude...\n');
+
+      const constants = await generateConstants(raw, apiKey);
+      const constantsPath = join(ROOT, 'test-data', 'constants.ts');
+      await mkdir(dirname(constantsPath), { recursive: true });
+      await writeFile(constantsPath, constants, 'utf-8');
+
+      lines.push(
+        `\n✅ Test data generated — ${raw.products.length} products, ${raw.categories.length} categories`,
+        `   Constants: ${constantsPath}`,
+      );
+    }
+  }
+
+  return lines.filter(Boolean).join('\n');
 }
