@@ -1,3 +1,4 @@
+import { WORKSPACE_PATHS } from './workspace.js';
 import { readFile, readdir, stat } from 'fs/promises';
 import { join } from 'path';
 import {
@@ -54,7 +55,7 @@ interface BacklogScope {
 }
 
 async function readBacklogStatus(): Promise<{ totalOpen: number; scopes: BacklogScope[] }> {
-  const BACKLOG_PATH = join(ROOT, 'GAPS_BACKLOG.md');
+  const BACKLOG_PATH = WORKSPACE_PATHS.gapsBacklog;
   try {
     const content = await readFile(BACKLOG_PATH, 'utf-8');
     const lines = content.split('\n');

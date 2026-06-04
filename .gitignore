@@ -11,13 +11,11 @@ test-data/.auth/
 # Local config — contains your API key and absolute path; never commit this
 .claude/settings.local.json
 
-# Local working files (personal, not committed)
-my-test.txt
-prd.md
-prd-tests.txt
-coverage-report.md
-coverage-gaps.txt
-GAPS_BACKLOG.md
+# Workspace — user inputs and tool-generated working files
+# The workspace/ folder is gitignored by default.
+# To share a specific output with your team, force-add it: git add -f workspace/APP_KNOWLEDGE.md
+workspace/*
+!workspace/.gitkeep
 
 # macOS
 .DS_Store

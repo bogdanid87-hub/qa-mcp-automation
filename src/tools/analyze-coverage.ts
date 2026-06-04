@@ -1,3 +1,4 @@
+import { WORKSPACE, WORKSPACE_PATHS, ensureWorkspace } from '../workspace.js';
 import Anthropic from '@anthropic-ai/sdk';
 import { readFile, readdir, writeFile } from 'fs/promises';
 import { join } from 'path';
@@ -294,7 +295,7 @@ async function analyzeUntestedPaths(specContent: string, apiKey: string): Promis
 
 // ── Gaps backlog ───────────────────────────────────────────────────────────────
 
-const BACKLOG_PATH = join(ROOT, 'GAPS_BACKLOG.md');
+const BACKLOG_PATH = WORKSPACE_PATHS.gapsBacklog;
 
 const BACKLOG_HEADER = `# Gaps Backlog
 
@@ -393,6 +394,7 @@ export async function analyzeCoverageTool(args: {
   outputDir?: string;     // defaults to ROOT
 }): Promise<{ content: { type: 'text'; text: string }[] }> {
   const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
+  await ensureWorkspace();
   if (!apiKey) {
     return { content: [{ type: 'text', text: 'Error: ANTHROPIC_API_KEY is not set.' }] };
   }
@@ -508,7 +510,7 @@ export async function analyzeCoverageTool(args: {
   }
 
   // ── Write outputs ────────────────────────────────────────────────────────────
-  const outDir = args.outputDir ?? ROOT;
+  const outDir = args.outputDir ?? WORKSPACE;
   const reportPath = join(outDir, 'coverage-report.md');
   const report = buildReport(result, contextLabel);
   await writeFile(reportPath, report, 'utf-8');
