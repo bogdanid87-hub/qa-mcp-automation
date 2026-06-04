@@ -5,21 +5,36 @@
  * Price is stored as a plain number (currency symbol stripped).
  */
 export const PRODUCTS = [
-  { id: 1,  name: "Blue Top",                                    price: 500,  category: "" },
-  { id: 2,  name: "Men Tshirt",                                  price: 400,  category: "" },
-  { id: 3,  name: "Sleeveless Dress",                            price: 1000, category: "" },
-  { id: 4,  name: "Stylish Dress",                               price: 1500, category: "" },
-  { id: 5,  name: "Winter Top",                                  price: 600,  category: "" },
-  { id: 6,  name: "Summer White Top",                            price: 400,  category: "" },
-  { id: 7,  name: "Madame Top For Women",                        price: 1000, category: "" },
-  { id: 8,  name: "Fancy Green Top",                             price: 700,  category: "" },
-  { id: 11, name: "Sleeves Printed Top - White",                 price: 499,  category: "" },
-  { id: 12, name: "Half Sleeves Top Schiffli Detailing - Pink",  price: 359,  category: "" },
-  { id: 13, name: "Frozen Tops For Kids",                        price: 278,  category: "" },
-  { id: 14, name: "Full Sleeves Top Cherry - Pink",              price: 679,  category: "" },
-  { id: 15, name: "Printed Off Shoulder Top - White",            price: 315,  category: "" },
-  { id: 16, name: "Sleeves Top and Short - Blue & Pink",         price: 478,  category: "" },
-  { id: 18, name: "Little Girls Mr. Panda Shirt",                price: 1200, category: "" },
+  { id: 1,  name: "Blue Top",                                              price: 500,  category: "" },
+  { id: 2,  name: "Men Tshirt",                                            price: 400,  category: "" },
+  { id: 3,  name: "Sleeveless Dress",                                      price: 1000, category: "" },
+  { id: 4,  name: "Stylish Dress",                                         price: 1500, category: "" },
+  { id: 5,  name: "Winter Top",                                            price: 600,  category: "" },
+  { id: 6,  name: "Summer White Top",                                      price: 400,  category: "" },
+  { id: 7,  name: "Madame Top For Women",                                  price: 1000, category: "" },
+  { id: 8,  name: "Fancy Green Top",                                       price: 700,  category: "" },
+  { id: 11, name: "Sleeves Printed Top - White",                           price: 499,  category: "" },
+  { id: 12, name: "Half Sleeves Top Schiffli Detailing - Pink",            price: 359,  category: "" },
+  { id: 13, name: "Frozen Tops For Kids",                                  price: 278,  category: "" },
+  { id: 14, name: "Full Sleeves Top Cherry - Pink",                        price: 679,  category: "" },
+  { id: 15, name: "Printed Off Shoulder Top - White",                      price: 315,  category: "" },
+  { id: 16, name: "Sleeves Top and Short - Blue & Pink",                   price: 478,  category: "" },
+  { id: 18, name: "Little Girls Mr. Panda Shirt",                          price: 1200, category: "" },
+  { id: 19, name: "Sleeveless Unicorn Patch Gown - Pink",                  price: 1050, category: "" },
+  { id: 20, name: "Cotton Mull Embroidered Dress",                         price: 1190, category: "" },
+  { id: 21, name: "Blue Cotton Indie Mickey Dress",                        price: 1530, category: "" },
+  { id: 22, name: "Long Maxi Tulle Fancy Dress Up Outfits -Pink",          price: 1600, category: "" },
+  { id: 23, name: "Sleeveless Unicorn Print Fit & Flare Net Dress - Multi",price: 1100, category: "" },
+  { id: 24, name: "Colour Blocked Shirt \u2013 Sky Blue",                  price: 849,  category: "" },
+  { id: 28, name: "Pure Cotton V-Neck T-Shirt",                            price: 1299, category: "" },
+  { id: 29, name: "Green Side Placket Detail T-Shirt",                     price: 1000, category: "" },
+  { id: 30, name: "Premium Polo T-Shirts",                                 price: 1500, category: "" },
+  { id: 31, name: "Pure Cotton Neon Green Tshirt",                         price: 850,  category: "" },
+  { id: 33, name: "Soft Stretch Jeans",                                    price: 799,  category: "" },
+  { id: 35, name: "Regular Fit Straight Jeans",                            price: 1200, category: "" },
+  { id: 37, name: "Grunt Blue Slim Fit Jeans",                             price: 1400, category: "" },
+  { id: 38, name: "Rose Pink Embroidered Maxi Dress",                      price: 2300, category: "" },
+  { id: 39, name: "Cotton Silk Hand Block Print Saree",                    price: 3000, category: "" },
 ] as const;
 
 /**
@@ -44,9 +59,9 @@ export const SUBCATEGORIES: Record<string, readonly string[]> = {
  * - `partial` — 2-3 character prefixes of product names; should match multiple results.
  */
 export const SEARCH = {
-  valid:   ["Blue", "Sleeveless", "Tshirt", "Frozen", "Stylish"],
+  valid:   ["Blue", "Sleeveless", "Tshirt", "Frozen", "Stylish", "Jeans", "Cotton", "Polo", "Saree"],
   invalid: ["xyznotfound123", "zzzzaaa", "!@#$%", "qqqqqq99"],
-  partial: ["Sle", "Top", "Dre"],
+  partial: ["Sle", "Top", "Dre", "Jea", "Cot"],
 };
 
 /**
