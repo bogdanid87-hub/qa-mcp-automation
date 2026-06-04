@@ -18,6 +18,35 @@ import { extractJson } from './llm-utils.js';
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
 
+/**
+ * Scan generated spec files for TODO comments that flag data missing from constants.ts
+ * (the system prompt instructs Claude to leave these). Append any new ones to
+ * test-data/constants.ts so the user knows what to add on the next audit run.
+ */
+async function appendConstantsTodos(files: Array<{ path: string; content: string }>): Promise<void> {
+  const constantsPath = join(ROOT, 'test-data', 'constants.ts');
+  let existing: string;
+  try { existing = await readFile(constantsPath, 'utf-8'); } catch { return; }
+
+  const todos: string[] = [];
+  const todoPattern = /\/\/\s*TODO:\s*add.+?constants\.ts[^\n]*/gi;
+
+  for (const file of files) {
+    if (!file.path.startsWith('tests/')) continue;
+    let match;
+    while ((match = todoPattern.exec(file.content)) !== null) {
+      const todo = match[0].trim();
+      // Only append if not already present in constants.ts
+      if (!existing.includes(todo)) todos.push(todo);
+    }
+  }
+
+  if (todos.length === 0) return;
+
+  const block = `\n// ── Suggestions from generate_test — add to constants on next audit_site --mode data run\n${todos.join('\n')}\n`;
+  await writeFile(constantsPath, existing + block, 'utf-8');
+}
+
 interface GeneratedFile {
   path: string;
   content: string;
@@ -538,6 +567,12 @@ Never remove existing methods — only append new ones.` : '';
     await writeFile(join(ROOT, 'fixtures', 'index.ts'), parsed.fixture_additions, 'utf-8');
     written.push('fixtures/index.ts (updated)');
   }
+
+  // ── Constants feedback loop ──────────────────────────────────────────────
+  // Scan the written spec for TODO comments flagging data not yet in constants.ts
+  // (the system prompt instructs Claude to leave these). Append them as a
+  // consolidated block at the end of constants.ts so the user knows what to add.
+  await appendConstantsTodos(parsed.files ?? []);
 
   const specFile = (parsed.files ?? []).find(
     (f) => f.path.startsWith('tests/') && f.path.endsWith('.spec.ts'),

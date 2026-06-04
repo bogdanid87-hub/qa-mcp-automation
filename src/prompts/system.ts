@@ -59,6 +59,12 @@ General rules:
 - If a POM for the target page already exists in pages/, ADD the new locators and methods to that file — never create a second class for the same page
 - Only create a new POM file when no existing class covers that page
 
+Navigation and loaded-check pattern — avoid duplication:
+- Every POM that has a primary URL should have a goto() method, but it MUST delegate to this.navigate(), not re-implement navigation:
+    async goto(): Promise<void> { await this.navigate('/the-path', { waitUntil: 'domcontentloaded' }); }
+- Every POM should have a verifyLoaded() method with a single focused assertion (URL pattern or unique heading). Do NOT copy-paste verifyLoaded() logic from other POMs — each page has one unique identifier.
+- Never implement page.goto() directly in a POM method — always go through this.navigate() so the base class handles popup dismissal and load state consistently.
+
 POM method design — think about the full feature, not just the current test:
 When writing or extending a POM, think about ALL tests that will eventually cover that page,
 not just the one being generated right now. Use the proposed additional tests as a signal
@@ -119,6 +125,15 @@ Imports — always match the import style to the export style:
   Default export → import ClassName from './ClassName'
 Mismatched import style silently makes the imported value undefined and breaks class inheritance.
 
+### Assertion messages — always describe what was expected
+Every assertion that is not self-evident from the locator name must include a failure message
+as the second argument to expect():
+  expect(rows.length, 'cart should contain at least one product').toBeGreaterThan(0);
+  expect(cartTotal, 'total should equal unit price × quantity').toBe(unitPrice * qty);
+  expect(email, 'registered email should appear in the confirmation').toContain(userEmail);
+This is a QA best practice: when a test fails in CI, the message is the first thing the engineer reads.
+Single-condition assertions on well-named locators do not need messages (e.g. await expect(cartPage.cartTable).toBeVisible()).
+
 ### No hardcoded application data
 Never hardcode values that come from the live application — product names, prices, headings, category labels. These change and make tests brittle.
 - **Capture at runtime:** read the value with textContent() / innerText(), store it in a variable, assert against that variable
@@ -132,6 +147,20 @@ If test-data/constants.ts exists in the project, import from it instead of inven
 - Use TEST_USER for registration/login/checkout — TEST_USER.email() for a unique address
 - Use PAYMENT.valid for checkout payment fields
 - Import only what is needed: import { PRODUCTS, TEST_USER } from '../../test-data/constants'
+- NEVER invent a product name, price, category, email, or card number inline — always import
+- If the test needs data that is NOT in constants.ts (e.g. a specific edge-case search term), note it as a comment so it can be added to the constants file: // TODO: add 'xyz' to SEARCH.invalid in test-data/constants.ts
+
+### Test tagging
+Tag every generated test so it can be run as part of a targeted subset:
+- @smoke — minimal happy-path tests that verify the site is up and the critical path works (add to cart, checkout, login). One per major feature.
+- @regression — full coverage tests that run on every PR
+- @critical — tests covering revenue paths (checkout, payment, cart totals)
+
+Apply tags in the test() call:
+  test('should add product to cart @smoke @critical', async ({ ... }) => { ... });
+
+Playwright can then filter: npx playwright test --grep @smoke
+Every generated test should have at least @regression. Add @smoke only to the primary happy-path test per feature. Add @critical to any test that touches cart totals, payment, or order placement.
 
 ### E2E helper functions — extract shared flows
 E2E tests frequently share multi-step setup flows (login, add product to cart, navigate to
