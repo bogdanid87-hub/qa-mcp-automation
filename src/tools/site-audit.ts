@@ -126,7 +126,6 @@ async function fingerprint(page: any): Promise<Omit<PageTypeInfo, 'pattern' | 'r
 }
 
 export async function runSiteAudit(args: SiteAuditArgs): Promise<AuditResult> {
-  const base = normaliseBase(args.url);
   const maxTypes = args.maxPageTypes ?? 20;
 
   const browser = await chromium.launch({ headless: true });

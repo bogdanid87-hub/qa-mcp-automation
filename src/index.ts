@@ -3,7 +3,6 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 
 import { generateTestTool } from './tools/generate-test.js';
-import { generateApiTestTool } from './tools/generate-api-test.js';
 import { generatePomTool } from './tools/generate-pom.js';
 import { analyzePrdTool } from './tools/analyze-prd.js';
 import { analyzeCoverageTool } from './tools/analyze-coverage.js';
