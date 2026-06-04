@@ -96,17 +96,28 @@ npx playwright install chromium
 
 ### 2. Configure the MCP server
 
-Copy the example and fill in your values:
+The MCP server is pre-configured in `.mcp.json` (already committed). Set your Anthropic API key as an environment variable so the server can reach it:
+
+```bash
+# Add to ~/.zshrc (or ~/.bashrc on Linux):
+echo 'export ANTHROPIC_API_KEY=sk-ant-your-key-here' >> ~/.zshrc
+```
+
+Restart VS Code. The MCP server connects automatically — you should see `qa-mcp-automation` when you run `/mcp` in Claude Code.
+
+> **macOS — optional, more secure:** store the key in the system Keychain instead of plaintext. The startup script (`scripts/start-mcp.sh`) will retrieve it automatically:
+> ```bash
+> security add-generic-password -a ANTHROPIC_API_KEY -s anthropic -w sk-ant-your-key-here
+> # Then in ~/.zshrc (for the VS Code terminal):
+> echo 'export ANTHROPIC_API_KEY=$(security find-generic-password -a ANTHROPIC_API_KEY -s anthropic -w 2>/dev/null)' >> ~/.zshrc
+> ```
+> To inspect or delete the key later, open **Keychain Access.app** and search for `anthropic`.
+
+Optionally copy the settings example to customise Claude Code permissions for this project:
 
 ```bash
 cp .claude/settings.local.json.example .claude/settings.local.json
 ```
-
-Then edit `.claude/settings.local.json`:
-- Replace `/absolute/path/to/your/clone` with the output of `pwd` inside the project folder
-- Replace `sk-ant-your-key-here` with your Anthropic API key
-
-The file is gitignored and must never be committed — it contains your API key and a machine-specific path.
 
 ### 3. (Optional) Set up local LLM
 

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "qa-mcp-automation": {
+      "type": "stdio",
+      "command": "bash",
+      "args": [
+        "scripts/start-mcp.sh"
+      ]
+    }
+  }
+}
