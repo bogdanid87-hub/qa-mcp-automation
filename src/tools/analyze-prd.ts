@@ -1,10 +1,8 @@
+import { WORKSPACE_PATHS, ensureWorkspace } from '../workspace.js';
 import Anthropic from '@anthropic-ai/sdk';
 import { readFile, writeFile } from 'fs/promises';
-import { join } from 'path';
 import { readTestCases, readBrokenTests } from './test-registry.js';
 import { readAppKnowledge, readAppLimitations } from './generate-app-knowledge.js';
-
-const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
 
 const SYSTEM_PROMPT = `\
@@ -122,7 +120,7 @@ spec_file rules:
  * gaps that have already been identified (even if not yet generated).
  */
 async function readBacklogTestNames(): Promise<string[]> {
-  const BACKLOG_PATH = join(ROOT, 'GAPS_BACKLOG.md');
+  const BACKLOG_PATH = WORKSPACE_PATHS.gapsBacklog;
   try {
     const content = await readFile(BACKLOG_PATH, 'utf-8');
     const names: string[] = [];
@@ -169,6 +167,7 @@ export async function analyzePrdTool(args: {
   tier?: string[];        // e.g. ['critical', 'high'] — omit medium/low
   focus?: string[];       // e.g. ['checkout', 'authentication'] — omit other features
 }): Promise<{ content: { type: 'text'; text: string }[] }> {
+  await ensureWorkspace();
   const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
   if (!apiKey) {
     return { content: [{ type: 'text', text: 'Error: ANTHROPIC_API_KEY is not set.' }] };
@@ -273,7 +272,7 @@ export async function analyzePrdTool(args: {
   const criticalCount = (raw.match(/^# risk: critical/gm) ?? []).length;
   const highCount = (raw.match(/^# risk: high/gm) ?? []).length;
 
-  const outputPath = args.outputFile ?? join(ROOT, 'prd-tests.txt');
+  const outputPath = args.outputFile ?? WORKSPACE_PATHS.prdTests;
   const filterNote = [
     ...(args.tier?.length ? [`# Tier filter:    ${args.tier.join(', ')}`] : []),
     ...(args.focus?.length ? [`# Feature filter: ${args.focus.join(', ')}`] : []),
@@ -299,7 +298,7 @@ export async function analyzePrdTool(args: {
   // Each test_name is written as a "- name" bullet so readBacklogTestNames() can
   // load them on the next run and exclude them from Claude's "already covered" list.
   // Mark resolved by changing "- name" to "- ~~name~~" (strikethrough).
-  const BACKLOG_PATH = join(ROOT, 'GAPS_BACKLOG.md');
+  const BACKLOG_PATH = WORKSPACE_PATHS.gapsBacklog;
   const BACKLOG_HEADER = '# Gaps Backlog\n\nGaps identified by analyze_coverage and analyze_prd that have not yet been generated.\nMark resolved with ~~strikethrough~~ or delete the line.\n\n';
   const date = new Date().toISOString().slice(0, 10);
   const sourceLabel = args.prdContent

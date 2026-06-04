@@ -1,3 +1,4 @@
+import { WORKSPACE_PATHS, ensureWorkspace } from '../workspace.js';
 import Anthropic from '@anthropic-ai/sdk';
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
@@ -11,11 +12,11 @@ import {
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
-export const APP_KNOWLEDGE_PATH = join(ROOT, 'APP_KNOWLEDGE.md');
-export const APP_KNOWLEDGE_MANUAL_PATH = join(ROOT, 'APP_KNOWLEDGE_MANUAL.md');
+export const APP_KNOWLEDGE_PATH = WORKSPACE_PATHS.appKnowledge;
+export const APP_KNOWLEDGE_MANUAL_PATH = WORKSPACE_PATHS.appKnowledgeManual;
 export const APP_LIMITATIONS_PATH = join(ROOT, 'APP_LIMITATIONS.md');
-const GAPS_BACKLOG_PATH = join(ROOT, 'GAPS_BACKLOG.md');
-const COVERAGE_REPORT_PATH = join(ROOT, 'coverage-report.md');
+const GAPS_BACKLOG_PATH = WORKSPACE_PATHS.gapsBacklog;
+const COVERAGE_REPORT_PATH = WORKSPACE_PATHS.coverageReport;
 
 // ── Data gathering ─────────────────────────────────────────────────────────────
 
@@ -116,6 +117,7 @@ _Last updated: ${new Date().toISOString().slice(0, 10)}_
 export async function generateAppKnowledgeTool(args: {
   output?: string;
 }): Promise<{ content: { type: 'text'; text: string }[] }> {
+  await ensureWorkspace();
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return { content: [{ type: 'text', text: 'Error: ANTHROPIC_API_KEY not set.' }] };
 

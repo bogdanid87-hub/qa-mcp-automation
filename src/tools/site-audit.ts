@@ -1,3 +1,4 @@
+import { WORKSPACE_PATHS, ensureWorkspace } from '../workspace.js';
 import Anthropic from '@anthropic-ai/sdk';
 import { chromium } from '@playwright/test';
 import { readFile, writeFile, mkdir } from 'fs/promises';
@@ -586,7 +587,8 @@ Add JSDoc comments on each export.`,
 }
 
 export async function siteAuditTool(args: SiteAuditArgs): Promise<string> {
-  const mdPath = args.output ?? join(ROOT, 'site-audit-report.md');
+  await ensureWorkspace();
+  const mdPath = args.output ?? WORKSPACE_PATHS.siteAuditReport;
   const jsonPath = mdPath.replace(/\.md$/, '.json');
   const mode = args.mode ?? 'all';
   const lines: string[] = [];

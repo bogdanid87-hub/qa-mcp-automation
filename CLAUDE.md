@@ -32,9 +32,9 @@ See [TOOLS.md](TOOLS.md) for a quick index and [docs/](docs/) for per-tool guide
 ## Key commands
 
 ```bash
-npm run generate -- --file my-test.txt   # generate a UI/E2E test from description
+npm run generate -- --file workspace/my-test.txt   # generate a UI/E2E test from description
 npm run generate_api -- --description "..." # generate an API test (local LLM first)
-npm run analyze_prd -- --file prd.md     # generate test backlog from a PRD
+npm run analyze_prd -- --file workspace/prd.md     # generate test backlog from a PRD
 npm run analyze_coverage -- --spec tests/ui/contact.spec.ts  # coverage gap analysis
 npm run fix                               # investigate and fix failing tests (max 2 attempts)
 npm run fix -- --max-attempts 3          # override attempt limit
@@ -43,7 +43,7 @@ npm run tag_tests                         # tag spec files with registry IDs
 npm run audit_site -- --url https://...   # crawl site, build component matrix, recommend POM hierarchy
 npm run generate_auth -- --name loggedIn --login-url /login  # generate auth fixture + storage state
 npm run generate_mock -- --name stripe --url 'https://api.stripe.com/**' --response "..."  # network mock
-npm run generate_knowledge                # synthesise APP_KNOWLEDGE.md (enriches analyze_prd + analyze_coverage)
+npm run generate_knowledge                # synthesise workspace/APP_KNOWLEDGE.md (enriches analyze_prd + analyze_coverage)
 npm run sync_registry                     # reconcile all three registries with reality
 npm run update_registry                   # re-check known broken/app-bug entries
 npm test                                  # run all tests headless (Chromium)
@@ -147,8 +147,8 @@ If Ollama is not running:
 
 Opt out for a session:
 ```bash
-npm run generate -- --file my-test.txt --no-local   # skip Ollama, use Claude
-NO_LOCAL_LLM=1 npm run generate -- --file my-test.txt  # same via env var
+npm run generate -- --file workspace/my-test.txt --no-local   # skip Ollama, use Claude
+NO_LOCAL_LLM=1 npm run generate -- --file workspace/my-test.txt  # same via env var
 ```
 
 ---

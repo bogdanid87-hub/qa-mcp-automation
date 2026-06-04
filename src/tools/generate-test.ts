@@ -545,15 +545,15 @@ Never remove existing methods — only append new ones.` : '';
 
   for (const file of parsed.files ?? []) {
     const abs = join(ROOT, file.path);
-    if (file.path.startsWith('pages/')) {
-      // Guard: never write a POM update that drops existing async methods
+    if (file.path.startsWith('pages/') || file.path.startsWith('tests/helpers/')) {
+      // Guard: never write an update that drops existing exported functions
       try {
         const existing = await readFile(abs, 'utf-8');
-        const missing = [...existing.matchAll(/async\s+(\w+)\s*(?:<[^>]*>)?\s*\(/g)]
+        const missing = [...existing.matchAll(/(?:async\s+)?(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*[(<]/g)]
           .map(m => m[1])
-          .filter(name => !new RegExp(`async\\s+${name}[\\s<(]`).test(file.content));
+          .filter(name => name !== 'default' && !new RegExp(`(?:function|async)\\s+${name}[\\s<(]`).test(file.content));
         if (missing.length > 0) {
-          process.stderr.write(`[generate-test] skipping POM update — would drop: ${missing.join(', ')}\n`);
+          process.stderr.write(`[generate-test] skipping update to ${file.path} — would drop: ${missing.join(', ')}\n`);
           continue;
         }
       } catch { /* new file — no guard needed */ }
