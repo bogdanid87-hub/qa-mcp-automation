@@ -526,7 +526,11 @@ ${existingContent}
 6. PAYMENT — payment test data:
    - valid: { name, number: '4111111111111111', cvv: '123', expiryMonth: '12' }
    - valid.expiryYear: use a getter — get expiryYear() { return String(new Date().getFullYear() + 2); }
-     This MUST always be in the future — never hardcode a year.` : '';
+     This MUST always be in the future — never hardcode a year.
+7. REVIEW — fixture for review/feedback forms (product reviews, contact forms):
+   - name: string (same as TEST_USER.name)
+   - email: string (a fixed address, NOT a function — review submissions don't need uniqueness)
+   - text: a short, realistic but obviously fake review sentence (1-2 sentences)` : '';
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
@@ -562,6 +566,7 @@ Add JSDoc comments on each export.`,
     const missing: string[] = [];
     if (!/export const TEST_USER/.test(generated)) missing.push('TEST_USER');
     if (!/export const PAYMENT/.test(generated)) missing.push('PAYMENT');
+    if (!/export const REVIEW/.test(generated) && /export const REVIEW/.test(existingContent)) missing.push('REVIEW');
 
     if (missing.length > 0) {
       process.stderr.write(`[audit_site] ⚠️  Claude dropped ${missing.join(', ')} — restoring from existing file\n`);
