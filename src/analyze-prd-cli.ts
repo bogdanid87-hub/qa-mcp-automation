@@ -1,7 +1,8 @@
-import { readFile } from 'fs/promises';
+import { readFile, writeFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { chromium } from '@playwright/test';
 import { analyzePrdTool, type PrdFile } from './tools/analyze-prd.js';
+import { WORKSPACE_PATHS, ensureWorkspace } from './workspace.js';
 
 const ROOT = process.cwd();
 
@@ -65,8 +66,23 @@ async function main(): Promise<void> {
     }
   }
 
-  const filePath = raw['file'];
   const pageUrl = raw['url'];
+  // Default to workspace/prd.md; auto-create with template if missing
+  let filePath = raw['file'];
+  if (!filePath && !pageUrl) {
+    await ensureWorkspace();
+    const defaultPath = WORKSPACE_PATHS.prd;
+    try {
+      await readFile(defaultPath);
+      filePath = defaultPath;
+    } catch {
+      await writeFile(defaultPath,
+        '# PRD — paste your product requirements document here\n\n' +
+        'Replace this with your PRD content...\n', 'utf-8');
+      console.log('\n📝 Created workspace/prd.md — fill it in and re-run.\n');
+      process.exit(0);
+    }
+  }
 
   if (!filePath && !pageUrl) {
     console.error(

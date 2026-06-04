@@ -17,6 +17,10 @@ test-data/.auth/
 workspace/*
 !workspace/.gitkeep
 
+# Backward compat — also ignore if someone creates these in the root (old habit)
+my-test.txt
+prd.md
+
 # macOS
 .DS_Store
 .setup-guide.md
