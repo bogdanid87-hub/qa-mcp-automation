@@ -144,10 +144,14 @@ Never hardcode values that come from the live application — product names, pri
 If test-data/constants.ts exists in the project, import from it instead of inventing values:
 - Use PRODUCTS[n].id for product navigation (e.g. /product_details/\${PRODUCTS[0].id})
 - Use SEARCH.valid[0] as a known-good search term, SEARCH.invalid[0] for empty-results test
-- Use TEST_USER for registration/login/checkout — TEST_USER.email() for a unique address
+- Use TEST_USER for ANY form that takes user data — registration, login, checkout, subscription, reviews, contact forms, etc.
+  - TEST_USER.email() for any email input (call it once and store in a variable — reuse the variable if the same email is needed twice, e.g. duplicate-subscription tests)
+  - TEST_USER.name / firstName / lastName for any name field
+  - TEST_USER.address / city / state / country / zipCode / mobile for any address field
+- Use REVIEW for review/feedback forms — REVIEW.name, REVIEW.email, REVIEW.text
 - Use PAYMENT.valid for checkout payment fields
-- Import only what is needed: import { PRODUCTS, TEST_USER } from '../../test-data/constants'
-- NEVER invent a product name, price, category, email, or card number inline — always import
+- Import only what is needed: import { PRODUCTS, TEST_USER, REVIEW } from '../../test-data/constants'
+- NEVER invent a name, email, address, card number, or review text inline — always import
 - If the test needs data that is NOT in constants.ts (e.g. a specific edge-case search term), note it as a comment so it can be added to the constants file: // TODO: add 'xyz' to SEARCH.invalid in test-data/constants.ts
 
 ### Test tagging
