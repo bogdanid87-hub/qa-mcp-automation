@@ -1,0 +1,238 @@
+# ─────────────────────────────────────────────────────────────────────────
+# PRD Test Analysis — 2026-06-03
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Review: keep the tests you want, delete the ones you don't.
+# Run:    npm run generate -- --file prd-tests.txt
+#
+# risk levels: critical | high | medium | low
+# ─────────────────────────────────────────────────────────────────────────
+
+# test_name: ip-geolocation-prepopulates-shipping-estimate
+# spec_file: tests/ui/cart-shipping-estimator.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: critical
+# priority: critical
+# reason: Shipping cost pre-population directly affects the cart total a user sees before checkout, making it a revenue-critical display.
+
+1. Add a product to the cart and navigate to /view_cart.
+2. Wait for the shipping estimator widget to render on the cart page.
+3. Assert that the postal/zip code input field is pre-populated with a value (non-empty) derived from IP geo-location — do not assert a specific code, just that auto-fill occurred.
+4. Assert that an estimated shipping cost figure is displayed in the estimator section (e.g. a element containing a currency symbol and a numeric value).
+5. Assert that the cart total shown in the estimator reflects the product subtotal plus the pre-populated shipping estimate.
+
+---
+
+# test_name: manual-postal-code-entry-recalculates-shipping
+# spec_file: tests/ui/cart-shipping-estimator.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: critical
+# priority: critical
+# reason: Incorrect recalculation after manual postal code entry could display a wrong total, causing the user to be surprised at checkout — a direct revenue-trust failure.
+
+1. Add a product to the cart and navigate to /view_cart.
+2. Clear the pre-populated postal code field in the shipping estimator widget.
+3. Type a valid UK postal code (e.g. "SW1A 1AA") into the postal code input.
+4. Submit or trigger the recalculation (click "Estimate" button or equivalent).
+5. Assert that the estimated shipping cost updates to a value appropriate for the entered postal code.
+6. Assert that the displayed cart total updates to reflect the new shipping cost (subtotal + new shipping).
+7. Assert that the postal code field retains the manually entered value after recalculation.
+
+---
+
+# test_name: carrier-selection-dropdown-recalculates-total
+# spec_file: tests/ui/cart-shipping-estimator.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: critical
+# priority: critical
+# reason: Toggling carrier/speed options changes the shipping charge displayed before checkout; a stale or wrong total is a direct revenue-trust issue.
+
+1. Add a product to the cart and navigate to /view_cart.
+2. Locate the carrier selection dropdown in the shipping estimator widget.
+3. Record the estimated total displayed with the default carrier option selected (e.g. "Standard").
+4. Select an alternative option from the dropdown (e.g. "Next Day").
+5. Assert that the estimated shipping cost line item changes immediately (instant recalculation, no page reload required).
+6. Assert that the cart total updates to reflect the new shipping cost.
+7. Assert that the new total is strictly greater than the Standard total (Next Day should cost more).
+
+---
+
+# test_name: invalid-postal-code-shows-fallback-error-message
+# spec_file: tests/ui/cart-shipping-estimator.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: critical
+# priority: critical
+# reason: Failing to surface the error state could leave the user with no shipping estimate while still proceeding toward checkout with an incomplete total.
+
+1. Add a product to the cart and navigate to /view_cart.
+2. Clear the postal code field in the shipping estimator widget.
+3. Enter a syntactically invalid postal code (e.g. "ZZZZZ999") and trigger recalculation.
+4. Assert that a fallback error message is displayed in the estimator section indicating the address is invalid or shipping is unavailable for the selected region.
+5. Assert that no shipping cost figure is shown alongside the error (the estimator does not display a £0.00 or placeholder amount as if valid).
+6. Assert that the cart subtotal line still shows the correct product total (the error state does not corrupt the existing cart data).
+
+---
+
+# test_name: shipping-unavailable-for-region-shows-fallback-message
+# spec_file: tests/ui/cart-shipping-estimator.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: critical
+# priority: critical
+# reason: A region with no available shipping options must surface the fallback message rather than silently blocking checkout progress or showing a £0 total.
+
+1. Add a product to the cart and navigate to /view_cart.
+2. Enter a postal code for a region known to have no shipping coverage (use a test postal code confirmed as out-of-zone in the staging environment).
+3. Trigger recalculation.
+4. Assert that a fallback message is displayed indicating shipping is unavailable for the selected region.
+5. Assert the estimator does not display a shipping cost line item for the unavailable region.
+6. Assert the rest of the cart (product rows, subtotal) remains intact and correctly displayed.
+
+---
+
+# test_name: estimator-widget-visible-on-cart-page
+# spec_file: tests/ui/cart-shipping-estimator.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: medium
+# priority: medium
+# reason: The estimator must be discoverable in the cart view for users to engage with it; if the section does not render in the correct position the 40% usage metric cannot be achieved.
+
+1. Add a product to the cart and navigate to /view_cart.
+2. Assert that the shipping estimator section is visible on the page (not hidden, not collapsed by default).
+3. Assert that the section contains: a postal code input field, a carrier selection dropdown, and an estimated total display area.
+4. Assert that the estimator is positioned below the cart item list and above or alongside the cart summary/checkout button (verify it does not render below the fold or outside the cart summary block).
+
+---
+
+# test_name: estimator-not-shown-on-empty-cart
+# spec_file: tests/ui/cart-shipping-estimator.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: medium
+# priority: medium
+# reason: Displaying a shipping estimator when there are no items would surface a meaningless £0 estimate and could confuse users; the widget should be absent or disabled on an empty cart.
+
+1. Navigate to /view_cart without adding any products (empty cart state).
+2. Assert that the shipping estimator widget is either not rendered or is explicitly disabled/hidden.
+3. Assert that no estimated total or shipping cost figure is displayed in the estimator area.
+
+---
+
+# test_name: tax-estimate-included-in-displayed-total
+# spec_file: tests/ui/cart-shipping-estimator.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: critical
+# priority: critical
+# reason: The PRD states the goal is transparent up-front pricing including taxes; a total missing the tax component would directly mislead the user about their final charge.
+
+1. Add a product to the cart and navigate to /view_cart.
+2. Enter a valid UK postal code in the estimator and trigger recalculation.
+3. Assert that a tax/VAT line item is displayed separately in the estimator breakdown.
+4. Assert that the displayed estimated grand total equals: product subtotal + shipping cost + tax amount (verify arithmetic, e.g. sum the visible line items and compare to the total figure).
+5. Assert the tax line is non-zero for a standard UK postal code (UK VAT is 20%).
+
+---
+
+# test_name: out-of-scope-non-uk-postal-code-handled-gracefully
+# spec_file: tests/ui/cart-shipping-estimator.spec.ts
+# page_paths: /view_cart
+# source: direct
+# risk: medium
+# priority: medium
+# reason: Phase 1 is limited to UK addresses; entering a non-UK postal code is an in-scope error condition that must not silently accept international input or crash the estimator.
+
+1. Add a product to the cart and navigate to /view_cart.
+2. Clear the postal code field and enter a non-UK postal code (e.g. US ZIP "90210" or "10001").
+3. Trigger recalculation.
+4. Assert that either: (a) a fallback/error message is shown indicating the region is not supported, or (b) the estimator prompts the user that only UK postal codes are accepted in Phase 1.
+5. Assert that no shipping or tax estimate is calculated and displayed for the non-UK input.
+
+---
+
+# test_name: geolocation-estimate-updates-when-postal-code-manually-overridden
+# spec_file: tests/ui/cart-shipping-estimator.spec.ts
+# page_paths: /view_cart
+# source: suggested
+# risk: critical
+# priority: critical
+# reason: If the manually entered code does not replace the geo-detected value, the user could complete checkout believing a different address's shipping cost applies — a direct billing accuracy failure.
+
+1. Add a product to the cart and navigate to /view_cart.
+2. Note the auto-populated postal code and the corresponding shipping estimate shown by IP geo-location.
+3. Clear the postal code field and enter a different valid UK postal code that would produce a different shipping tier.
+4. Trigger recalculation.
+5. Assert that the shipping estimate changes from the original geo-detected value.
+6. Assert the postal code field displays the manually entered code, not the original geo-detected code.
+7. Assert the cart total reflects the newly calculated shipping cost, not the original geo-detected cost.
+
+---
+
+# test_name: carrier-dropdown-defaults-to-standard-shipping
+# spec_file: tests/ui/cart-shipping-estimator.spec.ts
+# page_paths: /view_cart
+# source: suggested
+# risk: medium
+# priority: medium
+# reason: If the default selection is not Standard, users may see an inflated total on first load and abandon the cart before investigating cheaper options.
+
+1. Add a product to the cart and navigate to /view_cart.
+2. Locate the carrier selection dropdown in the shipping estimator.
+3. Assert that the dropdown's selected value on initial page load is the "Standard" shipping option (or the cheapest available tier as defined in the PRD).
+4. Assert that the initial estimated total shown corresponds to Standard shipping, not Next Day or any premium tier.
+
+---
+
+# test_name: estimator-total-matches-checkout-first-page-total
+# spec_file: tests/e2e/cart-shipping-estimator-checkout.spec.ts
+# page_paths: /view_cart, /checkout
+# source: suggested
+# risk: critical
+# priority: critical
+# reason: The entire feature goal is to eliminate price surprises at checkout; if the estimator total diverges from the checkout page total, the feature actively misleads users and causes the drop-off it was designed to prevent.
+
+1. Add a product to the cart and navigate to /view_cart.
+2. Enter a valid UK postal code in the estimator and select a specific carrier (e.g. "Standard").
+3. Record the estimated grand total (subtotal + shipping + tax) displayed in the estimator.
+4. Click "Proceed to Checkout" and complete any login/registration modal if prompted.
+5. On the Shipping & Billing step of checkout, assert that the order total displayed matches the estimated total recorded in step 3 (allow ±£0.01 for rounding).
+6. Assert that the same postal code is pre-filled or reflected in the checkout shipping address section.
+
+---
+
+# test_name: estimator-persists-postal-code-after-page-refresh
+# spec_file: tests/ui/cart-shipping-estimator.spec.ts
+# page_paths: /view_cart
+# source: suggested
+# risk: high
+# priority: high
+# reason: If the manually entered postal code is lost on refresh, users must re-enter their location on every cart visit, silently undermining the transparency goal and eroding trust in the feature.
+
+1. Add a product to the cart and navigate to /view_cart.
+2. Clear the pre-populated postal code and enter a specific valid UK postal code.
+3. Trigger recalculation and confirm the shipping estimate updates.
+4. Reload the page (F5 / navigation refresh).
+5. Assert that the postal code field retains the manually entered value after reload.
+6. Assert that the shipping estimate displayed matches the value from before the reload (the estimate is not reset to the IP geo-located default).
+
+---
+
+# test_name: empty-postal-code-field-submission-shows-validation
+# spec_file: tests/ui/cart-shipping-estimator.spec.ts
+# page_paths: /view_cart
+# source: suggested
+# risk: medium
+# priority: medium
+# reason: Submitting with no postal code should not silently display a £0 shipping estimate or crash the widget; inline validation prevents user confusion.
+
+1. Add a product to the cart and navigate to /view_cart.
+2. Clear the postal code field completely (remove any IP geo-detected pre-fill).
+3. Attempt to trigger recalculation with an empty field (click "Estimate" or equivalent).
+4. Assert that a validation message is displayed prompting the user to enter a postal code.
+5. Assert that the shipping estimate area does not update to show £0.00 or any value (it either retains the previous estimate or shows a blank/placeholder state).
+6. Assert the cart subtotal is unaffected.
