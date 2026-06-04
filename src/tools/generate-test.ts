@@ -558,6 +558,18 @@ Never remove existing methods — only append new ones.` : '';
         }
       } catch { /* new file — no guard needed */ }
     }
+    if (file.path.startsWith('tests/') && file.path.endsWith('.spec.ts')) {
+      // Guard: never write a spec update that drops existing test() calls
+      try {
+        const existing = await readFile(abs, 'utf-8');
+        const existingTests = [...existing.matchAll(/test\s*\(\s*['"`]([^'"`]+)['"`]/g)].map(m => m[1]);
+        const missing = existingTests.filter(name => !file.content.includes(name));
+        if (missing.length > 0) {
+          process.stderr.write(`[generate-test] skipping spec update — would drop tests: ${missing.join(', ')}\n`);
+          continue;
+        }
+      } catch { /* new file — no guard needed */ }
+    }
     await mkdir(dirname(abs), { recursive: true });
     await writeFile(abs, file.content, 'utf-8');
     written.push(file.path);
