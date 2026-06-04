@@ -1,12 +1,10 @@
 {
-  "mcpServers": {
-    "qa-mcp-automation": {
-      "command": "npx",
-      "args": ["tsx", "src/index.ts"],
-      "cwd": "/absolute/path/to/your/clone",
-      "env": {
-        "ANTHROPIC_API_KEY": "sk-ant-your-key-here"
-      }
-    }
+  "//": "Optional. Copy to settings.local.json to pre-approve common Claude Code commands for this project so you are not prompted on every run. The file is gitignored — safe to customise per machine.",
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npm install *)",
+      "Bash(npx playwright *)"
+    ]
   }
 }
