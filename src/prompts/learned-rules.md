@@ -120,4 +120,8 @@ await page.waitForFunction(() =>
 );
 ```
 Replace `#target-region` with the actual screenshot locator selector.
+
+## Rule 024 — CSS selector confusion between an element having a class vs an element being a descendant of a class
+**Problem class**: CSS selector confusion between an element having a class vs an element being a descendant of a class
+**Rule**: When the target element is a child of the element bearing a specific class, always use a descendant selector (`.parent-class child-tag`) rather than a compound selector (`child-tag.parent-class`). Before writing any class-based locator, inspect the DOM to confirm which element actually carries the class.
 <!-- rules-end -->

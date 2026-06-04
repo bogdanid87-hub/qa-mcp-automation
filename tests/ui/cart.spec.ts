@@ -182,32 +182,4 @@ test.describe('Cart', () => {
     await expect(cartPage.registerLoginLink).toBeVisible();
   });
 
-  // [UI Cart #6]
-  test('should add product from detail page and verify it appears in cart via modal View Cart link', async ({ page, cartPage }) => {
-    // Navigate directly to the product detail page for product ID 1
-    await page.goto('/product_details/1', { waitUntil: 'domcontentloaded' });
-
-    // Wait for the product information section to be visible before interacting
-    await page.locator('.product-information').waitFor({ state: 'visible' });
-
-    // Click the Add to cart button on the product detail page
-    const addToCartBtn = page.locator('.product-information .btn.cart, .product-information button.btn').first();
-    await addToCartBtn.click();
-
-    // Wait for the cart modal to appear after clicking Add to cart
-    await page.locator('#cartModal').waitFor({ state: 'visible' });
-
-    // Click the View Cart link inside the modal to navigate to the cart page
-    await page.locator('p.text-center a[href="/view_cart"]').click();
-    await page.waitForLoadState('domcontentloaded');
-
-    // Verify the cart page loaded and the product is present in the cart table
-    await expect(page).toHaveURL(/\/view_cart/);
-    await expect(page.locator('#cart_info_table')).toBeVisible();
-    await page.locator('#cart_info_table tbody tr').first().waitFor({ state: 'visible' });
-
-    // Assert at least one product row is present in the cart
-    const rowCount = await cartPage.getRowCount();
-    expect(rowCount).toBeGreaterThanOrEqual(1);
-  });
 });

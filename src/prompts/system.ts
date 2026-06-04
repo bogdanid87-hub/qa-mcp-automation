@@ -59,6 +59,16 @@ General rules:
 - If a POM for the target page already exists in pages/, ADD the new locators and methods to that file — never create a second class for the same page
 - Only create a new POM file when no existing class covers that page
 
+POM method design — think about the full feature, not just the current test:
+When writing or extending a POM, think about ALL tests that will eventually cover that page,
+not just the one being generated right now. Use the proposed additional tests as a signal
+for what the page will need. Pre-build methods for the page's primary user interactions so
+future tests can reuse them without re-implementing the same locator logic.
+  WRONG: write only the method the current test needs, leave locators bare for future tests
+  RIGHT: for a product detail page, add addToCart(), getProductName(), getPrice(),
+         changeQuantity(n), and submitReview(name, email, text) — future tests will need all of these
+Reusable methods reduce test fragility: if a locator changes, one POM edit fixes every test.
+
 Locator priority (strict order):
     1. [data-qa="..."]
     2. getByRole(...)
@@ -93,8 +103,11 @@ Locator rules:
 - Import: import { test, expect } from '../../fixtures'  (for tests/ui/ and tests/e2e/)
 - Wrap every test inside test.describe('Meaningful Name', () => { ... })
 - Every test MUST contain at least one expect() assertion
-- If a spec file already exists for the same feature area, ADD the new test inside that file — do not create a new spec file
-- Only create a new spec file when no existing file covers that feature area
+- The spec file is determined by the PRIMARY page where the main user action happens — not by where the test ends or what it asserts on
+  - A test that clicks "Add to cart" on the product detail page → product-detail.spec.ts, even if it then verifies the cart
+  - A test that starts on /products and ends on /view_cart → cart.spec.ts only if the cart itself is what's being tested
+- If a spec file already exists for that primary feature area, ADD the new test inside it — do not create a new spec file
+- Only create a new spec file when no existing file covers that primary feature area
 
 test.describe() naming — name the FEATURE AREA or user goal, never the specific scenario:
   CORRECT: test.describe('Cart', ...)  /  test.describe('Place Order', ...)
@@ -105,6 +118,44 @@ Imports — always match the import style to the export style:
   Named export  → import { ClassName } from './ClassName'
   Default export → import ClassName from './ClassName'
 Mismatched import style silently makes the imported value undefined and breaks class inheritance.
+
+### No hardcoded application data
+Never hardcode values that come from the live application — product names, prices, headings, category labels. These change and make tests brittle.
+- **Capture at runtime:** read the value with textContent() / innerText(), store it in a variable, assert against that variable
+- **Assert structure, not content:** prefer expect(name.trim().length).toBeGreaterThan(0) over expect(name).toBe('Blue Top')
+- **Exception:** stable URL IDs (e.g. /product_details/1) and form field names are fine to hardcode
+
+### Test data constants
+If test-data/constants.ts exists in the project, import from it instead of inventing values:
+- Use PRODUCTS[n].id for product navigation (e.g. /product_details/\${PRODUCTS[0].id})
+- Use SEARCH.valid[0] as a known-good search term, SEARCH.invalid[0] for empty-results test
+- Use TEST_USER for registration/login/checkout — TEST_USER.email() for a unique address
+- Use PAYMENT.valid for checkout payment fields
+- Import only what is needed: import { PRODUCTS, TEST_USER } from '../../test-data/constants'
+
+### E2E helper functions — extract shared flows
+E2E tests frequently share multi-step setup flows (login, add product to cart, navigate to
+checkout). Never duplicate these flows across test bodies — extract them as helper functions.
+
+Where helpers live:
+- tests/helpers/<domain>-helpers.ts  — cross-page flows that span multiple POMs
+  e.g. loginUser(page, email, password), addProductAndGoToCart(page, productId), completeCheckout(page, user, payment)
+- POM methods — page-specific action sequences that a single page class owns
+
+When to extract vs inline:
+- A flow that appears in 2+ tests → always extract
+- A flow proposed in additional tests suggestions → extract proactively, even if only one test is written now;
+  the proposals signal what will be reused before it is written
+- A one-off sequence unique to a single test → inline is fine
+
+Example helpers file:
+  // tests/helpers/checkout-helpers.ts
+  export async function addProductAndGoToCart(page: Page, productId: number): Promise<void> { ... }
+  export async function loginUser(page: Page, email: string, password: string): Promise<void> { ... }
+  export async function completeCheckout(page: Page, user: typeof TEST_USER, payment: typeof PAYMENT.valid): Promise<void> { ... }
+
+When generating multiple E2E tests at once: identify shared steps across all of them FIRST,
+write the helpers, then write the test bodies that call them.
 
 ### Test isolation — critical
 Every test must be fully independent:
