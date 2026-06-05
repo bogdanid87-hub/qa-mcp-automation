@@ -1,0 +1,138 @@
+# Test descriptions for automationexercise.com
+# Generated for start-from-zero workflow validation.
+# Run: npm run generate -- --file workspace/my-test.txt
+# Separate tests with --- on its own line.
+
+# ── Cart ─────────────────────────────────────────────────────────────────────
+
+# spec_file: tests/ui/cart.spec.ts
+# page_paths: /products, /view_cart
+Add two different products to the cart from the products listing page.
+Navigate to the cart and verify both products appear with correct names,
+unit prices, quantities of 1, and that each row total equals its unit price.
+
+---
+
+# spec_file: tests/ui/cart.spec.ts
+# page_paths: /view_cart
+Navigate directly to the cart page without adding any products.
+Verify the cart is empty — no product rows visible.
+
+---
+
+# spec_file: tests/ui/cart.spec.ts
+# page_paths: /products, /view_cart
+Add a product to the cart from the products page, then navigate to the cart.
+Remove the product using the delete icon and verify the cart is now empty.
+
+---
+
+# spec_file: tests/ui/cart.spec.ts
+# page_paths: /products, /view_cart
+Add the same product to the cart twice from the products page.
+Navigate to the cart and verify it shows one row with quantity 2 rather than two separate rows.
+
+---
+
+# spec_file: tests/ui/cart.spec.ts
+# page_paths: /products, /view_cart
+Add a product to the cart and navigate to the cart page as a guest.
+Click Proceed To Checkout and verify a modal appears offering the option to register or log in.
+
+---
+
+# ── Product Detail ───────────────────────────────────────────────────────────
+
+# spec_file: tests/ui/product-detail.spec.ts
+# page_paths: /product_details/1, /view_cart
+Navigate to a product detail page, click Add to Cart, verify the confirmation modal appears,
+then click View Cart and verify the product appears in the cart with the correct name.
+
+---
+
+# spec_file: tests/ui/product-detail.spec.ts
+# page_paths: /product_details/1, /view_cart
+Navigate to a product detail page, change the quantity input to 3, then click Add to Cart.
+Navigate to the cart and verify the product row shows quantity 3 and a total equal to unit price × 3.
+
+---
+
+# spec_file: tests/ui/product-detail.spec.ts
+# page_paths: /product_details/1
+Navigate to a product detail page and submit a review using the review form.
+Fill in a reviewer name, email, and review text, click Submit,
+and verify the Thank You success message appears.
+
+---
+
+# ── Search ───────────────────────────────────────────────────────────────────
+
+# spec_file: tests/ui/search.spec.ts
+# page_paths: /products
+On the products page, search for a product using the search box.
+Verify the results are displayed and each visible product name contains the search term.
+Cross-reference the count against the products API to confirm no results are hidden.
+
+---
+
+# ── Contact ──────────────────────────────────────────────────────────────────
+
+# spec_file: tests/ui/contact.spec.ts
+# page_paths: /contact_us
+Fill in the Contact Us form with a name, email address, subject, and message.
+Upload a file attachment. Submit the form and verify the success confirmation message appears.
+
+---
+
+# ── Subscription ─────────────────────────────────────────────────────────────
+
+# spec_file: tests/ui/subscription.spec.ts
+# page_paths: /
+On the home page, scroll to the footer subscription form.
+Enter a valid email address and click Subscribe.
+Verify the success message confirms the subscription.
+
+---
+
+# spec_file: tests/ui/subscription.spec.ts
+# page_paths: /view_cart
+Navigate to the cart page (with or without products).
+Scroll to the footer subscription form, enter a valid email, and subscribe.
+Verify the success message appears without leaving the cart page.
+
+---
+
+# spec_file: tests/ui/subscription.spec.ts
+# page_paths: /
+On the home page footer subscription form, enter an invalid email format (e.g. "notanemail").
+Verify the browser or the site rejects the input and no success message is shown.
+
+---
+
+# spec_file: tests/ui/subscription.spec.ts
+# page_paths: /
+On the home page footer subscription form, submit without entering an email.
+Verify the browser native validation prevents submission and the success message does not appear.
+
+---
+
+# spec_file: tests/ui/subscription.spec.ts
+# page_paths: /
+Subscribe with a valid email on the home page footer.
+Subscribe again with the same email. Observe what the site does on the second submission —
+verify the result (success, error, or duplicate handling) and document the actual behaviour.
+
+---
+
+# ── E2E: Full checkout ───────────────────────────────────────────────────────
+
+# spec_file: tests/e2e/place-order.spec.ts
+# page_paths: /products, /view_cart, /login, /checkout, /payment_done
+Register a new user account during the checkout flow:
+1. Add a product to the cart from the products page
+2. Navigate to the cart and proceed to checkout
+3. Register a new account when prompted (use fresh credentials each run)
+4. Complete the delivery address and order confirmation steps
+5. Enter payment details and place the order
+6. Verify the order success page is shown
+7. Delete the test account via the Delete Account option to clean up

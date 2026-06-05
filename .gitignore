@@ -16,10 +16,14 @@ test-data/.auth/
 # To share a specific output with your team, force-add it: git add -f workspace/APP_KNOWLEDGE.md
 workspace/*
 !workspace/.gitkeep
+!workspace/my-test.txt
 
 # Backward compat — also ignore if someone creates these in the root (old habit)
 my-test.txt
 prd.md
+
+# Archive of pre-regeneration files — kept for comparison only
+.qa-archive/
 
 # macOS
 .DS_Store
