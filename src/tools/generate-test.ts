@@ -459,7 +459,20 @@ Respond with the standard JSON:
       try {
         pomParsed = parseJson(pomRaw);
       } catch {
-        return { content: [{ type: 'text', text: `${useLocal ? LOCAL_MODEL : 'Claude'} returned invalid JSON in POM step.\n\n${pomRaw}` }] };
+        if (pomGeneratedByLocal) {
+          // Local LLM returned unparseable JSON (often truncated for complex tasks) —
+          // fall back to Claude before giving up.
+          process.stderr.write(`[generate-test] local LLM invalid JSON in POM step — falling back to Claude\n`);
+          try {
+            pomRaw = await callClaude(buildUserBlocks({ description: description + POM_ONLY_HINT, existingContext, domContext }));
+            pomParsed = parseJson(pomRaw);
+            pomGeneratedByLocal = false;
+          } catch {
+            return { content: [{ type: 'text', text: `POM step failed: local LLM returned invalid JSON and Claude fallback also failed.` }] };
+          }
+        } else {
+          return { content: [{ type: 'text', text: `Claude returned invalid JSON in POM step.\n\n${pomRaw}` }] };
+        }
       }
 
       for (const file of pomParsed.files ?? []) {
