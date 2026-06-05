@@ -313,7 +313,12 @@ export async function generateTestTool(args: {
   // Split POM and spec generation into two calls when no POM exists yet.
   // This guarantees the spec call sees the committed POM — eliminating method-name
   // mismatches between the two files that occur when both are invented simultaneously.
-  const doPomSpecSplit = !args.proposalsOnly && !(await pomExistsForFeature(featureKeywords));
+  // E2E tests always need the split: their descriptions mention page keywords
+  // (e.g. "product", "cart") that match existing UI POMs, causing pomExistsForFeature
+  // to return true even though the flow-specific POMs (checkout, payment, register)
+  // are missing. Force the split so each call stays small and doesn't time out.
+  const isE2E = args.spec_file?.startsWith('tests/e2e/') || args.type === 'e2e';
+  const doPomSpecSplit = !args.proposalsOnly && (isE2E || !(await pomExistsForFeature(featureKeywords)));
   let pomGeneratedByLocal = false;
 
   if (doPomSpecSplit) {
