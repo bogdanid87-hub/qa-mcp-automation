@@ -34,7 +34,7 @@ export class ProductDetailsPage extends SitePage {
   }
 
   async goto(productId: number): Promise<void> {
-    await this.navigate(`/product_details/${productId}`, { waitUntil: 'domcontentloaded' });
+    await this.navigate(`/product_details/${productId}`, );
   }
 
   async verifyLoaded(): Promise<void> {

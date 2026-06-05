@@ -586,9 +586,14 @@ Never remove existing methods — only append new ones.` : '';
   // consolidated block at the end of constants.ts so the user knows what to add.
   await appendConstantsTodos(parsed.files ?? []);
 
-  const specFile = (parsed.files ?? []).find(
-    (f) => f.path.startsWith('tests/') && f.path.endsWith('.spec.ts'),
-  );
+  // Only run tests for spec files that were actually written to disk.
+  // If the spec drop guard blocked the write, parsed.files still contains
+  // the spec but written[] does not — running against the old file would
+  // report false passes and record tests that weren't actually generated.
+  const specFile = written
+    .filter(p => p.startsWith('tests/') && p.endsWith('.spec.ts'))
+    .map(p => (parsed.files ?? []).find(f => f.path === p))
+    .find(Boolean);
   let testRunNote = '';
   let passing = true;
   let lastFailureOutput = '';

@@ -22,7 +22,7 @@ export class ViewCartPage extends SitePage {
   }
 
   async goto(): Promise<void> {
-    await this.navigate('/view_cart', { waitUntil: 'domcontentloaded' });
+    await this.navigate('/view_cart', );
   }
 
   async verifyLoaded(): Promise<void> {

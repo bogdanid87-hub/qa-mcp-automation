@@ -12,7 +12,7 @@ export class ProductsPage extends ProductListPage {
   }
 
   async goto(): Promise<void> {
-    await this.navigate('/products', { waitUntil: 'domcontentloaded' });
+    await this.navigate('/products', );
   }
 
   async verifyLoaded(): Promise<void> {
