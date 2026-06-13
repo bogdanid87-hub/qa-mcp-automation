@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtemp, rm, readFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -141,6 +141,41 @@ test.describe('Cart', () => {
     const result = await safeWrite(path, tightened);
     expect(result.ok).toBe(true);
     expect(result.written).toBe(true);
+  });
+
+  it('refuses to write a hardcoded secret env value into a .ts file', async () => {
+    vi.stubEnv('TEST_PASSWORD', 'sup3rSecretPw');
+    const path = join(dir, 'leaky.spec.ts');
+    const result = await safeWrite(path, "const password = 'sup3rSecretPw';\n");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain('TEST_PASSWORD');
+    expect(result.reason).toContain('refusing to write a secret');
+    vi.unstubAllEnvs();
+  });
+
+  it('refuses a hardcoded secret even with allowOverwrite: true', async () => {
+    vi.stubEnv('TEST_PASSWORD', 'sup3rSecretPw');
+    const path = join(dir, 'leaky.spec.ts');
+    const result = await safeWrite(path, "const password = 'sup3rSecretPw';\n", { allowOverwrite: true });
+    expect(result.ok).toBe(false);
+    vi.unstubAllEnvs();
+  });
+
+  it('does not scan non-.ts files for secrets', async () => {
+    vi.stubEnv('TEST_PASSWORD', 'sup3rSecretPw');
+    const path = join(dir, 'notes.md');
+    const result = await safeWrite(path, 'password is sup3rSecretPw\n');
+    expect(result.ok).toBe(true);
+    vi.unstubAllEnvs();
+  });
+
+  it('allows fake credentials that do not match a sensitive env var or secret pattern', async () => {
+    vi.stubEnv('TEST_PASSWORD', 'sup3rSecretPw');
+    const path = join(dir, 'auth.spec.ts');
+    const result = await safeWrite(path, "const password = 'Test@1234';\nconst email = 'nonexistent@test.com';\n");
+    expect(result.ok).toBe(true);
+    expect(result.written).toBe(true);
+    vi.unstubAllEnvs();
   });
 });
 

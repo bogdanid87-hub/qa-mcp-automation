@@ -1,5 +1,6 @@
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { dirname } from 'path';
+import { scanForSecrets } from './scan-secrets';
 
 export interface SafeWriteOptions {
   /** Allow shrinking the file or removing existing test()/describe() blocks. */
@@ -19,6 +20,13 @@ export interface SafeWriteResult {
 
 const MIN_LINES_FOR_SHRINK_CHECK = 5;
 const SHRINK_RATIO = 0.5;
+
+/** Extensions scanned for hardcoded secrets — generated specs, POMs, fixtures, mocks. */
+const SCANNED_EXTENSIONS = ['.ts', '.tsx'];
+
+function hasScannedExtension(path: string): boolean {
+  return SCANNED_EXTENSIONS.some((ext) => path.endsWith(ext));
+}
 
 /** Matches `test('title'`, `describe.skip("title"`, etc. — the call signature is the unit of comparison. */
 const BLOCK_RE = /\b(?:test|describe)(?:\.\w+)?\s*\(\s*(['"`])(?:\\.|(?!\1).)*\1/g;
@@ -56,6 +64,10 @@ function describeUnsafeOverwrite(existing: string, next: string): string | null 
  * `allowOverwrite` is set. Always returns a unified diff for preview, and creates
  * parent directories as needed. A no-op (content identical to what's on disk)
  * returns `ok: true, written: false`.
+ *
+ * For `.ts`/`.tsx` paths, `content` is also scanned for hardcoded secrets
+ * (see `scan-secrets.ts`) — a match refuses the write regardless of
+ * `allowOverwrite`.
  */
 export async function safeWrite(
   path: string,
@@ -74,6 +86,14 @@ export async function safeWrite(
   }
 
   const diff = unifiedDiff(existing ?? '', content, path);
+
+  if (hasScannedExtension(path)) {
+    const secrets = scanForSecrets(content);
+    if (secrets.length > 0) {
+      const found = secrets.map((s) => `${s.label} (${s.excerpt})`).join(', ');
+      return { ok: false, written: false, diff, reason: `would write ${found} — refusing to write a secret into generated code` };
+    }
+  }
 
   if (existing !== null && !options.allowOverwrite) {
     const reason = describeUnsafeOverwrite(existing, content);

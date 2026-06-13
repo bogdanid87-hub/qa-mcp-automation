@@ -181,6 +181,27 @@ The same `blockedWrites` list also collects fixes to `tests/**/*.spec.ts` that
 would change *what* an existing test asserts (rather than how it reaches the
 assertion) — see [investigate-and-fix.md](investigate-and-fix.md#objective-preservation--intent-signature-guard).
 
+**Secret scan — `src/lib/scan-secrets.ts`:** for `.ts`/`.tsx` paths, `safeWrite`
+also scans `content` and refuses the write (regardless of `allowOverwrite`) if
+it finds:
+
+- the literal *value* of a sensitive env var — `ANTHROPIC_API_KEY`,
+  `TEST_EMAIL`, or `TEST_PASSWORD` — read from `process.env` at call time and
+  checked against `content`. Values shorter than 6 chars are skipped (too many
+  false positives). If the var isn't set in the server's environment, that
+  check is a no-op — this is a best-effort guard, not a guarantee.
+- a secret-shaped string regardless of environment: an `sk-...` API key, an
+  AWS access key (`AKIA...`), a GitHub token (`ghp_...` etc.), or a PEM
+  private-key header.
+
+**Why:** `docs/generate-auth-fixture.md` already says credentials must be read
+via `process.env.*`, never hardcoded — this turns that convention into an
+enforced gate. It deliberately does **not** flag generic-looking emails or
+passwords (e.g. `test-data/constants.ts`'s `qa.tester.fixed@testmail.com`,
+`tests/api/auth.spec.ts`'s `Test@1234` / `nonexistent@test.com`) — those are
+intentional fixtures, and a domain-allowlist style check would constantly
+false-positive as new fake addresses are added.
+
 ---
 
 ## Shell execution guard — `src/lib/shell-guard.ts`
