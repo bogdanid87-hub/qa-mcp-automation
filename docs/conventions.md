@@ -117,6 +117,41 @@ structurally impossible for generated POMs.
 
 ---
 
+## Test data cleanup — `trackCleanup` fixture
+
+Generated tests that create data via the API (accounts, cart items, reviews,
+subscriptions, uploaded files, etc.) register cleanup through the `trackCleanup`
+fixture (`fixtures/index.ts`), available on every `test` from `../../fixtures`:
+
+```typescript
+test('should ...', async ({ request, trackCleanup }) => {
+  const email = randomEmail();
+  const password = randomPassword();
+  await request.post('/api/createAccount', { form: { email, password, /* ... */ } });
+  trackCleanup(() => request.delete('/api/deleteAccount', { form: { email, password } }));
+
+  // ... rest of test, including assertions — cleanup still runs even if these fail
+});
+```
+
+- `trackCleanup(fn)` pushes `fn` onto a per-test registry.
+- After the test finishes — pass **or** fail — fixture teardown runs every
+  registered callback in reverse order, each wrapped in try/catch so one
+  failed cleanup doesn't block the rest.
+- Register the cleanup **immediately** after the entity is created, before any
+  further action or assertion that could throw and skip a cleanup line written
+  later in the test body. A test creating multiple entities registers a
+  cleanup for each one as it's created.
+
+**Why:** a bare `test.afterAll`/`test.afterEach` only cleans up data if the
+hook itself runs and the right variables were set before the failure point.
+Fixture teardown (the code after `await use(...)`) is guaranteed by Playwright
+to run for every test regardless of pass/fail, so `trackCleanup` makes
+"create → register cleanup → continue" the structural default rather than
+something each spec has to get right with manual hooks and shared state.
+
+---
+
 ## AI model routing
 
 | Task | Model | Reason |
