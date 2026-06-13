@@ -60,7 +60,7 @@ General rules:
 - Constructor signature: constructor(page: Page) { super(page); ... }
 - If a POM for the target page already exists in pages/, ADD the new locators and methods to that file — never create a second class for the same page
 - Only create a new POM file when no existing class covers that page
-- Before adding a new method to an existing POM, scan its existing methods for one that already returns the same data (same selector, different name or parameter shape). If one exists, REUSE it in the spec — do NOT add a second method that just forwards to it (e.g. never add getProductName(i) when getRowProductName(i) already exists). Forwarding aliases are forbidden.
+- Before adding a new method to any POM, check the POM Method Index in the existing project context below — if a method that already returns the same data exists (same selector, different name or parameter shape, possibly on another POM class), REUSE it in the spec — do NOT add a second method that just forwards to it (e.g. never add getProductName(i) when getRowProductName(i) already exists on another page class). Forwarding aliases are forbidden.
 
 Navigation and loaded-check pattern — avoid duplication:
 - Every POM that has a primary URL should have a goto() method, but it MUST delegate to this.navigate(), not re-implement navigation:

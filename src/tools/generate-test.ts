@@ -15,6 +15,7 @@ import { autoFixFailure } from './investigate-fix.js';
 import { writeTestAnnotation } from './annotations.js';
 import { readAppLimitations } from './generate-app-knowledge.js';
 import { extractJson } from './llm-utils.js';
+import { extractExportedFunctionNames, extractPomMethods } from './pom-index.js';
 import { TokenBudget } from './budget.js';
 
 const ROOT = process.cwd();
@@ -406,8 +407,8 @@ export async function generateTestTool(args: {
           // Guard: reject if local model silently dropped existing async methods
           try {
             const existing = await readFile(abs, 'utf-8');
-            const missing = [...existing.matchAll(/async\s+(\w+)\s*(?:<[^>]*>)?\s*\(/g)]
-              .map(m => m[1])
+            const missing = extractPomMethods(existing)
+              .map(m => m.name)
               .filter(name => !new RegExp(`async\\s+${name}[\\s<(]`).test(file.content));
             if (missing.length > 0) continue;
           } catch { /* new file — no guard needed */ }
@@ -515,8 +516,8 @@ Respond with the standard JSON:
         if (useLocal) {
           try {
             const existing = await readFile(abs, 'utf-8');
-            const missing = [...existing.matchAll(/async\s+(\w+)\s*(?:<[^>]*>)?\s*\(/g)]
-              .map(m => m[1])
+            const missing = extractPomMethods(existing)
+              .map(m => m.name)
               .filter(name => !new RegExp(`async\\s+${name}[\\s<(]`).test(file.content));
             if (missing.length > 0) { pomGeneratedByLocal = false; continue; }
           } catch { /* new file */ }
@@ -601,9 +602,8 @@ Never remove existing methods — only append new ones.` : '';
       // Guard: never write an update that drops existing exported functions
       try {
         const existing = await readFile(abs, 'utf-8');
-        const missing = [...existing.matchAll(/(?:async\s+)?(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*[(<]/g)]
-          .map(m => m[1])
-          .filter(name => name !== 'default' && !new RegExp(`(?:function|async)\\s+${name}[\\s<(]`).test(file.content));
+        const missing = extractExportedFunctionNames(existing)
+          .filter(name => !new RegExp(`(?:function|async)\\s+${name}[\\s<(]`).test(file.content));
         if (missing.length > 0) {
           process.stderr.write(`[generate-test] skipping update to ${file.path} — would drop: ${missing.join(', ')}\n`);
           continue;

@@ -36,6 +36,9 @@ BasePage          — navigate(), popup handling only
 - All POM parent imports are named: `import { SitePage } from './SitePage'`
 - If a POM for the target page already exists in `pages/`, add to it — never create
   a second class for the same page.
+- Before adding a new method, check the POM Method Index for an equivalent on
+  *any* class — see [qa-workflow's look-ahead
+  section](../qa-workflow/SKILL.md#look-ahead-check-before-you-add-applies-to-your-own-direct-edits-too).
 
 ## Locators
 
