@@ -82,10 +82,14 @@ POM methods, fixtures, and shared helpers before adding new ones. The same
 principle applies when *you* edit this repo's `pages/`, `fixtures/`, `tests/`, or
 `utils/` directly:
 
-- **New POM method or locator** — grep `pages/*.ts` for an equivalent first. If a
-  parent class (`SitePage`, `ProductListPage`, `BasePage`) already exposes it,
-  don't redeclare it in a subclass. See [qa-conventions](../qa-conventions/SKILL.md)
-  for the hierarchy.
+- **New POM method or locator** — check the POM Method Index first: run
+  `buildPomIndex`/`formatPomIndex` from `src/tools/pom-index.ts` over `pages/*.ts`
+  (the same index `generate_test` injects into its own context) for an equivalent
+  method on *any* class, not just the one you're editing — this is what catches
+  forwarding aliases (e.g. a new `getProductName` when `getRowProductName` already
+  exists on another page). If a parent class (`SitePage`, `ProductListPage`,
+  `BasePage`) already exposes it, don't redeclare it in a subclass. See
+  [qa-conventions](../qa-conventions/SKILL.md) for the hierarchy.
 - **New fixture** — check `fixtures/index.ts` before adding one. `trackCleanup` is
   already a built-in fixture; never propose re-adding it.
 - **New spec file** — never instantiate `new SomePage(page)` directly in a spec;

@@ -1,6 +1,6 @@
 # Test Cases
 
-**Total: 12 tests**
+**Total: 13 tests**
 
 ---
 
@@ -26,6 +26,7 @@
 | 1 | should add product to cart and verify it appears in cart @smoke @regression @critical |
 | 2 | should submit a product review and show the thank you message @regression |
 | 3 | should show quantity 3 and correct total in cart when quantity is changed before adding to cart @regression @critical |
+| 4 | should show matching unit price in cart when product added with quantity 1 @regression @critical |
 
 ---
 

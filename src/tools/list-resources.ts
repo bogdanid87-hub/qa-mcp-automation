@@ -1,5 +1,6 @@
 import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
+import { buildPomIndex, extractPomMethods, formatPomIndex } from './pom-index.js';
 
 const ROOT = process.cwd();
 const DIRS = ['pages', 'fixtures', 'tests', 'utils'] as const;
@@ -107,7 +108,9 @@ export async function readFocusedContextForFeature(keywords: string[]): Promise<
     if (lower.some((k) => fileName.includes(k))) relevant.add(f.name);
   }
 
-  return buildFocusedContext(all, relevant);
+  const pomIndex = formatPomIndex(buildPomIndex(all.filter((f) => f.name.startsWith('pages/'))));
+  const context = buildFocusedContext(all, relevant);
+  return pomIndex ? `${pomIndex}\n\n${context}` : context;
 }
 
 /**
@@ -123,7 +126,7 @@ export async function pomExistsForFeature(keywords: string[]): Promise<boolean> 
     // Locators-only POMs (from generate_pom) have no async methods — treat them
     // as "not ready" so generate_test still runs the POM step to add methods.
     const content = await readFile(join(ROOT, 'pages', match), 'utf-8');
-    return /async\s+\w+\s*[(<]/.test(content);
+    return extractPomMethods(content).length > 0;
   } catch {
     return false;
   }
