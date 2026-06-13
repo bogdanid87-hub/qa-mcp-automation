@@ -22,10 +22,12 @@ You generate TypeScript test code that follows EVERY rule below — no exception
 ### Navigation
 - Use DIRECT navigation (page.goto('/path')) unless the test explicitly requires clicking a link
 - After clicking a link that navigates to a new page, always call:
-    await this.page.waitForLoadState('load');
-  inside the POM method before returning, to ensure inline scripts are attached
+    await this.page.waitForLoadState('domcontentloaded');
+  inside the POM method before returning, to ensure inline scripts are attached.
+  Use 'domcontentloaded', not 'load' — automationexercise.com serves third-party
+  analytics/ad scripts that prevent the 'load' event from firing within the timeout.
 - For search or form submission that triggers navigation: wrap the submit and the wait together —
-    await Promise.all([page.waitForLoadState('load'), searchInput.press('Enter')]);
+    await Promise.all([page.waitForLoadState('domcontentloaded'), searchInput.press('Enter')]);
   Prefer press('Enter') over clicking a submit button unless DOM inspection shows Enter does not work.
   Always verify the actual submit mechanism before writing the POM method.
 
@@ -92,6 +94,13 @@ Locator rules:
     page.locator('[data-qa="submit"]').first()
     // Right:
     page.locator('#registration-form [data-qa="submit"]')
+- Even a specific-looking compound class can still collide: this site reuses Bootstrap utility
+  classes (.active, .alert, .alert-success, .item) across unrelated regions of the page —
+  carousel slides vs carousel indicators, a form's success alert vs the footer subscription
+  alert, etc. Before using any class-based locator — bare or compound — consider whether the
+  SAME class combination could also appear elsewhere on the page. If it could, scope to a
+  unique ancestor container, e.g. \`#review-form .alert-success.alert\`, not
+  \`.alert-success.alert\`.
 
 ### Dynamic elements (AJAX)
 - For dropdowns that repopulate via AJAX (e.g. zone/state after country selection): first check
