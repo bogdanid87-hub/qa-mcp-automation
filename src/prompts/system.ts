@@ -58,6 +58,7 @@ General rules:
 - Constructor signature: constructor(page: Page) { super(page); ... }
 - If a POM for the target page already exists in pages/, ADD the new locators and methods to that file — never create a second class for the same page
 - Only create a new POM file when no existing class covers that page
+- Before adding a new method to an existing POM, scan its existing methods for one that already returns the same data (same selector, different name or parameter shape). If one exists, REUSE it in the spec — do NOT add a second method that just forwards to it (e.g. never add getProductName(i) when getRowProductName(i) already exists). Forwarding aliases are forbidden.
 
 Navigation and loaded-check pattern — avoid duplication:
 - Every POM that has a primary URL should have a goto() method, but it MUST delegate to this.navigate(), not re-implement navigation:
@@ -108,6 +109,28 @@ Locator rules:
   teardown of data created during a test — see "User management & test data cleanup"
   below. It already exists; never propose re-adding it via fixture_additions.
 
+Specs must NEVER instantiate a POM with \`new SomePage(page)\`. Always obtain it through a
+fixture, destructured straight from the test callback. If fixtures/index.ts does not yet
+expose a fixture for a POM this test needs, ADD one via fixture_additions — provide the
+COMPLETE updated file content (import the class, extend the fixture type, add one lazy
+fixture function per POM). Example, adding a \`cartPage\` fixture for CartPage:
+
+  import { CartPage } from '../pages/CartPage';
+  // ...
+  export const test = base.extend<{
+    trackCleanup: (fn: CleanupFn) => void;
+    cartPage: CartPage;
+  }>({
+    // ...existing page/trackCleanup fixtures unchanged...
+    cartPage: async ({ page }, use) => {
+      await use(new CartPage(page));
+    },
+  });
+
+The spec then consumes it directly — no manual construction:
+  WRONG: test('...', async ({ page }) => { const cartPage = new CartPage(page); ... });
+  RIGHT: test('...', async ({ page, cartPage }) => { ... });
+
 ### Test file conventions
 - Import: import { test, expect } from '../../fixtures'  (for tests/ui/ and tests/e2e/)
 - Wrap every test inside test.describe('Meaningful Name', () => { ... })
@@ -156,6 +179,22 @@ If test-data/constants.ts exists in the project, import from it instead of inven
 - Import only what is needed: import { PRODUCTS, TEST_USER, REVIEW } from '../../test-data/constants'
 - NEVER invent a name, email, address, card number, or review text inline — always import
 - If the test needs data that is NOT in constants.ts (e.g. a specific edge-case search term), note it as a comment so it can be added to the constants file: // TODO: add 'xyz' to SEARCH.invalid in test-data/constants.ts
+
+### Shared value helpers (utils/)
+Some displayed values need non-trivial parsing, formatting, or comparison logic
+(currency, dates, percentages, etc.) before they can be asserted against. Before
+writing that logic inline in a spec:
+- Check utils/ for an existing helper that already covers it — if one exists,
+  import and reuse it. Never duplicate parsing/formatting logic inline across
+  multiple specs.
+- If no helper exists yet, create one in utils/<name>.ts: a parse function, and a
+  format function if the value also needs to be reconstructed for comparison, with
+  a short comment documenting the exact format observed on this site.
+Example — this project has utils/price.ts for prices displayed as "Rs. <amount>":
+  import { parsePrice, formatPrice } from '../../utils/price';
+  const unitPrice = parsePrice(await cartPage.getRowUnitPrice(0));
+  const expectedTotal = formatPrice(unitPrice * quantity);
+  expect(rowTotal, 'row total should equal unit price × quantity').toBe(expectedTotal);
 
 ### Test tagging
 Tag every generated test so it can be run as part of a targeted subset:

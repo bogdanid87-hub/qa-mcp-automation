@@ -125,4 +125,8 @@ Replace `#target-region` with the actual screenshot locator selector.
 ## Rule 024 — CSS selector confusion between an element having a class vs an element being a descendant of a class
 **Problem class**: CSS selector confusion between an element having a class vs an element being a descendant of a class
 **Rule**: When the target element is a child of the element bearing a specific class, always use a descendant selector (`.parent-class child-tag`) rather than a compound selector (`child-tag.parent-class`). Before writing any class-based locator, inspect the DOM to confirm which element actually carries the class.
+
+## Rule 025 — A locator targeting a shared CSS class matches multiple unrelated elements on the page, causing a strict-mode violation
+**Problem class**: A locator targeting a shared CSS class matches multiple unrelated elements on the page, causing a strict-mode violation.
+**Rule**: When a CSS class combination (e.g. `.alert-success.alert`) can appear in more than one place on a page (e.g. both a form-specific alert and a footer subscription alert), always scope the locator to a unique ancestor container (e.g. `#review-form .alert-success.alert`) to prevent strict-mode violations.
 <!-- rules-end -->
