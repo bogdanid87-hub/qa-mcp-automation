@@ -5,27 +5,32 @@ Claude API and a local LLM. Eleven tools cover the full QA workflow from PRD
 analysis through test generation, auth fixture setup, network mocking, failure
 investigation, registry maintenance, and app knowledge synthesis.
 
-See [TOOLS.md](TOOLS.md) for a quick index and [docs/](docs/) for per-tool guides.
+See [TOOLS.md](TOOLS.md) for a quick index, [docs/](docs/) for per-tool guides, and
+`.claude/skills/` for collaboration rules and conventions Claude Code loads on demand
+during sessions in this repo.
 
 ---
 
-## Collaboration rules (apply to every session)
+## Always-on safety rules
 
-- **Ask before updating `CLAUDE.md`** — notify the user first and wait for confirmation
-- **Never commit or push** without the user explicitly asking for it
-- **Never commit changes to test files without running them locally first** — run the affected spec with `npx playwright test --project=chromium <spec>` and confirm it passes before staging. This applies to any edit to `tests/`, `pages/`, `fixtures/`, and `src/prompts/`. No exceptions.
-- **Use PRs for all changes to `qa-mcp-automation`** — never push directly to `main`. Work on a feature branch, commit there, then create a PR with `gh pr create`. The PR description should summarise what changed and why. Only push to main on the skeleton (`mcp-qa-skeleton`).
-- **Never run token-consuming operations** (Claude API calls, Playwright test runs, Ollama inference, `npm run fix`, `npm run generate`, `npm run analyze_prd`, etc.) without first notifying the user and receiving permission
-- **Never fix test files directly** without first telling the user the fix is happening outside the tool flow — explain what is being changed and why before touching the file
-- **When given permission to fix tests manually:** also update the system prompt, learned rules, or tool code so the same issue cannot recur — a fix that only patches one file without closing the root cause is incomplete
-- **When adding or significantly changing a tool:** update ALL of these in the same commit as the code — never as a follow-up:
-  - `docs/[tool-name].md` — create or update the per-tool guide
-  - `TOOLS.md` — add/update both the MCP tools table and the terminal commands table, with doc links
-  - `CLAUDE.md` — update the tool count in the header and add to key commands if daily-use
-  - `README.md` — update the tool count (header + tools section + architecture block), add to the tools table and terminal commands list
-- **After any session that adds features (not just tools):** also update `README.md` "What this project demonstrates" section and `TOOLS.md` terminal commands table — these are frequently missed when adding scripts, CI workflows, or capabilities like multi-browser or visual testing that span multiple files
-- **When a general improvement is made here:** ask before propagating to `mcp-qa-skeleton`; only propagate AFTER the tool has been tested on this project and any bugs found have been fixed — propagating untested or newly-fixed tools means the skeleton gets the broken version
-- **After every `generate_test` call that returns proposed additional tests:** present them as a numbered list and invite the user to pick any, with or without modifications — e.g. "generate 2 but start from the home page instead". Apply any natural-language adjustments to the description before calling the tool again. This is strictly better than the CLI prompt because the user can tweak proposals rather than only accepting them verbatim.
+The full collaboration rules — branch/PR workflow, the tool-update checklist,
+propagation to the skeleton, look-ahead checks — live in
+[.claude/skills/qa-workflow/SKILL.md](.claude/skills/qa-workflow/SKILL.md) and load
+whenever you're about to change code, run commands, or open a PR. These apply even
+before that:
+
+- **Ask before updating `CLAUDE.md`** — notify the user first and wait for confirmation.
+- **Never commit or push without the user explicitly asking.**
+- **Never run token-consuming operations** (Claude API calls, Playwright runs, Ollama
+  inference, `npm run fix`/`generate`/`analyze_prd` etc.) without first notifying the
+  user and receiving permission.
+- **Never commit changes to `tests/`, `pages/`, `fixtures/`, or `src/prompts/`**
+  without running the affected spec first (`npx playwright test --project=chromium
+  <spec>`) and confirming it passes. No exceptions.
+- **Never fix a test file directly** without first telling the user what's changing
+  and why.
+- **Use PRs for all changes** — never push directly to `main` (only the skeleton,
+  `mcp-qa-skeleton`, takes direct pushes).
 
 ---
 
@@ -90,38 +95,14 @@ src/
 
 ---
 
-## Test organisation
+## Conventions, test layout, and auto-managed files
 
-```
-tests/
-  global.setup.ts       — saves guest browser state before tests run
-  ui/                   — single-feature browser tests
-    cart.spec.ts
-    contact.spec.ts
-    search.spec.ts
-    subscription.spec.ts
-  e2e/                  — full user journeys (multi-page, multi-step)
-    place-order.spec.ts
-pages/                  — Page Object Models (one class per page)
-fixtures/index.ts       — custom test + expect (ad-blocking + popup handling)
-```
-
-**Naming conventions:**
-- `test.describe()` = broad feature area ("Place Order", "Cart") — never the scenario
-- `test()` = specific scenario ("should register during checkout and place an order")
-- `spec_file` directive controls which file a test goes into; `test_name` only names the `test()` and `describe()` blocks
-
----
-
-## Files that are auto-managed — do not edit manually
-
-| File | Managed by |
-|------|-----------|
-| `TESTS_UI.md` | `generate_test` tool, `npm run sync_registry`, `npm run update_registry` — UI tests |
-| `TESTS_E2E.md` | same — E2E tests (`tests/e2e/`) only |
-| `TESTS_API.md` | same — API tests (`tests/api/`) only |
-| `src/prompts/learned-rules.md` | `investigate_and_fix` (auto-appends after every fix) |
-| `test-data/.auth/guest.json` | `global.setup.ts` (Playwright setup) |
+POM class hierarchy, locator priority and pitfalls (incl. locator-uniqueness),
+navigation rules, the `tests/`/`pages/`/`fixtures/` layout and naming conventions,
+the `trackCleanup` fixture, and the table of auto-managed files (`TESTS_UI.md`,
+`learned-rules.md`, etc.) all live in
+[qa-conventions](.claude/skills/qa-conventions/SKILL.md) — loaded automatically when
+editing `pages/`, `tests/`, or `fixtures/`.
 
 ---
 
@@ -153,35 +134,11 @@ NO_LOCAL_LLM=1 npm run generate -- --file workspace/my-test.txt  # same via env 
 
 ---
 
-## Important conventions
+## Risk tiers and my-test.txt format
 
-- POM classes: **named exports only** — `export class LoginPage`, never `export default class`
-- POM parent class: extend `SitePage` for any full site page, `ProductListPage` for product listing pages, `BasePage` only for pages without site nav/footer — see [docs/conventions.md](docs/conventions.md#pom-hierarchy)
-- All POM parent imports are named: `import { SitePage } from './SitePage'` (never default)
-- Spec imports: `import { test, expect } from '../../fixtures'` (two levels up from ui/ or e2e/)
-- Locator priority: `[data-qa="..."]` → role → label → placeholder → text → `#id`
-- `waitForLoadState`: use `'domcontentloaded'` on this site — `'load'` times out due to third-party scripts
-- Never assert `toBeVisible()` on Bootstrap carousel `.item` elements (Rule 004)
+Risk tiers (critical/high/medium/low, with examples) —
+[analyze-prd](.claude/skills/analyze-prd/SKILL.md#risk-tiers).
 
----
-
-## my-test.txt directives
-
-```
-# test_name: login-happy-path          ← names test() and describe() only
-# spec_file: tests/ui/auth.spec.ts     ← target file (created or appended)
-# page_paths: /login, /               ← pages to inspect for correct locators
-```
-
-Separate multiple tests with `---` for batch mode.
-
----
-
-## Risk tiers (analyze_prd)
-
-| Tier | Meaning |
-|------|---------|
-| critical | Revenue — checkout, payment, cart totals |
-| high | Trust/data — login, registration, order history |
-| medium | Conversion — search, filtering, product detail |
-| low | Content — static pages, newsletter, social links |
+`my-test.txt` batch-file directives (`test_name`/`spec_file`/`page_paths`, `---`
+separators) —
+[generate-test](.claude/skills/generate-test/SKILL.md#terminal-usage--my-testtxt).

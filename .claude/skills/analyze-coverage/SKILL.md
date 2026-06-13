@@ -1,0 +1,89 @@
+---
+name: analyze-coverage
+description: Analyses the test suite for coverage gaps and risk, scoped to a spec/folder/registry or the full suite — writes coverage-report.md and optional coverage-gaps.txt (analyze_coverage MCP tool / npm run analyze_coverage). Load when assessing what's missing or planning the next tests.
+---
+
+# analyze_coverage
+
+Analyses the existing test suite and identifies coverage gaps and risk areas.
+Scopes to a spec file, folder, registry, or the full suite. Always writes
+`coverage-report.md`; optionally writes `coverage-gaps.txt` in `prd-tests.txt`
+batch format for direct generation.
+
+## When to use it
+
+- After writing the first test for a feature — see what negative cases are missing
+- Before a sprint — identify the highest-priority untested areas
+- Given a new page URL — discover what should be tested there
+- Periodically across the full suite — catch gaps that built up over time
+
+## vs analyze_prd
+
+| | `analyze_prd` | `analyze_coverage` |
+|--|---------------|-------------------|
+| Starting point | PRD / feature description | Existing spec files and registries |
+| Output | What *should* be tested | What *isn't* tested yet |
+| Direction | Requirements → test cases | Test suite → gaps |
+
+Complementary: `analyze_prd` builds the initial backlog; `analyze_coverage` finds
+what drifted or was never written. See [analyze-prd](../analyze-prd/SKILL.md).
+
+## Priority vs Risk
+
+**Risk** = intrinsic criticality of the *feature* (critical: checkout/payment/cart
+totals; high: login/registration/account; medium: search/filtering/navigation;
+low: static pages/newsletter/contact).
+
+**Priority** = urgency to *write this test*, which can exceed risk when: the gap
+covers the dominant user path while only an optional variant is tested (e.g.
+contact-form-with-file always tested, so no-file is medium priority despite low
+feature risk); it's the only test for a flow (any regression invisible); or no
+existing test would catch a regression. A `note` field explains divergence.
+
+## Usage
+
+```bash
+npm run analyze_coverage -- --spec tests/ui/contact.spec.ts        # one spec
+npm run analyze_coverage -- --spec tests/ui/                        # a folder
+npm run analyze_coverage -- --registry TESTS_UI.md                  # a registry
+npm run analyze_coverage -- --spec tests/api/ --url <api-docs-url>  # + feature context
+npm run analyze_coverage -- --url <page-url>                        # page not yet tested
+npm run analyze_coverage                                             # full suite
+npm run analyze_coverage -- --spec tests/ui/contact.spec.ts --gaps  # + coverage-gaps.txt
+npm run analyze_coverage -- --spec tests/ui/contact.spec.ts --deep  # extra pre-pass, ~2x cost
+```
+
+```
+Analyse coverage for the contact us tests
+Analyse API test coverage — url: https://automationexercise.com/api_list
+```
+
+| Parameter | CLI flag | MCP param | Description |
+|-----------|----------|-----------|-------------|
+| Spec path | `--spec` | `spec_path` | Spec file or folder to focus on |
+| Registry | `--registry` | `registry_path` | `TESTS_UI.md` / `TESTS_API.md` / `TESTS_E2E.md` |
+| URL | `--url` | `url` | Page or docs URL for feature context |
+| Gaps file | `--gaps` | `generate_gaps` | Also write `coverage-gaps.txt` |
+| Deep mode | `--deep` | `deep` | Pre-analysis pass for untested paths (extra Claude call) |
+
+## URL handling
+
+`automationexercise.com` URLs use DOM inspection (like
+[inspect-page](../inspect-page/SKILL.md)) — `[data-qa]`, inputs, buttons, nav
+links. Other hosts (docs/wikis) get plain-text extraction.
+
+## Deep mode
+
+Extra Claude pre-pass asking "which paths/variants/input types/error states are
+NOT exercised by the existing tests?" — feeds the answer into the main analysis.
+Use for complex specs where gap-detection accuracy matters more than ~2x cost.
+
+## Typical workflow
+
+```bash
+npm run analyze_coverage -- --spec tests/ui/contact.spec.ts --gaps
+# review coverage-report.md, then:
+npm run generate -- --file coverage-gaps.txt
+```
+
+Full guide: [docs/analyze-coverage.md](../../../docs/analyze-coverage.md)
