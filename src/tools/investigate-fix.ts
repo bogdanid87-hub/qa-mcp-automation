@@ -73,6 +73,38 @@ async function extractUrlsFromSpec(specPath: string): Promise<string[]> {
   }
 }
 
+// ── Loop helpers ─────────────────────────────────────────────────────────────
+
+/** Strip ANSI colour codes, durations, and generated-artifact paths so cosmetic
+ *  differences between runs (timings, screenshot filenames) don't change the signature. */
+function normalizeForSignature(line: string): string {
+  return line
+    .replace(/\x1B\[[0-9;]*m/g, '')
+    .replace(/\d+(\.\d+)?\s*m?s\b/g, '<dur>')
+    .replace(/test-results\/\S+/g, '<artifact>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Build a stable signature for a Playwright failure-output string, used by the
+ * fix loop's no-progress detector: if a fix attempt's verification run produces
+ * the same signature as the failure that triggered it, the fix had no effect and
+ * the loop stops rather than repeating it.
+ *
+ * Combines the sorted set of failing `spec::name` keys with the normalized
+ * "Error:"/"Locator:"/"Expected:"/"Received:" diagnostic lines — only a genuine
+ * change in what is failing or how counts as progress.
+ */
+export function failureSignature(output: string): string {
+  const failing = parseFailingTestsFromOutput(output).map(f => `${f.spec}::${f.name}`).sort();
+
+  const detailRe = /^\s*(Error|TimeoutError|AssertionError|Locator|Expected|Received):.*$/gm;
+  const details = [...output.matchAll(detailRe)].map(m => normalizeForSignature(m[0])).sort();
+
+  return [...failing, ...details].join('\n');
+}
+
 // ── Intent-signature helpers ────────────────────────────────────────────────
 //
 // "Objective preservation": a fix may change HOW a test reaches an assertion
@@ -221,6 +253,18 @@ export interface AutoFixResult {
   lesson: { problemClass: string; rule: string } | null;
   verifyOutput: string;
   budgetExceeded: boolean;
+  /**
+   * True when this attempt's outcome has the same failureSignature as the failure
+   * that triggered it — the previous fix had no effect. Callers should stop
+   * retrying rather than repeating a fix that won't help.
+   */
+  noProgress: boolean;
+  /**
+   * Signature of this attempt's outcome (the re-verification output if the fix
+   * was applied, otherwise the input failureOutput unchanged). Pass this as
+   * `previousSignature` to the next call to enable no-progress detection.
+   */
+  signature: string;
 }
 
 /**
@@ -228,15 +272,39 @@ export interface AutoFixResult {
  * lesson, re-run the spec, and record any newly passing tests.
  *
  * Exported so generate-test and CLI fix loops can call it directly.
- * Pass a TokenBudget to track cumulative cost across multiple attempts.
+ * Pass a TokenBudget to track cumulative cost across multiple attempts, and
+ * `previousSignature` (the `signature` returned by the prior call) to enable the
+ * no-progress detector.
  */
 export async function autoFixFailure(
   failureOutput: string,
   pattern?: string,
   budget?: TokenBudget,
+  previousSignature?: string,
 ): Promise<AutoFixResult> {
+  const signature = failureSignature(failureOutput);
+
+  // No-progress detector: if this failure is identical to the one the previous
+  // attempt was given (same failing tests, same error/locator/expectation), the
+  // previous fix had no effect. Stop here rather than spending tokens on a
+  // diagnosis that will most likely repeat.
+  if (previousSignature !== undefined && signature === previousSignature) {
+    return {
+      fixed: false,
+      verdict: 'unclear',
+      rootCause: 'No progress — this failure is identical to the one before the previous fix attempt (same failing test(s), same error). Stopping rather than repeating a fix that had no effect.',
+      fixedFiles: [],
+      blockedWrites: [],
+      lesson: null,
+      verifyOutput: failureOutput,
+      budgetExceeded: false,
+      noProgress: true,
+      signature,
+    };
+  }
+
   if (budget?.exceeded) {
-    return { fixed: false, verdict: 'unclear', rootCause: '', fixedFiles: [], blockedWrites: [], lesson: null, verifyOutput: '', budgetExceeded: true };
+    return { fixed: false, verdict: 'unclear', rootCause: '', fixedFiles: [], blockedWrites: [], lesson: null, verifyOutput: '', budgetExceeded: true, noProgress: false, signature };
   }
 
   // Retry pre-check: re-run the failing test(s) once before spending any tokens.
@@ -252,7 +320,7 @@ export async function autoFixFailure(
       const rootCause = verdict === 'transient'
         ? 'Test(s) passed on re-run — original failure was a connectivity or navigation error. The app may have been temporarily unavailable. No code changes made.'
         : 'Test(s) passed on re-run — failure looks like a timing or race condition. Consider adding `retries: 1` in playwright.config.ts or a more resilient wait. No code changes made.';
-      return { fixed: false, verdict, rootCause, fixedFiles: [], blockedWrites: [], lesson: null, verifyOutput: retryOutput, budgetExceeded: false };
+      return { fixed: false, verdict, rootCause, fixedFiles: [], blockedWrites: [], lesson: null, verifyOutput: retryOutput, budgetExceeded: false, noProgress: false, signature: failureSignature(retryOutput) };
     }
   }
 
@@ -340,12 +408,39 @@ If the failure is not reproducible or the cause is unclear, set "lesson" to null
     ...screenshotBlocks,
   ];
 
+  // Pre-flight budget check — the fix loop aborts a call outright if even a
+  // worst-case (no cache hit, full output) estimate would push spend past the
+  // configured TokenBudget. Generation tools (POMs, e2e specs) use the same
+  // TokenBudget.wouldExceed() helper but only warn, never abort — see
+  // generate-test.ts / generate-pom.ts.
+  const MAX_OUTPUT_TOKENS = 8192;
+  const IMAGE_TOKEN_ESTIMATE = 1500; // rough cost of one screenshot at the resolutions we send
+  const systemBlocks = await getSystemBlocks();
+  const estimatedInputTokens = TokenBudget.estimateTokens(
+    systemBlocks.map((b) => b.text).join('') + existingContext + domSection + failureOutput + TASK_PROMPT,
+  ) + screenshotBlocks.length * IMAGE_TOKEN_ESTIMATE;
+
+  if (budget?.wouldExceed(estimatedInputTokens, MAX_OUTPUT_TOKENS)) {
+    return {
+      fixed: false,
+      verdict: 'unclear',
+      rootCause: `Pre-flight estimate (~${estimatedInputTokens} input + up to ${MAX_OUTPUT_TOKENS} output tokens) would push spend past the $${budget.limitUsd.toFixed(2)} budget — aborting before sending. Increase --budget or investigate manually.`,
+      fixedFiles: [],
+      blockedWrites: [],
+      lesson: null,
+      verifyOutput: '',
+      budgetExceeded: true,
+      noProgress: false,
+      signature,
+    };
+  }
+
   let raw: string;
   try {
     const message = await client.messages.create({
       model: MODEL,
-      max_tokens: 8192,
-      system: await getSystemBlocks(),
+      max_tokens: MAX_OUTPUT_TOKENS,
+      system: systemBlocks,
       messages: [{ role: 'user', content: userBlocks }],
     });
     budget?.add(
@@ -359,7 +454,7 @@ If the failure is not reproducible or the cause is unclear, set "lesson" to null
       .map((b) => (b as { type: 'text'; text: string }).text)
       .join('');
   } catch (err: any) {
-    return { fixed: false, verdict: 'unclear', rootCause: `Claude API error: ${err.message}`, fixedFiles: [], blockedWrites: [], lesson: null, verifyOutput: '', budgetExceeded: false };
+    return { fixed: false, verdict: 'unclear', rootCause: `Claude API error: ${err.message}`, fixedFiles: [], blockedWrites: [], lesson: null, verifyOutput: '', budgetExceeded: false, noProgress: false, signature };
   }
 
   let parsed: InvestigateResponse;
@@ -373,7 +468,7 @@ If the failure is not reproducible or the cause is unclear, set "lesson" to null
     }
     parsed = JSON.parse(jsonStr);
   } catch {
-    return { fixed: false, verdict: 'unclear', rootCause: 'Claude returned invalid JSON', fixedFiles: [], blockedWrites: [], lesson: null, verifyOutput: '', budgetExceeded: false };
+    return { fixed: false, verdict: 'unclear', rootCause: 'Claude returned invalid JSON', fixedFiles: [], blockedWrites: [], lesson: null, verifyOutput: '', budgetExceeded: false, noProgress: false, signature };
   }
 
   const verdict = parsed.verdict ?? 'unclear';
@@ -390,6 +485,8 @@ If the failure is not reproducible or the cause is unclear, set "lesson" to null
       lesson: null,
       verifyOutput: '',
       budgetExceeded: false,
+      noProgress: false,
+      signature,
     };
   }
 
@@ -441,7 +538,18 @@ If the failure is not reproducible or the cause is unclear, set "lesson" to null
   const failed = verifyOutput.includes('failed') || verifyOutput.includes('Error');
   const fixed = fixedFiles.length > 0 && !failed;
 
-  return { fixed, verdict, rootCause: parsed.root_cause, fixedFiles, blockedWrites, lesson, verifyOutput, budgetExceeded: budget?.exceeded ?? false };
+  return {
+    fixed,
+    verdict,
+    rootCause: parsed.root_cause,
+    fixedFiles,
+    blockedWrites,
+    lesson,
+    verifyOutput,
+    budgetExceeded: budget?.exceeded ?? false,
+    noProgress: false,
+    signature: verifyOutput ? failureSignature(verifyOutput) : signature,
+  };
 }
 
 export async function investigateFixTool(args: {

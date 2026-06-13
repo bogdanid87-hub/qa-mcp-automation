@@ -184,6 +184,7 @@ async function runBatch(
       description: combinedDescription,
       spec_file:   specFile,
       type:        'api',
+      budget,
     });
     console.log(result.content[0]?.text ?? '');
     const { created, edited } = await diffFiles(before);
@@ -210,6 +211,7 @@ async function runBatch(
         test_name: section.testName,
         page_paths: section.pagePaths,
         spec_file: section.specFile,
+        budget,
       });
     } catch (err) {
       const msg = (err as Error).message ?? String(err);
@@ -453,7 +455,7 @@ async function main(): Promise<void> {
         }
 
         console.log('\n⏳ Checking for additional test scenarios...\n');
-        const propResult = await generateTestTool({ description, page_paths: pagePaths, proposalsOnly: true });
+        const propResult = await generateTestTool({ description, page_paths: pagePaths, proposalsOnly: true, budget });
         const propOutput = propResult.content[0]?.text ?? '';
 
         const rawProps = parseProposedNegatives(propOutput);
@@ -499,7 +501,7 @@ async function main(): Promise<void> {
           console.log('\n⏳ Generating additional tests...\n');
 
           const before = await snapshotFiles();
-          const negResult = await generateTestTool({ description: negDesc, page_paths: pagePaths });
+          const negResult = await generateTestTool({ description: negDesc, page_paths: pagePaths, budget });
           console.log(negResult.content[0]?.text ?? '');
 
           const negDiff = await diffFiles(before);
@@ -525,7 +527,7 @@ async function main(): Promise<void> {
   console.log('\n⏳ Generating test...\n');
 
   let before = await snapshotFiles();
-  const result = await generateTestTool({ description, page_paths: pagePaths, test_name: testName, spec_file: specFile, type: args.type });
+  const result = await generateTestTool({ description, page_paths: pagePaths, test_name: testName, spec_file: specFile, type: args.type, budget });
   const output = result.content[0]?.text ?? '';
   console.log(output);
 
@@ -539,6 +541,7 @@ async function main(): Promise<void> {
     let stillFailing = true;
     let fixAttempts = 1; // initial auto-fix in generate already counted as attempt 1
     const maxFixAttempts = args.maxAttempts ?? 2;
+    let previousSignature: string | undefined;
 
     while (stillFailing) {
       const budgetBar = '─'.repeat(48);
@@ -572,7 +575,26 @@ async function main(): Promise<void> {
       fixAttempts++;
       console.log(`\n⏳ Attempting another fix (attempt ${fixAttempts}/${maxFixAttempts})...\n`);
       const newFailureOutput = await runTests(specFile);
-      const fix = await autoFixFailure(newFailureOutput, specFile, budget);
+      const fix = await autoFixFailure(newFailureOutput, specFile, budget, previousSignature);
+
+      if (fix.noProgress) {
+        console.log(`\n⛔ No progress — the previous fix attempt didn't change the failure.`);
+        console.log(`  Stopping rather than repeating a fix that had no effect.\n  ${fix.rootCause}`);
+        console.log('\n⚠️  Writing BROKEN comment into the spec file...');
+        await writeTestAnnotation(specFile, newFailureOutput, 'broken', fix.rootCause);
+        console.log(`  Done. Open ${specFile} to review.\n`);
+        break;
+      }
+
+      if (fix.budgetExceeded) {
+        console.log(`\n⚠️  Spending cap of $${budget.limitUsd.toFixed(2)} reached (${budget.summary}).\n  ${fix.rootCause}`);
+        console.log('\n⚠️  Writing BROKEN comment into the spec file...');
+        await writeTestAnnotation(specFile, newFailureOutput, 'broken', fix.rootCause || 'Spending cap reached — run npm run fix to continue');
+        console.log(`  Done. Open ${specFile} to review.\n`);
+        break;
+      }
+
+      previousSignature = fix.signature;
 
       if (fix.verdict === 'app_bug') {
         console.log('\n⚠️  Application bug detected — the test is correct, the site is broken.');

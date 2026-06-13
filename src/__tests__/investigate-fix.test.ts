@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { extractIntentSignatures, describeIntentViolation } from '../tools/investigate-fix';
+import { extractIntentSignatures, describeIntentViolation, failureSignature, autoFixFailure } from '../tools/investigate-fix';
+import { TokenBudget } from '../tools/budget';
 
 describe('extractIntentSignatures', () => {
   it('maps each test() title to its sorted assertion-chain signature', () => {
@@ -137,5 +138,120 @@ test('adds item', async ({ page }) => {
 });
 `;
     expect(describeIntentViolation(spec, spec)).toBeNull();
+  });
+});
+
+// ── failureSignature ────────────────────────────────────────────────────────
+
+describe('failureSignature', () => {
+  const baseFailure = [
+    '✗  1 [chromium] › tests/ui/cart.spec.ts:12:5 › Cart › should add a product (500ms)',
+    '',
+    '  1) [chromium] › tests/ui/cart.spec.ts:12:5 › Cart › should add a product',
+    '',
+    '    Error: Timed out 5000ms waiting for expect(locator).toBeVisible()',
+    '',
+    "    Locator: locator('.cart-item')",
+    '    Expected: visible',
+    '    Received: hidden',
+  ].join('\n');
+
+  it('is identical for the exact same output', () => {
+    expect(failureSignature(baseFailure)).toBe(failureSignature(baseFailure));
+  });
+
+  it('ignores cosmetic differences — durations, ANSI codes, artifact paths', () => {
+    const cosmeticVariant = [
+      '✗  1 [chromium] › tests/ui/cart.spec.ts:12:5 › Cart › should add a product (823ms)',
+      '',
+      '  1) [chromium] › tests/ui/cart.spec.ts:12:5 › Cart › should add a product',
+      '',
+      '    Error: \x1B[31mTimed out 7321ms waiting for expect(locator).toBeVisible()\x1B[39m',
+      '',
+      "    Locator: locator('.cart-item')",
+      '    Expected: visible',
+      '    Received: hidden',
+      '',
+      '    attachment #1: screenshot (image/png) ───',
+      '    test-results/cart-should-add-a-product/test-failed-1.png',
+    ].join('\n');
+
+    expect(failureSignature(cosmeticVariant)).toBe(failureSignature(baseFailure));
+  });
+
+  it('changes when the error detail changes', () => {
+    const differentError = [
+      '✗  1 [chromium] › tests/ui/cart.spec.ts:12:5 › Cart › should add a product (500ms)',
+      '',
+      '  1) [chromium] › tests/ui/cart.spec.ts:12:5 › Cart › should add a product',
+      '',
+      '    Error: expect(received).toBe(expected)',
+      '',
+      '    Expected: 5',
+      '    Received: 3',
+    ].join('\n');
+
+    expect(failureSignature(differentError)).not.toBe(failureSignature(baseFailure));
+  });
+
+  it('changes when a different test fails', () => {
+    const differentTest = baseFailure
+      .replace('should add a product', 'should remove a product');
+
+    expect(failureSignature(differentTest)).not.toBe(failureSignature(baseFailure));
+  });
+
+  it('is independent of the order failing tests appear in', () => {
+    const a = [
+      '✗  1 [chromium] › tests/ui/cart.spec.ts:12:5 › Cart › should add a product (500ms)',
+      '✗  2 [chromium] › tests/ui/search.spec.ts:8:3 › Search › should filter results (300ms)',
+    ].join('\n');
+    const b = [
+      '✗  1 [chromium] › tests/ui/search.spec.ts:8:3 › Search › should filter results (300ms)',
+      '✗  2 [chromium] › tests/ui/cart.spec.ts:12:5 › Cart › should add a product (500ms)',
+    ].join('\n');
+
+    expect(failureSignature(a)).toBe(failureSignature(b));
+  });
+});
+
+// ── autoFixFailure — early returns (no API call) ──────────────────────────────
+
+describe('autoFixFailure early returns', () => {
+  const baseFailure = [
+    '✗  1 [chromium] › tests/ui/cart.spec.ts:12:5 › Cart › should add a product (500ms)',
+    '',
+    '  1) [chromium] › tests/ui/cart.spec.ts:12:5 › Cart › should add a product',
+    '',
+    '    Error: Timed out 5000ms waiting for expect(locator).toBeVisible()',
+    '',
+    "    Locator: locator('.cart-item')",
+    '    Expected: visible',
+    '    Received: hidden',
+  ].join('\n');
+
+  it('stops with noProgress when the signature matches the previous attempt', async () => {
+    const previousSignature = failureSignature(baseFailure);
+    const result = await autoFixFailure(baseFailure, undefined, undefined, previousSignature);
+
+    expect(result.noProgress).toBe(true);
+    expect(result.verdict).toBe('unclear');
+    expect(result.budgetExceeded).toBe(false);
+    expect(result.signature).toBe(previousSignature);
+  });
+
+  it('aborts with budgetExceeded before calling Claude when the pre-flight estimate exceeds the budget', async () => {
+    // No parseable failing tests and no `pattern` ⇒ the retry pre-check
+    // (which would shell out to `runTests`) is skipped, so this stays
+    // network/Playwright-free.
+    const output = 'Build failed: something went wrong with no Playwright markers';
+    const budget = new TokenBudget(0.000001); // any real call blows past this
+
+    const result = await autoFixFailure(output, undefined, budget);
+
+    expect(result.budgetExceeded).toBe(true);
+    expect(result.noProgress).toBe(false);
+    expect(result.fixed).toBe(false);
+    expect(result.signature).toBe(failureSignature(output));
   });
 });

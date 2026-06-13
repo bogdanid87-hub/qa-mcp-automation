@@ -105,6 +105,14 @@ mid-generation or mid-fix wastes money and produces nothing useful. Cost is
 tracked and displayed after each attempt. Pass `--budget N` to either CLI
 to opt in to a spending cap (useful when sharing an API key with a usage quota).
 
+**`--budget N` aborts vs. warns depending on call size.** Before each Claude call,
+`TokenBudget.wouldExceed()` estimates whether it would push spend past the cap:
+- The **fix loop** (`investigate-fix.ts`) aborts the call before sending —
+  partial diagnosis is useless, so there's nothing to lose by stopping early.
+- **Generation calls** (`generate-test.ts`, `generate-pom.ts`) only warn and
+  continue — a partial POM/spec is still progress, and aborting mid-generation
+  would waste the tokens already spent reaching that point.
+
 ---
 
 ## `test.describe()` naming
