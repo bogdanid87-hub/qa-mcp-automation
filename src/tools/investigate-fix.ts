@@ -1,7 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import { dirname, join } from 'path';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 import { getSystemBlocks, appendLearnedRule } from '../prompts/system.js';
+import { safeWrite } from '../lib/safe-write.js';
 import { readFocusedContextForFailure } from './list-resources.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { runTests, runTestsTool } from './run-tests.js';
@@ -90,6 +91,8 @@ export interface AutoFixResult {
   /** Only present when verdict is 'app_bug' — describes what the app actually does. */
   actualBehavior?: string;
   fixedFiles: string[];
+  /** Files the proposed fix would have rewritten unsafely (dropped tests / drastic shrink) — not written. */
+  blockedWrites: { path: string; reason: string; diff: string }[];
   lesson: { problemClass: string; rule: string } | null;
   verifyOutput: string;
   budgetExceeded: boolean;
@@ -108,7 +111,7 @@ export async function autoFixFailure(
   budget?: TokenBudget,
 ): Promise<AutoFixResult> {
   if (budget?.exceeded) {
-    return { fixed: false, verdict: 'unclear', rootCause: '', fixedFiles: [], lesson: null, verifyOutput: '', budgetExceeded: true };
+    return { fixed: false, verdict: 'unclear', rootCause: '', fixedFiles: [], blockedWrites: [], lesson: null, verifyOutput: '', budgetExceeded: true };
   }
 
   // Retry pre-check: re-run the failing test(s) once before spending any tokens.
@@ -124,7 +127,7 @@ export async function autoFixFailure(
       const rootCause = verdict === 'transient'
         ? 'Test(s) passed on re-run — original failure was a connectivity or navigation error. The app may have been temporarily unavailable. No code changes made.'
         : 'Test(s) passed on re-run — failure looks like a timing or race condition. Consider adding `retries: 1` in playwright.config.ts or a more resilient wait. No code changes made.';
-      return { fixed: false, verdict, rootCause, fixedFiles: [], lesson: null, verifyOutput: retryOutput, budgetExceeded: false };
+      return { fixed: false, verdict, rootCause, fixedFiles: [], blockedWrites: [], lesson: null, verifyOutput: retryOutput, budgetExceeded: false };
     }
   }
 
@@ -231,7 +234,7 @@ If the failure is not reproducible or the cause is unclear, set "lesson" to null
       .map((b) => (b as { type: 'text'; text: string }).text)
       .join('');
   } catch (err: any) {
-    return { fixed: false, verdict: 'unclear', rootCause: `Claude API error: ${err.message}`, fixedFiles: [], lesson: null, verifyOutput: '', budgetExceeded: false };
+    return { fixed: false, verdict: 'unclear', rootCause: `Claude API error: ${err.message}`, fixedFiles: [], blockedWrites: [], lesson: null, verifyOutput: '', budgetExceeded: false };
   }
 
   let parsed: InvestigateResponse;
@@ -245,7 +248,7 @@ If the failure is not reproducible or the cause is unclear, set "lesson" to null
     }
     parsed = JSON.parse(jsonStr);
   } catch {
-    return { fixed: false, verdict: 'unclear', rootCause: 'Claude returned invalid JSON', fixedFiles: [], lesson: null, verifyOutput: '', budgetExceeded: false };
+    return { fixed: false, verdict: 'unclear', rootCause: 'Claude returned invalid JSON', fixedFiles: [], blockedWrites: [], lesson: null, verifyOutput: '', budgetExceeded: false };
   }
 
   const verdict = parsed.verdict ?? 'unclear';
@@ -258,19 +261,26 @@ If the failure is not reproducible or the cause is unclear, set "lesson" to null
       rootCause: parsed.root_cause,
       actualBehavior: parsed.actual_behavior,
       fixedFiles: [],
+      blockedWrites: [],
       lesson: null,
       verifyOutput: '',
       budgetExceeded: false,
     };
   }
 
-  // Code bug or unclear — attempt to fix the test code
+  // Code bug or unclear — attempt to fix the test code. A proposed fix that would
+  // shrink a populated spec or drop existing test()/describe() blocks is refused —
+  // a fix may change *how* a test reaches an assertion, never *what* it asserts.
   const fixedFiles: string[] = [];
+  const blockedWrites: { path: string; reason: string; diff: string }[] = [];
   for (const file of parsed.files ?? []) {
     const abs = join(ROOT, file.path);
-    await mkdir(dirname(abs), { recursive: true });
-    await writeFile(abs, file.content, 'utf-8');
-    fixedFiles.push(file.path);
+    const result = await safeWrite(abs, file.content);
+    if (result.ok) {
+      fixedFiles.push(file.path);
+    } else {
+      blockedWrites.push({ path: file.path, reason: result.reason ?? 'unsafe overwrite', diff: result.diff });
+    }
   }
 
   // Persist lesson
@@ -294,7 +304,7 @@ If the failure is not reproducible or the cause is unclear, set "lesson" to null
   const failed = verifyOutput.includes('failed') || verifyOutput.includes('Error');
   const fixed = fixedFiles.length > 0 && !failed;
 
-  return { fixed, verdict, rootCause: parsed.root_cause, fixedFiles, lesson, verifyOutput, budgetExceeded: budget?.exceeded ?? false };
+  return { fixed, verdict, rootCause: parsed.root_cause, fixedFiles, blockedWrites, lesson, verifyOutput, budgetExceeded: budget?.exceeded ?? false };
 }
 
 export async function investigateFixTool(args: {
@@ -321,7 +331,7 @@ export async function investigateFixTool(args: {
     };
   }
 
-  const { verdict, rootCause, actualBehavior, fixedFiles, lesson } = await autoFixFailure(failureOutput, args.pattern);
+  const { verdict, rootCause, actualBehavior, fixedFiles, blockedWrites, lesson } = await autoFixFailure(failureOutput, args.pattern);
 
   const verdictLabel = verdict === 'app_bug' ? '⚠️  Application bug' : verdict === 'code_bug' ? '🔧 Code bug' : verdict === 'flaky' ? '🌀 Flaky test' : verdict === 'transient' ? '⚡ Transient infrastructure failure' : '❓ Unclear';
   const lines: string[] = [`## Verdict\n${verdictLabel}`, `\n## Root cause\n${rootCause}`];
@@ -336,6 +346,13 @@ export async function investigateFixTool(args: {
     lines.push('\n## Fixed files', ...fixedFiles.map((p) => `  - ${p}`));
   } else {
     lines.push('\n## Fixed files\n  (none — no code changes needed)');
+  }
+
+  if (blockedWrites.length) {
+    lines.push('\n## ⛔ Blocked writes — needs human review');
+    for (const b of blockedWrites) {
+      lines.push(`  - ${b.path}: ${b.reason}`, '```diff', b.diff.trimEnd(), '```');
+    }
   }
 
   if (lesson) {

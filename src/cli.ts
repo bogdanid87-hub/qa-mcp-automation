@@ -590,6 +590,10 @@ async function main(): Promise<void> {
         lastFailureOutput = fix.verifyOutput || newFailureOutput;
         console.log(`\n❌ Still failing. Root cause: ${fix.rootCause}`);
       }
+      if (fix.blockedWrites.length > 0) {
+        console.log('\n⛔ Blocked writes — proposed fix would shrink or drop tests, needs human review:');
+        for (const b of fix.blockedWrites) console.log(`  - ${b.path}: ${b.reason}`);
+      }
     }
   }
 

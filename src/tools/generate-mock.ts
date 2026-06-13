@@ -1,9 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { writeFile, mkdir } from 'fs/promises';
+import { mkdir } from 'fs/promises';
 import { join } from 'path';
 import { getSystemBlocks } from '../prompts/system.js';
 import { isLocalLlmAvailable, callLocalLlm, LOCAL_MODEL } from './local-llm.js';
 import { cleanLlmCode, extractJson } from './llm-utils.js';
+import { safeWrite } from '../lib/safe-write.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -160,8 +161,12 @@ export async function generateMockTool(args: GenerateMockArgs): Promise<{
   if (parsed.scope === 'fixture') {
     const filePath = join(ROOT, parsed.fileName);
     await mkdir(MOCKS_DIR, { recursive: true });
-    await writeFile(filePath, cleanContent, 'utf-8');
-    lines.push(`**File written:** ${parsed.fileName}`, '');
+    const result = await safeWrite(filePath, cleanContent);
+    if (result.ok) {
+      lines.push(`**File written:** ${parsed.fileName}`, '');
+    } else {
+      lines.push(`⛔ Skipped writing ${parsed.fileName} — ${result.reason}`, '');
+    }
   } else {
     lines.push('**Inline snippet (paste inside your test body):**', '```typescript', cleanContent, '```', '');
   }
