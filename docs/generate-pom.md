@@ -83,6 +83,15 @@ well. If Ollama isn't running, it falls back to the Claude API.
 When multiple URLs are passed, one LLM call fires per URL in parallel, so inspecting
 four pages takes roughly the same time as inspecting one.
 
+**The model never writes the `.ts` file directly.** It returns a structured
+description of each locator (`name`, `selectorType` — one of `data-qa`, `role`,
+`label`, `placeholder`, `text`, `css` — plus `value`/`roleName`), and
+`compilePom()` (`src/templates/pom.ts`) renders that into the file shown above.
+A response that doesn't parse into a valid spec is treated as a generation
+failure for that page (the local LLM falls back to Claude; if Claude's
+response is also invalid, the page is skipped) — see
+[conventions.md](conventions.md#templated-pom-compile--srctemplatespomts).
+
 ---
 
 ## Site audit enrichment

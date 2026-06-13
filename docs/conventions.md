@@ -90,6 +90,33 @@ BasePage          — navigate(), popup handling only
 
 ---
 
+## Templated POM compile — `src/templates/pom.ts`
+
+`generate_pom` does not let the model write `.ts` file text directly. Instead
+the model returns a structured `PomSpec` — `{ file, className, parentClass,
+locators: [{ name, selectorType, value, roleName? }] }` — and
+`compilePom(spec)` renders that through a fixed template into the actual POM
+file.
+
+- `selectorType` is one of `data-qa`, `role`, `label`, `placeholder`, `text`,
+  `css` — the same priority order as the old "Locator priority" prompt
+  section, now expressed as an enum rather than free-form code.
+- `validatePomSpec` (called by `compilePom`) rejects invalid TS identifiers
+  for `className`/locator `name`s, unknown `parentClass`/`selectorType`
+  values, and empty selector values — a bad model response fails generation
+  for that page rather than producing a broken file.
+- `generate-pom.ts`'s `generateForSnapshot` calls this for both the local LLM
+  and Claude API paths; if the local LLM's response doesn't parse/validate,
+  it falls back to Claude as before.
+
+**Why:** previously the model emitted the full `.ts` file as a JSON string
+field, which could (and did) contain markdown fences or other malformed TS —
+see Rule 010 in `src/prompts/learned-rules.md`. Asking for locator metadata
+instead and compiling the file ourselves makes fences/malformed-TS
+structurally impossible for generated POMs.
+
+---
+
 ## AI model routing
 
 | Task | Model | Reason |
