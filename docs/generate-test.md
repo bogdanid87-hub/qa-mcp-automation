@@ -143,12 +143,14 @@ If the generated test fails on the first run, the tool:
    `test()` call; the test is **not** modified because it correctly documents a defect
 
 If the auto-fix doesn't resolve the failure, the CLI prompts to retry. Each attempt
-shows the running token cost. The loop stops after **2 attempts by default**
-(override with `--max-attempts N`, where attempt 1 is the automatic fix above), when
-the user declines, when `--budget N` is reached, or when a retry makes **no
-progress** — see [Loop & cost ceilings](investigate-and-fix.md#usage) for how
-no-progress detection and the pre-flight budget check work. In all stop cases a
-`/* ⚠️ BROKEN */` annotation is written.
+shows the running token cost. **This retry loop is separate from `npm run fix`'s
+loop** (which defaults to 5 attempts — see [investigate-and-fix.md](investigate-and-fix.md#usage));
+this one stops after **2 attempts by default** (override with `--max-attempts N`,
+where attempt 1 is the automatic fix above), when the user declines, when
+`--budget N` is reached, or when a retry makes **no progress** — see
+[Loop & cost ceilings](investigate-and-fix.md#usage) for how no-progress detection
+and the pre-flight budget check work. In all stop cases a `/* ⚠️ BROKEN */`
+annotation is written.
 
 ---
 
