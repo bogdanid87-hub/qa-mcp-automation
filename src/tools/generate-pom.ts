@@ -7,6 +7,7 @@ import { isLocalLlmAvailable, callLocalLlm, LOCAL_MODEL } from './local-llm.js';
 import { extractJson } from './llm-utils.js';
 import type { SiteAuditJson } from './site-audit.js';
 import { safeWrite } from '../lib/safe-write.js';
+import { TokenBudget } from './budget.js';
 
 const ROOT = process.cwd();
 const BASE_URL = 'https://automationexercise.com';
@@ -232,6 +233,7 @@ async function generateForSnapshot(opts: {
   apiKey: string;
   localAvailable: boolean;
   auditContext: string | null;
+  budget?: TokenBudget;
 }): Promise<{ file: string; content: string } | null> {
   const nameHint = opts.nameHint ? `\n\nClass name to use: ${opts.nameHint}` : '';
   const auditHint = opts.auditContext ? `\n\n${opts.auditContext}` : '';
@@ -248,11 +250,26 @@ async function generateForSnapshot(opts: {
     }
   }
 
+  const MAX_OUTPUT_TOKENS = 4096;
+
+  // Soft pre-flight warning only — same TokenBudget.wouldExceed() check as the
+  // fix loop, but POM generation never aborts on it (see investigate-fix.ts).
+  if (opts.budget) {
+    const estimatedInputTokens = TokenBudget.estimateTokens(SYSTEM_PROMPT + userPrompt);
+    if (opts.budget.wouldExceed(estimatedInputTokens, MAX_OUTPUT_TOKENS)) {
+      console.warn(
+        `\n⚠️  Generating ${opts.path} may push spend past the $${opts.budget.limitUsd.toFixed(2)} budget ` +
+        `(currently ${opts.budget.summary}, est. +${estimatedInputTokens} input tokens). ` +
+        `Continuing anyway — generation calls warn but don't abort.\n`,
+      );
+    }
+  }
+
   const client = new Anthropic({ apiKey: opts.apiKey });
   try {
     const message = await client.messages.create({
       model: MODEL,
-      max_tokens: 4096,
+      max_tokens: MAX_OUTPUT_TOKENS,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
     });
@@ -297,6 +314,8 @@ async function writeWithLocatorGuard(
 export async function generatePomTool(args: {
   urls: string[];
   page_name?: string;
+  /** Optional shared cost tracker — see TokenBudget.wouldExceed() in generateForSnapshot. */
+  budget?: TokenBudget;
 }): Promise<{ content: { type: 'text'; text: string }[] }> {
   const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
   if (!apiKey) {
@@ -323,6 +342,7 @@ export async function generatePomTool(args: {
         apiKey,
         localAvailable,
         auditContext,
+        budget: args.budget,
       });
     }),
   );

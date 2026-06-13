@@ -143,9 +143,14 @@ If the generated test fails on the first run, the tool:
    `test()` call; the test is **not** modified because it correctly documents a defect
 
 If the auto-fix doesn't resolve the failure, the CLI prompts to retry. Each attempt
-shows the running token cost. The loop stops after **5 attempts** (override with
-`--max-attempts N`) or when the user declines. Pass `--budget N` for an optional
-spending cap. In all stop cases a `/* ⚠️ BROKEN */` annotation is written.
+shows the running token cost. **This retry loop is separate from `npm run fix`'s
+loop** (which defaults to 5 attempts — see [investigate-and-fix.md](investigate-and-fix.md#usage));
+this one stops after **2 attempts by default** (override with `--max-attempts N`,
+where attempt 1 is the automatic fix above), when the user declines, when
+`--budget N` is reached, or when a retry makes **no progress** — see
+[Loop & cost ceilings](investigate-and-fix.md#usage) for how no-progress detection
+and the pre-flight budget check work. In all stop cases a `/* ⚠️ BROKEN */`
+annotation is written.
 
 ---
 
@@ -173,11 +178,21 @@ npm run generate -- --file my-test.txt --max-attempts 3   # stop after 3 fix att
 npm run generate -- --file my-test.txt --budget 1.00      # stop at $1.00 spent
 ```
 
-**`--max-attempts N`** (default: 5) — stops after N attempts even if the user
-keeps answering 'y'. The right guard for a problem Claude can't resolve — five
-attempts is a clear signal that manual investigation is needed.
+**`--max-attempts N`** (default: 2) — stops the fix-retry loop after N attempts
+even if the user keeps answering 'y'. A clear signal that manual investigation
+is needed via `npm run fix`, which retries with deeper context.
 
-**`--budget N`** — stops at a spending cap. Use for shared API keys with usage quotas.
+**`--budget N`** — spending cap shared across the whole run (POM generation, spec
+generation, and any fix attempts). Its effect differs by call type:
+
+- **Fix attempts** (the auto-fix loop above) — before each Claude call, the
+  estimated cost is checked against the remaining budget; a call that would push
+  spend past the cap is **aborted before it's sent**, and the test is annotated
+  `BROKEN` with the reason.
+- **Generation calls** (POM + spec, including the planning call for complex
+  multi-page flows) — the same estimate only prints a **warning** and continues.
+  Aborting mid-generation would discard tokens already spent on a partial result,
+  so generation always runs to completion regardless of the cap.
 
 ---
 

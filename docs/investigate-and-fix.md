@@ -179,16 +179,29 @@ npm run fix -- --pattern tests/login.spec.ts --budget 0.50  # optional spending 
 npm run fix -- --pattern tests/login.spec.ts --max-attempts 3  # override attempt limit
 ```
 
-The CLI tracks and displays cost after each attempt but never stops based on
-cost alone. Two guards prevent runaway loops:
+The CLI tracks and displays cost after each attempt. Three guards prevent
+runaway loops, any of which annotates the test as BROKEN and stops:
 
 **`--max-attempts N`** (default: 5) — hard stop after N attempts regardless of
-what the user answers at the retry prompt. When reached, the test is annotated
-as BROKEN and the tool exits with a clear message. This is the primary guard
-against a stuck problem that Claude can't resolve automatically.
+what the user answers at the retry prompt. This is the primary guard against a
+stuck problem that Claude can't resolve automatically.
 
 **`--budget N`** — optional spending cap (useful for shared API keys with a usage
-quota). Stops immediately when the cap is reached.
+quota). Before each attempt's Claude call, the cost of that call is *estimated*
+(system prompt + context + failure output + ~1500 tokens per screenshot) and
+the call is **aborted before it's sent** if even a worst-case estimate would
+push spend past the cap — no tokens are spent on the call that would tip it
+over. This pre-flight check is specific to the fix loop; large generation calls
+(building POMs or e2e specs in `generate_test`) use the same estimate but only
+print a warning, since aborting mid-generation would waste what was already spent.
+
+**No-progress detector** — each attempt computes a *failure signature*: the
+sorted set of failing `spec › test` names plus the normalized `Error:` /
+`Locator:` / `Expected:` / `Received:` lines (durations, ANSI codes, and
+`test-results/...` paths stripped so cosmetic differences don't count). If a
+fix attempt's re-verification produces the same signature as the failure that
+triggered it, the previous fix had no effect — the loop stops immediately
+rather than spending tokens repeating a fix that didn't change anything.
 
 ---
 

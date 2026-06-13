@@ -7,6 +7,26 @@ import { TokenBudget } from './tools/budget.js';
 import { writeTestAnnotation } from './tools/annotations.js';
 import { parseFailingTestsFromOutput, deriveRisk } from './tools/test-registry.js';
 
+/** Print a stop banner, cost summary, and (if a spec pattern is known) annotate it BROKEN. */
+async function stopAndAnnotate(opts: {
+  message: string;
+  reason: string;
+  pattern?: string;
+  failureOutput: string;
+  budget: TokenBudget;
+}): Promise<void> {
+  const bar = '─'.repeat(48);
+  console.log(`\n${bar}`);
+  console.log(opts.message);
+  console.log(`  Cost: ${opts.budget.summary}`);
+  console.log(`${bar}`);
+  if (opts.pattern) {
+    console.log('\n⚠️  Writing BROKEN comment into the spec file...');
+    await writeTestAnnotation(opts.pattern, opts.failureOutput, 'broken', opts.reason);
+    console.log(`  Done. Open ${opts.pattern} to review.\n`);
+  }
+}
+
 const ROOT = process.cwd();
 // No budget cap by default — cost is tracked and displayed but never blocks completion.
 // Pass --budget 0.30 to opt in to a spending limit (useful when working with a shared API key).
@@ -96,42 +116,61 @@ async function main(): Promise<void> {
   let lastRootCause = '';
   let lastFailureOutput = failureOutput;
   let attempts = 0;
+  let previousSignature: string | undefined;
   const maxAttempts = args.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
 
   // Fix loop — stops at natural verdicts, user declining retry, spending cap,
-  // or max attempt count (whichever comes first).
+  // no-progress detection, or max attempt count (whichever comes first).
   while (true) {
     if (attempts >= maxAttempts) {
-      const bar = '─'.repeat(48);
-      console.log(`\n${bar}`);
-      console.log(`  ⛔ Maximum attempts (${maxAttempts}) reached without a fix.`);
-      console.log(`  Claude couldn't resolve this automatically — investigate manually.`);
-      console.log(`  Cost: ${budget.summary}`);
-      console.log(`${bar}`);
-      if (args.pattern) {
-        console.log('\n⚠️  Writing BROKEN comment into the spec file...');
-        await writeTestAnnotation(args.pattern, lastFailureOutput, 'broken', lastRootCause || `Could not auto-fix after ${maxAttempts} attempts`);
-        console.log(`  Done. Open ${args.pattern} to review.\n`);
-      }
+      await stopAndAnnotate({
+        message: `  ⛔ Maximum attempts (${maxAttempts}) reached without a fix.\n  Claude couldn't resolve this automatically — investigate manually.`,
+        reason: lastRootCause || `Could not auto-fix after ${maxAttempts} attempts`,
+        pattern: args.pattern,
+        failureOutput: lastFailureOutput,
+        budget,
+      });
       break;
     }
     if (budget.exceeded) {
-      const bar = '─'.repeat(48);
-      console.log(`\n${bar}`);
-      console.log(`  ⚠️  Spending cap of $${budget.limitUsd.toFixed(2)} reached (${budget.summary}).`);
-      console.log(`${bar}`);
-      if (args.pattern) {
-        console.log('\n⚠️  Writing BROKEN comment into the spec file...');
-        await writeTestAnnotation(args.pattern, lastFailureOutput, 'broken', lastRootCause || 'Spending cap reached — run npm run fix to continue');
-        console.log(`  Done. Open ${args.pattern} to review.\n`);
-      }
+      await stopAndAnnotate({
+        message: `  ⚠️  Spending cap of $${budget.limitUsd.toFixed(2)} reached (${budget.summary}).`,
+        reason: lastRootCause || 'Spending cap reached — run npm run fix to continue',
+        pattern: args.pattern,
+        failureOutput: lastFailureOutput,
+        budget,
+      });
       break;
     }
 
     attempts++;
     console.log(`\n⏳ Investigating and fixing (attempt ${attempts}/${maxAttempts})...\n`);
-    const fix = await autoFixFailure(lastFailureOutput, args.pattern, budget);
+    const fix = await autoFixFailure(lastFailureOutput, args.pattern, budget, previousSignature);
     lastRootCause = fix.rootCause;
+
+    if (fix.noProgress) {
+      await stopAndAnnotate({
+        message: `  ⛔ No progress — the previous fix attempt didn't change the failure.\n  Stopping rather than repeating a fix that had no effect.\n  ${fix.rootCause}`,
+        reason: fix.rootCause,
+        pattern: args.pattern,
+        failureOutput: lastFailureOutput,
+        budget,
+      });
+      break;
+    }
+
+    if (fix.budgetExceeded) {
+      await stopAndAnnotate({
+        message: `  ⚠️  Spending cap of $${budget.limitUsd.toFixed(2)} reached (${budget.summary}).\n  ${fix.rootCause}`,
+        reason: fix.rootCause || 'Spending cap reached — run npm run fix to continue',
+        pattern: args.pattern,
+        failureOutput: lastFailureOutput,
+        budget,
+      });
+      break;
+    }
+
+    previousSignature = fix.signature;
 
     const bar = '─'.repeat(48);
     console.log(`\n${bar}`);

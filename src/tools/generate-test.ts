@@ -15,6 +15,7 @@ import { autoFixFailure } from './investigate-fix.js';
 import { writeTestAnnotation } from './annotations.js';
 import { readAppLimitations } from './generate-app-knowledge.js';
 import { extractJson } from './llm-utils.js';
+import { TokenBudget } from './budget.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -197,6 +198,12 @@ export async function generateTestTool(args: {
   dry_run?: boolean;
   /** Override auto-detection. 'api' forces API path; 'visual' forces visual regression path; 'ui'/'e2e' forces browser path. */
   type?: 'auto' | 'ui' | 'e2e' | 'api' | 'visual';
+  /**
+   * Optional shared cost tracker. Generation calls are large (POM + spec, sometimes
+   * a planning call too) so an over-budget estimate only WARNS — it never aborts,
+   * unlike the fix loop's pre-flight check in investigate-fix.ts.
+   */
+  budget?: TokenBudget;
 }): Promise<{ content: { type: 'text'; text: string }[]; _meta?: { specFile?: string; lastFailureOutput?: string; passing: boolean } }> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -242,12 +249,30 @@ export async function generateTestTool(args: {
   const client = new Anthropic({ apiKey });
   const systemBlocks = await getSystemBlocks();
 
+  const MAX_OUTPUT_TOKENS = 8192;
+
   async function callClaude(userBlocks: ReturnType<typeof buildUserBlocks>): Promise<string> {
+    // Soft pre-flight warning only — generation calls (POM + spec) are large and
+    // sometimes span several calls per run, so aborting mid-generation would waste
+    // the tokens already spent and leave nothing usable. The fix loop's pre-flight
+    // check (investigate-fix.ts) is the one that aborts; this one just informs.
+    if (args.budget) {
+      const inputText = [...systemBlocks, ...userBlocks].map((b) => b.text).join('');
+      const estimatedInputTokens = TokenBudget.estimateTokens(inputText);
+      if (args.budget.wouldExceed(estimatedInputTokens, MAX_OUTPUT_TOKENS)) {
+        console.warn(
+          `\n⚠️  This generation call may push spend past the $${args.budget.limitUsd.toFixed(2)} budget ` +
+          `(currently ${args.budget.summary}, est. +${estimatedInputTokens} input tokens). ` +
+          `Continuing anyway — generation calls warn but don't abort.\n`,
+        );
+      }
+    }
+
     for (let attempt = 0; attempt <= 1; attempt++) {
       try {
         const message = await client.messages.create({
           model: MODEL,
-          max_tokens: 8192,
+          max_tokens: MAX_OUTPUT_TOKENS,
           system: systemBlocks,
           messages: [{ role: 'user', content: userBlocks }],
         });
@@ -636,7 +661,7 @@ Never remove existing methods — only append new ones.` : '';
       passing = false;
       lastFailureOutput = testOutput;
       testRunNote = '⚠️ Initial run failed — attempting auto-fix...\n';
-      const fix = await autoFixFailure(testOutput, specFile.path);
+      const fix = await autoFixFailure(testOutput, specFile.path, args.budget);
       if (fix.verdict === 'app_bug') {
         lastFailureOutput = testOutput;
         await writeTestAnnotation(specFile.path, testOutput, 'app_bug', fix.rootCause, fix.actualBehavior);
