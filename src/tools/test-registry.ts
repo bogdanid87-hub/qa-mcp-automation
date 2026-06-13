@@ -1,20 +1,15 @@
 import { readFile } from 'fs/promises';
-import { join } from 'path';
 import { safeWrite } from '../lib/safe-write.js';
+import {
+  TESTS_UI_PATH,
+  TESTS_API_PATH,
+  TESTS_E2E_PATH,
+  TESTS_VISUAL_PATH,
+  registryForSpec,
+  deriveRisk,
+} from '../config.js';
 
-const ROOT = process.cwd();
-export const TESTS_UI_PATH     = join(ROOT, 'TESTS_UI.md');
-export const TESTS_API_PATH    = join(ROOT, 'TESTS_API.md');
-export const TESTS_E2E_PATH    = join(ROOT, 'TESTS_E2E.md');
-export const TESTS_VISUAL_PATH = join(ROOT, 'TESTS_VISUAL.md');
-
-/** Returns the correct registry file for a given spec path. */
-export function registryForSpec(specPath: string): string {
-  if (specPath.startsWith('tests/api/'))    return TESTS_API_PATH;
-  if (specPath.startsWith('tests/e2e/'))    return TESTS_E2E_PATH;
-  if (specPath.startsWith('tests/visual/')) return TESTS_VISUAL_PATH;
-  return TESTS_UI_PATH;
-}
+export { TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH, TESTS_VISUAL_PATH, registryForSpec, deriveRisk };
 
 /** Replace characters that would break markdown table cells. */
 function sanitizeCell(s: string): string {
@@ -77,19 +72,6 @@ export interface BrokenEntry {
   rootCause: string;
   actualBehavior?: string;
   risk?: 'critical' | 'high' | 'medium' | 'low';
-}
-
-/** Infer risk level from spec path and describe block name. */
-export function deriveRisk(spec: string, describe: string): 'critical' | 'high' | 'medium' | 'low' {
-  const s = (spec + ' ' + describe).toLowerCase();
-  // Critical: revenue-impacting flows — order placement, payment, checkout
-  if (/checkout|payment|place.order|order.confirm|complete.purchase/.test(s)) return 'critical';
-  // High: trust and data integrity — authentication, account lifecycle, data accuracy
-  if (/login|register|account|password|credential|verify.login|create.account|delete.account|auth/.test(s)) return 'high';
-  // Medium: conversion paths — product discovery, cart operations, navigation
-  if (/cart|search|product|filter|brand|navigation/.test(s)) return 'medium';
-  // Low: content and supplementary UX
-  return 'low';
 }
 
 const RISK_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };

@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
+import { buildPomHierarchyDescription } from '../config.js';
 
 const LEARNED_RULES_PATH = join(__dirname, 'learned-rules.md');
 
@@ -38,21 +39,7 @@ You generate TypeScript test code that follows EVERY rule below — no exception
 
 ### Page Object Model (POM)
 
-POM hierarchy — choose the right parent class:
-
-  SitePage        (import from './SitePage')       — any full site page (has nav bar, footer, loggedInAs)
-  ProductListPage (import from './ProductListPage') — pages with product card grid: /products, /category_products/:id, /brand_products/:slug
-  BasePage        (import from './BasePage')        — only for pages with no site nav/footer
-
-SitePage already provides (do NOT re-declare in subclasses):
-  logo, navContactUs, navProducts, loggedInAs, footer, subscriptionHeading,
-  subscribeEmailInput, subscribeBtn, subscribeSuccessMessage,
-  scrollToFooter(), subscribeToNewsletter(), verifySubscriptionSuccess(),
-  clickContactUs(), clickProducts()
-
-ProductListPage additionally provides (do NOT re-declare in subclasses):
-  productCards, cartModal, continueShoppingBtn, viewCartLink,
-  hoverAndAddToCart(), continueShopping(), clickViewCart(), getProductIdFromCard()
+${buildPomHierarchyDescription()}
 
 General rules:
 - BasePage (pages/BasePage.ts) exposes: navigate(path, dismissOnLoad?) — use this for direct navigation

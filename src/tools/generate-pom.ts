@@ -9,9 +9,9 @@ import type { SiteAuditJson } from './site-audit.js';
 import { safeWrite } from '../lib/safe-write.js';
 import { TokenBudget } from './budget.js';
 import { compilePom, type PomSpec } from '../templates/pom.js';
+import { SITE_URL, SITE_HOST } from '../config.js';
 
 const ROOT = process.cwd();
-const BASE_URL = 'https://automationexercise.com';
 const MODEL = 'claude-sonnet-4-6';
 
 
@@ -91,7 +91,7 @@ async function validateLocators(
   const page = await ctx.newPage();
 
   try {
-    const fullUrl = pageUrl.startsWith('http') ? pageUrl : `${BASE_URL}${pageUrl}`;
+    const fullUrl = pageUrl.startsWith('http') ? pageUrl : `${SITE_URL}${pageUrl}`;
     await page.goto(fullUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForTimeout(1500); // let dynamic content settle
 
@@ -143,7 +143,7 @@ function formatValidation(results: LocatorResult[]): string {
 // ── System prompt ────────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `\
-You are a Playwright Page Object Model generator for automationexercise.com.
+You are a Playwright Page Object Model generator for ${SITE_HOST}.
 
 Given a live DOM snapshot of a single page, identify the locators for a
 locator-only POM class — no async methods of any kind. You describe each

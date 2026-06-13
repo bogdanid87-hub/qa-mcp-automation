@@ -10,6 +10,10 @@ See [TOOLS.md](TOOLS.md) for a quick index, [docs/](docs/) for per-tool guides, 
 `.claude/skills/` for collaboration rules and conventions Claude Code loads on demand
 during sessions in this repo.
 
+Project-specific values (site URL, registry paths, risk-tier keywords, POM class
+hierarchy) live in [mcp-qa.config.json](mcp-qa.config.json), loaded by
+[src/config.ts](src/config.ts).
+
 ---
 
 ## Always-on safety rules
@@ -67,6 +71,7 @@ npm run mcp                               # start MCP server manually
 
 ```
 src/
+  config.ts             — loads mcp-qa.config.json; derives SITE_URL, registry paths, risk tiers, POM hierarchy
   index.ts              — MCP server entry point, 12 tools registered
   cli.ts                — npm run generate (interactive, cost-tracked)
   fix-cli.ts            — npm run fix
