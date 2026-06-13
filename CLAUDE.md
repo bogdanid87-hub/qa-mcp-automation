@@ -127,16 +127,7 @@ fixtures/index.ts       — custom test + expect (ad-blocking + popup handling)
 
 ## AI routing — which model does what
 
-| Task | Model |
-|------|-------|
-| POM generation — simple flows (≤ 2 pages) | Local LLM → Claude fallback |
-| POM generation — complex flows (> 2 pages) | Claude plans → Local LLM builds in parallel → Claude fills gaps |
-| Spec generation | Claude API always |
-| Failure investigation and fix | Claude API always (uses screenshots + DOM vision) |
-| Coverage gap analysis | Claude API always |
-| PRD risk analysis | Claude API always |
-| API test generation | Local LLM (qwen2.5-coder:14b) → Claude fallback |
-| Similarity check (before generate) | Claude API (cached test list) |
+See [docs/conventions.md#ai-model-routing](docs/conventions.md#ai-model-routing) for the full task → model table.
 
 Local LLM: `qwen2.5-coder:14b` via Ollama (`http://localhost:11434`).
 Override with `OLLAMA_HOST` or `LOCAL_MODEL` env vars.
