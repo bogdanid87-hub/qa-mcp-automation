@@ -19,7 +19,7 @@ import { extractExportedFunctionNames, extractPomMethods } from './pom-index.js'
 import { TokenBudget } from './budget.js';
 
 const ROOT = process.cwd();
-const MODEL = 'claude-sonnet-4-6';
+export const MODEL = 'claude-sonnet-4-6';
 
 /**
  * Scan generated spec files for TODO comments that flag data missing from constants.ts
@@ -71,7 +71,7 @@ interface GenerateResponse {
 
 // ── Orchestrator-worker types (complex multi-page flows) ──────────────────────
 
-interface PomPlan {
+export interface PomPlan {
   file: string;
   is_new: boolean;
   methods: string[];
@@ -80,7 +80,7 @@ interface PomPlan {
 
 // Planning prompt: Claude outputs a list of POMs + methods, no code.
 // Cheap call — output is ~200–500 tokens regardless of flow complexity.
-const PLAN_ONLY_HINT = `
+export const PLAN_ONLY_HINT = `
 
 IMPORTANT — PLANNING STEP: Do NOT write any TypeScript code. Analyse the test \
 description and the DOM snapshots, then list every POM file that must be created \

@@ -13,6 +13,7 @@ import { inspectPageTool } from './tools/inspect-page.js';
 import { generateAuthFixtureTool } from './tools/generate-auth-fixture.js';
 import { generateMockTool } from './tools/generate-mock.js';
 import { generateAppKnowledgeTool } from './tools/generate-app-knowledge.js';
+import { planE2eTool } from './tools/plan-e2e.js';
 
 const server = new McpServer({ name: 'qa-mcp-automation', version: '1.0.0' });
 
@@ -217,6 +218,23 @@ server.registerTool(
     },
   },
   (args) => generateAppKnowledgeTool(args),
+);
+
+server.registerTool(
+  'plan_e2e',
+  {
+    description:
+      'Plan a multi-page E2E journey before generating it. Asks Claude to decompose the flow into ' +
+      'the POMs each step needs (file, new vs existing, methods, page_url), then cross-references ' +
+      'the POM Method Index to produce a step → view → POM → exists? → action checklist — flagging ' +
+      'methods that already exist elsewhere so generate_test reuses them instead of creating ' +
+      'forwarding aliases. Writes no files; one Claude call.',
+    inputSchema: {
+      description: z.string().describe('The end-to-end journey to plan, e.g. numbered steps across multiple pages.'),
+      page_paths: z.array(z.string()).optional().describe('Page paths to inspect live for DOM context, improving plan accuracy.'),
+    },
+  },
+  (args) => planE2eTool(args),
 );
 
 async function main() {

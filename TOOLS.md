@@ -20,6 +20,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 | `generate_auth_fixture` | Generate a Playwright auth fixture for form or OAuth login — saves browser storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
 | `generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
 | `generate_app_knowledge` | Synthesise app bugs, coverage gaps, and coverage report into `APP_KNOWLEDGE.md` — enriches subsequent `analyze_prd` and `analyze_coverage` calls | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
+| `plan_e2e` | Plan a multi-page E2E journey before generating it — decomposes the flow into POMs/methods and cross-references the POM Method Index for a step → view → POM → exists? → action checklist | [docs/plan-e2e.md](docs/plan-e2e.md) |
 
 ---
 
@@ -65,6 +66,9 @@ New page, no POM yet:
 
 Existing page:
   generate_test
+
+Multi-page E2E journey:
+  plan_e2e → review the checklist (reuse vs new methods) → generate_test
 
 Something failed:
   investigate_and_fix / npm run fix
