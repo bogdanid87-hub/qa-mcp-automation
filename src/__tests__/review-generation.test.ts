@@ -37,14 +37,14 @@ export class FixturePage extends SitePage {
 `,
   }];
 
-  it('flags a bare/compound class selector that resolves to more than one element', async () => {
+  it('flags a bare/compound class selector that resolves to more than one element', () => {
     const html = `
       <html><body>
         <div class="alert-success alert">Saved!</div>
         <div class="alert-success alert">Also saved!</div>
       </body></html>
     `;
-    const issues = await checkLocatorCollisions(pomFiles, [{ url: '/fixture', html }]);
+    const issues = checkLocatorCollisions(pomFiles, [{ url: '/fixture', html }]);
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
       severity: 'warning',
@@ -56,29 +56,29 @@ export class FixturePage extends SitePage {
     expect(issues[0].message).toContain('2 elements');
   });
 
-  it('does not flag a selector that resolves to exactly one element', async () => {
+  it('does not flag a selector that resolves to exactly one element', () => {
     const html = `
       <html><body>
         <div class="alert-success alert">Saved!</div>
       </body></html>
     `;
-    const issues = await checkLocatorCollisions(pomFiles, [{ url: '/fixture', html }]);
+    const issues = checkLocatorCollisions(pomFiles, [{ url: '/fixture', html }]);
     expect(issues).toEqual([]);
   });
 
-  it('skips element-scoped class selectors entirely (h1.title is the recommended fix, not a violation)', async () => {
+  it('skips element-scoped class selectors entirely (h1.title is the recommended fix, not a violation)', () => {
     const html = `
       <html><body>
         <h1 class="title">Page A</h1>
         <h1 class="title">Page B</h1>
       </body></html>
     `;
-    const issues = await checkLocatorCollisions(pomFiles, [{ url: '/fixture', html }]);
+    const issues = checkLocatorCollisions(pomFiles, [{ url: '/fixture', html }]);
     expect(issues).toEqual([]);
   });
 
-  it('returns no issues when no pages were inspected', async () => {
-    const issues = await checkLocatorCollisions(pomFiles, []);
+  it('returns no issues when no pages were inspected', () => {
+    const issues = checkLocatorCollisions(pomFiles, []);
     expect(issues).toEqual([]);
   });
 });

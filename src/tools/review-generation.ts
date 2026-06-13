@@ -1,7 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { chromium } from '@playwright/test';
 import { getSystemBlocks } from '../prompts/system.js';
 import { getPomIndex } from './list-resources.js';
 import { extractPomMethods, extractPomLocators, type PomIndexEntry } from './pom-index.js';
@@ -27,11 +26,25 @@ export interface ReviewResult {
 // CORE_RULES requires class-based locators to be scoped by element type or a
 // unique ancestor — a bare/compound class selector (e.g. `.alert-success.alert`)
 // can collide with the same class combination used elsewhere on the page
-// (Rules 004/024/025). Rather than re-stating that prose, run the selector
-// against a real DOM via page.setContent() + locator.count() — anything that
-// resolves to >1 element is a structural collision, full stop.
+// (Rules 004/024/025). Rather than re-stating that prose, count elements whose
+// `class` attribute contains every token in the selector — anything that
+// resolves to >1 element is a structural collision, full stop. This selector
+// space (bare/compound class names only, no element type/id/attribute/descendant
+// combinators) is simple enough that a regex over the captured HTML is exact,
+// without needing a browser.
 
 const BARE_CLASS_SELECTOR_RE = /^\.[\w-]+(?:\.[\w-]+)*$/;
+const CLASS_ATTR_RE = /\bclass\s*=\s*(["'])((?:\\.|(?!\1).)*)\1/gi;
+
+/** Count elements in `html` whose `class` attribute contains every class in `classes`. */
+function countElementsWithClasses(html: string, classes: string[]): number {
+  let count = 0;
+  for (const m of html.matchAll(CLASS_ATTR_RE)) {
+    const elementClasses = new Set(m[2].split(/\s+/).filter(Boolean));
+    if (classes.every((c) => elementClasses.has(c))) count++;
+  }
+  return count;
+}
 
 /**
  * Flags POM locators defined with a bare/compound class selector (e.g.
@@ -39,10 +52,10 @@ const BARE_CLASS_SELECTOR_RE = /^\.[\w-]+(?:\.[\w-]+)*$/;
  * given pages. `pages` is the raw HTML captured by inspectPages() during
  * generation — when empty, this check is skipped entirely (no DOM to test against).
  */
-export async function checkLocatorCollisions(
+export function checkLocatorCollisions(
   pomFiles: { path: string; content: string }[],
   pages: { url: string; html: string }[],
-): Promise<ReviewIssue[]> {
+): ReviewIssue[] {
   const issues: ReviewIssue[] = [];
   if (pages.length === 0) return issues;
 
@@ -51,28 +64,21 @@ export async function checkLocatorCollisions(
       .filter((l) => BARE_CLASS_SELECTOR_RE.test(l.selector))
       .map((l) => ({ file: f.path, ...l })),
   );
-  if (candidates.length === 0) return issues;
 
-  const browser = await chromium.launch({ headless: true });
-  try {
-    const page = await browser.newPage();
-    for (const candidate of candidates) {
-      for (const p of pages) {
-        await page.setContent(p.html);
-        const count = await page.locator(candidate.selector).count();
-        if (count > 1) {
-          issues.push({
-            severity: 'warning',
-            category: 'locator-collision',
-            file: candidate.file,
-            message: `Locator '${candidate.selector}' (this.${candidate.name}) matches ${count} elements on ${p.url} — scope it to a unique ancestor container (CORE_RULES Locator rules).`,
-          });
-          break;
-        }
+  for (const candidate of candidates) {
+    const classes = candidate.selector.split('.').filter(Boolean);
+    for (const p of pages) {
+      const count = countElementsWithClasses(p.html, classes);
+      if (count > 1) {
+        issues.push({
+          severity: 'warning',
+          category: 'locator-collision',
+          file: candidate.file,
+          message: `Locator '${candidate.selector}' (this.${candidate.name}) matches ${count} elements on ${p.url} — scope it to a unique ancestor container (CORE_RULES Locator rules).`,
+        });
+        break;
       }
     }
-  } finally {
-    await browser.close();
   }
   return issues;
 }
@@ -305,7 +311,7 @@ export async function reviewGeneratedFiles(
   const issues: ReviewIssue[] = [];
 
   if (pomFiles.length > 0 && (opts.pages?.length ?? 0) > 0) {
-    issues.push(...await checkLocatorCollisions(pomFiles, opts.pages!));
+    issues.push(...checkLocatorCollisions(pomFiles, opts.pages!));
   }
 
   if (pomFiles.length > 0) {

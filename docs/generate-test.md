@@ -166,10 +166,10 @@ Two layers:
 
 1. **Deterministic checks (free, run first)**
    - **Locator collisions** — for any new/edited POM locator defined with a bare or
-     compound class selector (e.g. `.alert-success.alert`), runs `.count()` against
-     the DOM captured via `page_paths` during generation. More than one match means
-     the selector needs to be scoped to a unique ancestor container. Skipped
-     entirely when no `page_paths` were inspected.
+     compound class selector (e.g. `.alert-success.alert`), counts elements with
+     that class combination in the DOM captured via `page_paths` during generation.
+     More than one match means the selector needs to be scoped to a unique ancestor
+     container. Skipped entirely when no `page_paths` were inspected.
    - **Forwarding aliases** — flags a new POM method whose name closely overlaps an
      existing method on a *different* POM class with the same parameter count and a
      compatible return type — e.g. `CartPage.getProductName(i)` vs
