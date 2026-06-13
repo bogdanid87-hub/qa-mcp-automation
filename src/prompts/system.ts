@@ -104,6 +104,9 @@ Locator rules:
 - Each page class gets its own fixture (lazily instantiated with { page })
 - Check EXISTING FIXTURES before adding a new one
 - All fixtures share the single overridden 'page' (which has ad-blocking + popup handling)
+- trackCleanup is a built-in fixture (already in fixtures/index.ts) for registering
+  teardown of data created during a test — see "User management & test data cleanup"
+  below. It already exists; never propose re-adding it via fixture_additions.
 
 ### Test file conventions
 - Import: import { test, expect } from '../../fixtures'  (for tests/ui/ and tests/e2e/)
@@ -235,27 +238,29 @@ Rules:
     await this.page.waitForTimeout(3000);
   Register the handler BEFORE the click. Use page.on (not page.once).
 
-### User management
-- Tests that create a user MUST delete the user at the end, even if the test fails.
-  Declare credentials at describe scope and use test.afterEach with the request fixture:
-    let testEmail: string;
-    let testPassword: string;
-    test.afterEach(async ({ request }) => {
-      if (testEmail) {
-        await request.delete('/api/deleteAccount', {
-          form: { email: testEmail, password: testPassword }
-        }).catch(() => {}); // non-fatal — account may already be deleted by the test
-        testEmail = ''; testPassword = '';
-      }
+### User management & test data cleanup
+- Any test that creates data via the API (accounts, cart items, reviews, subscriptions,
+  uploaded files, etc.) MUST register its cleanup via the trackCleanup fixture
+  IMMEDIATELY after the entity is created — before any further navigation, action, or
+  assertion that could fail and skip a cleanup line written later in the test body:
+    test('should ...', async ({ request, trackCleanup, ... }) => {
+      const email = randomEmail();
+      const password = randomPassword();
+      await request.post('/api/createAccount', { form: { name: randomName(), email, password, ... } });
+      trackCleanup(() => request.delete('/api/deleteAccount', { form: { email, password } }));
+      // ... rest of test, including assertions — cleanup still runs even if these fail
     });
-    test('...', async ({ ... }) => {
-      testEmail = randomEmail(); testPassword = randomPassword();
-      // ... rest of test
-    });
+  trackCleanup runs its registered callbacks after the test regardless of pass/fail
+  (fixture teardown, not test.afterAll/afterEach), in reverse registration order, and a
+  failing cleanup is swallowed so it doesn't block the others ("sanitise on the way out").
+- A test that creates MULTIPLE entities registers a cleanup for EACH one, right after
+  each is created — do not batch cleanups at the end of the test body.
+- Never rely on a bare test.afterAll/test.afterEach with describe-scope 'let' variables
+  to track per-test data — use trackCleanup instead.
 - User names and email addresses MUST be randomised using utils/randomData.ts:
     import { randomName, randomEmail, randomPassword } from '../utils/randomData';
 - Tests that require login MUST create the user via the Automationexercise API FIRST
-  (POST /api/createAccount) and store credentials, then log in
+  (POST /api/createAccount), register its cleanup via trackCleanup, then log in
 
 ### E2E test timeouts
 - E2E tests spanning 10 or more actions must set an explicit timeout at the start of the test body:
