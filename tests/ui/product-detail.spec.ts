@@ -2,6 +2,7 @@ import { test, expect } from '../../fixtures';
 import { ProductDetailsPage } from '../../pages/ProductDetailsPage';
 import { ViewCartPage } from '../../pages/ViewCartPage';
 import { REVIEW } from '../../test-data/constants';
+import { parsePrice } from '../../utils/price';
 
 test.describe('Product Detail', () => {
   // [UI Product Detail #1]
@@ -86,8 +87,7 @@ test.describe('Product Detail', () => {
     // Capture the unit price displayed on the product detail page
     const priceText = await detailPage.getPrice();
     expect(priceText.length, 'product price should be non-empty').toBeGreaterThan(0);
-    if (!priceText.match(/\d+/)) throw new Error(`Unexpected price format: "${priceText}"`);
-    const unitPriceNumber = parseInt(priceText.replace(/[^\d]/g, ''), 10);
+    const unitPriceNumber = parsePrice(priceText);
 
     // Change the quantity input to 3 before adding to cart
     await detailPage.changeQuantity(3);
@@ -111,11 +111,61 @@ test.describe('Product Detail', () => {
 
     // Verify the row total equals unit price × 3
     const rowTotal = await cartPage.getRowTotal(0);
-    if (!rowTotal.match(/\d+/)) throw new Error(`Unexpected row total format: "${rowTotal}"`);
-    const rowTotalNumber = parseInt(rowTotal.replace(/[^\d]/g, ''), 10);
+    const rowTotalNumber = parsePrice(rowTotal);
     expect(
       rowTotalNumber,
       'cart row total should equal unit price × 3 when quantity is 3'
     ).toBe(unitPriceNumber * 3);
+  });
+
+  // [UI Product Detail #4]
+  test('should show matching unit price in cart when product added with quantity 1 @regression @critical', async ({ page }) => {
+    const detailPage = new ProductDetailsPage(page);
+    const cartPage = new ViewCartPage(page);
+
+    // Navigate directly to the product detail page
+    await page.goto('/product_details/1', { waitUntil: 'domcontentloaded' });
+    await detailPage.verifyLoaded();
+
+    // Capture the unit price displayed on the product detail page
+    const priceText = await detailPage.getPrice();
+    expect(priceText.length, 'product detail price should be non-empty').toBeGreaterThan(0);
+    const unitPriceNumber = parsePrice(priceText);
+
+    // Ensure quantity is set to 1 (default), then add to cart
+    await detailPage.changeQuantity(1);
+    await detailPage.addToCart();
+    await expect(detailPage.cartModal, 'cart modal should be visible after adding product').toBeVisible();
+
+    // Navigate to cart via the modal View Cart link
+    await detailPage.viewCart();
+    await cartPage.verifyLoaded();
+
+    // Wait for the cart table to load
+    await cartPage.cartTable.waitFor({ state: 'visible' });
+    const rowCount = await cartPage.cartRows.count();
+    expect(rowCount, 'cart should contain at least one row').toBeGreaterThan(0);
+
+    // Verify the cart row's unit price matches the price captured on the detail page
+    const rowUnitPriceText = await cartPage.getRowUnitPrice(0);
+    expect(rowUnitPriceText.length, 'cart row unit price should be non-empty').toBeGreaterThan(0);
+    const rowUnitPriceNumber = parsePrice(rowUnitPriceText);
+    expect(
+      rowUnitPriceNumber,
+      'cart row unit price should match the price shown on the product detail page'
+    ).toBe(unitPriceNumber);
+
+    // Verify the row total equals the unit price (quantity is 1)
+    const rowTotalText = await cartPage.getRowTotal(0);
+    expect(rowTotalText.length, 'cart row total should be non-empty').toBeGreaterThan(0);
+    const rowTotalNumber = parsePrice(rowTotalText);
+    expect(
+      rowTotalNumber,
+      'cart row total should equal unit price when quantity is 1'
+    ).toBe(unitPriceNumber);
+
+    // Verify the quantity in the cart row is 1
+    const rowQty = await cartPage.getRowQuantity(0);
+    expect(rowQty, 'cart row quantity should be 1').toBe(1);
   });
 });
