@@ -5,7 +5,7 @@ import { safeWrite } from '../lib/safe-write.js';
 import { getSystemBlocks, getSystemPrompt, buildUserBlocks, buildUserPrompt } from '../prompts/system.js';
 import { isLocalLlmAvailable, callLocalLlm, LOCAL_MODEL } from './local-llm.js';
 import { readFocusedContextForFeature, pomExistsForFeature } from './list-resources.js';
-import { inspectPages, formatSnapshots } from './inspect-page.js';
+import { inspectPages, formatSnapshots, type PageSnapshot } from './inspect-page.js';
 import { runTests } from './run-tests.js';
 import { parsePassingTests, recordPassingTests } from './test-registry.js';
 import { generateApiTestTool } from './generate-api-test.js';
@@ -16,6 +16,7 @@ import { writeTestAnnotation } from './annotations.js';
 import { readAppLimitations } from './generate-app-knowledge.js';
 import { extractJson } from './llm-utils.js';
 import { extractExportedFunctionNames, extractPomMethods } from './pom-index.js';
+import { reviewGeneratedFiles } from './review-generation.js';
 import { TokenBudget } from './budget.js';
 
 const ROOT = process.cwd();
@@ -319,10 +320,11 @@ export async function generateTestTool(args: {
   }
 
   let domContext = '';
+  let domSnapshots: PageSnapshot[] = [];
   if (args.page_paths && args.page_paths.length > 0) {
     try {
-      const snapshots = await inspectPages(args.page_paths);
-      domContext = formatSnapshots(snapshots);
+      domSnapshots = await inspectPages(args.page_paths);
+      domContext = formatSnapshots(domSnapshots);
     } catch (err: any) {
       domContext = `(Page inspection failed: ${err.message} — proceeding without DOM snapshot)`;
     }
@@ -706,6 +708,13 @@ Never remove existing methods — only append new ones.` : '';
     }
   }
 
+  const reviewPages = domSnapshots
+    .filter((s): s is PageSnapshot & { html: string } => !!s.html)
+    .map((s) => ({ url: s.path, html: s.html }));
+  const review = written.length > 0
+    ? await reviewGeneratedFiles(written, { pages: reviewPages, budget: args.budget })
+    : { issues: [] };
+
   const lines: string[] = [
     `✅ ${parsed.summary}`,
     '',
@@ -730,6 +739,14 @@ Never remove existing methods — only append new ones.` : '';
 
   if (testRunNote) {
     lines.push('', testRunNote);
+  }
+
+  if (review.issues.length > 0) {
+    lines.push(
+      '',
+      '**⚠️ Review notes** — pre-write reviewer found potential issues (report-only, not auto-fixed):',
+      ...review.issues.map((i) => `  - [${i.category}] ${i.file}: ${i.message}`),
+    );
   }
 
   const negatives = parsed.proposed_negative_tests ?? [];

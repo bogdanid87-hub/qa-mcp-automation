@@ -154,6 +154,37 @@ annotation is written.
 
 ---
 
+## Review notes
+
+After the spec is written (and any auto-fix has run), a hybrid pre-write reviewer
+pass checks the newly written/edited files for patterns that have slipped through
+before. It's **report-only** — issues appear in a "⚠️ Review notes" section of the
+response; nothing is changed automatically, and the section is omitted entirely
+when no issues are found.
+
+Two layers:
+
+1. **Deterministic checks (free, run first)**
+   - **Locator collisions** — for any new/edited POM locator defined with a bare or
+     compound class selector (e.g. `.alert-success.alert`), counts elements with
+     that class combination in the DOM captured via `page_paths` during generation.
+     More than one match means the selector needs to be scoped to a unique ancestor
+     container. Skipped entirely when no `page_paths` were inspected.
+   - **Forwarding aliases** — flags a new POM method whose name closely overlaps an
+     existing method on a *different* POM class with the same parameter count and a
+     compatible return type — e.g. `CartPage.getProductName(i)` vs
+     `ViewCartPage.getRowProductName(i)`. Reuse the existing method instead.
+   - **Fixture usage** — flags `new SomePage(page)` in any written spec file; POMs
+     must come from a fixture.
+
+2. **One LLM call** for the remaining CORE_RULES checks the deterministic layer
+   can't cover: inline currency/date/percentage parsing that should use a `utils/`
+   helper, and hardcoded application data that should be captured at runtime
+   instead. Fed the deterministic findings as already-confirmed issues so it
+   doesn't repeat them.
+
+---
+
 ## Additional test proposals
 
 After writing the main test, the tool proposes further scenarios — negative cases,

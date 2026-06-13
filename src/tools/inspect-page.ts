@@ -20,13 +20,15 @@ interface ElementInfo {
   note?: string;           // e.g. "hidden by default", "success message"
 }
 
-interface PageSnapshot {
+export interface PageSnapshot {
   path: string;
   url: string;
   title: string;
   headings: string[];
   elements: ElementInfo[];
   forms: { id?: string; action?: string; method?: string; enctype?: string }[];
+  /** Raw page.content() HTML — not included in formatSnapshots(), used by review-generation's locator-collision check. */
+  html?: string;
 }
 
 /** Navigate to each path and extract DOM element info for POM generation. */
@@ -135,6 +137,7 @@ export async function inspectPages(paths: string[]): Promise<PageSnapshot[]> {
         })()
       `) as PageSnapshot;
 
+      snapshot.html = await page.content();
       snapshots.push(snapshot);
       await context.close();
     }

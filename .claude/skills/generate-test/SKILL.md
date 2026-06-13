@@ -132,7 +132,11 @@ Before finalizing any class-based locator:
 - `generate_pom`'s [locator validation](../generate-pom/SKILL.md#locator-validation)
   step (`.count()` against the live page) catches `page.locator()` selectors that
   resolve to 0 or >1 — fix any ⚠️/❌ before running `generate_test`.
-- A planned hybrid reviewer pass (Task Group 8, not yet built) will run the same
-  `.count()` check automatically as part of `generate_test` itself.
+- `generate_test` itself runs the same collision check automatically as part of its
+  pre-write reviewer pass (Task Group 8) — a bare/compound class locator with >1
+  match on the inspected `page_paths` DOM is reported in "⚠️ Review notes". The
+  reviewer also flags forwarding-alias POM methods (near-duplicate name, same
+  param count/return type as a method on another POM class) and `new SomePage(page)`
+  in specs. Report-only — see [Review notes](../../../docs/generate-test.md#review-notes).
 
 Full guide: [docs/generate-test.md](../../../docs/generate-test.md)

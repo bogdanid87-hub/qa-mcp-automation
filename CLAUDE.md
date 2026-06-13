@@ -89,6 +89,7 @@ src/
     generate-app-knowledge.ts — synthesises APP_KNOWLEDGE.md from bugs, gaps, coverage report
     plan-e2e.ts         — look-ahead E2E journey planner; cross-references the POM Method Index
     pom-index.ts        — POM Method Index builder, shared by generate-test and plan-e2e
+    review-generation.ts — hybrid pre-write reviewer (deterministic checks + 1 LLM call) for generate-test
     annotations.ts      — writes /* ⚠️ APP BUG */ and /* ⚠️ BROKEN */ into specs
     budget.ts           — token cost tracking per session
   prompts/
