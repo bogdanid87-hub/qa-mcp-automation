@@ -183,6 +183,37 @@ assertion) — see [investigate-and-fix.md](investigate-and-fix.md#objective-pre
 
 ---
 
+## Shell execution guard — `src/lib/shell-guard.ts`
+
+Every place the server shells out goes through `runGuarded(command, args, options)`
+or `runGuardedShellDetached(cmd)` instead of calling `child_process.exec`/`execFile`
+directly:
+
+- `runGuarded` uses `execFile` (array args, no shell) — `pattern`/`grep` values
+  from `run_tests`/`investigate_and_fix` become a single argv element each and
+  can never break out into a separate command, even if they contain shell
+  metacharacters.
+- The binary must be in `ALLOWED_BINARIES` (`npx`, `ollama`, `open`). Anything
+  else (`rm`, `git`, `bash`, ...) is refused before it runs.
+- Regardless of binary, the full command/args are checked against a denylist —
+  `rm`, `git push`, `--force`/`--force-with-lease`, `--hard`, combined `-rf`/`-fr`
+  flags, and `-D`. This catches destructive arguments smuggled through `pattern`
+  or `grep` (e.g. `grep: "--force"`).
+- A blocked command returns `⛔ Blocked: <reason>.` as the tool's output instead
+  of throwing — `run_tests` and the fix loop surface this text directly.
+- `runGuardedShellDetached` is for the one hardcoded command that needs shell
+  features (`local-llm.ts`'s Ollama startup, which uses `||` and background `&`):
+  same denylist check, then `exec` with no callback (fire-and-forget), matching
+  the previous behaviour.
+
+**Why:** `run-tests.ts` previously built a shell string by interpolating
+`pattern`/`grep` from MCP tool input directly into `npx playwright test ${pattern} --grep ${JSON.stringify(grep)} ...`
+— a command-injection path. Switching to `execFile` closes that; the allowlist
+and denylist are defense-in-depth against future shell-out code repeating the
+mistake or constructing a destructive command.
+
+---
+
 ## `source: direct | suggested` — meaning differs by tool
 
 Both `analyze_prd` and `analyze_coverage` use the `source` field but with subtly

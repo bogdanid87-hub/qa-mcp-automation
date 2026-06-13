@@ -1,22 +1,15 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { runGuarded } from '../lib/shell-guard.js';
 
-const execAsync = promisify(exec);
 const ROOT = process.cwd();
 
 export type Browser = 'chromium' | 'firefox' | 'webkit' | 'visual';
 
 export async function runTests(pattern?: string, grep?: string, browser: Browser = 'chromium'): Promise<string> {
-  const patternArg = pattern ? ` ${pattern}` : '';
-  const grepArg    = grep    ? ` --grep ${JSON.stringify(grep)}` : '';
-  const projectArg = ` --project=${browser}`;
-  const cmd = `npx playwright test${patternArg}${grepArg}${projectArg} 2>&1`;
-  try {
-    const { stdout } = await execAsync(cmd, { cwd: ROOT, timeout: 120_000, maxBuffer: 50 * 1024 * 1024 });
-    return stdout || '(no output)';
-  } catch (err: any) {
-    return err.stdout ?? err.message;
-  }
+  const args = ['playwright', 'test'];
+  if (pattern) args.push(pattern);
+  if (grep) args.push('--grep', grep);
+  args.push(`--project=${browser}`);
+  return runGuarded('npx', args, { cwd: ROOT, timeout: 120_000, maxBuffer: 50 * 1024 * 1024 });
 }
 
 export async function runTestsTool(args: {

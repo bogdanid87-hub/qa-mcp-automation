@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { runGuardedShellDetached } from '../lib/shell-guard.js';
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST ?? 'http://localhost:11434';
 const LOCAL_MODEL = process.env.LOCAL_MODEL ?? 'qwen2.5-coder:14b';
@@ -25,7 +25,7 @@ async function checkOllamaReachable(): Promise<boolean> {
 /** Launch the Ollama macOS app and wait up to STARTUP_TIMEOUT_MS for it to respond. */
 async function tryStartOllama(): Promise<boolean> {
   // Try the macOS app first; fall back to `ollama serve` if the app isn't installed
-  exec('open -a Ollama 2>/dev/null || ollama serve &>/dev/null &');
+  runGuardedShellDetached('open -a Ollama 2>/dev/null || ollama serve &>/dev/null &');
 
   const deadline = Date.now() + STARTUP_TIMEOUT_MS;
   while (Date.now() < deadline) {
