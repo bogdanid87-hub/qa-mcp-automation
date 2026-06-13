@@ -13,7 +13,7 @@ Describe a test scenario in plain English. The server uses **Claude Sonnet 4.6**
 ## What this project demonstrates
 
 ### MCP server architecture
-A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes eleven AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
+A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes twelve AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
 
 ### Server-side quality engineering
 The MCP server itself is held to the same quality bar as the tests it generates:
@@ -150,7 +150,7 @@ NO_LOCAL_LLM=1 npm run generate -- --file my-test.txt   # same via env var
 
 ## Tools
 
-Eleven tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
+Twelve tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
 
 | Tool | One-liner | Guide |
 |------|-----------|-------|
@@ -165,6 +165,7 @@ Eleven tools are available in Claude Code chat and (most) from the terminal. See
 | `generate_auth_fixture` | Generate a Playwright auth fixture — saves browser storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
 | `generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
 | `generate_app_knowledge` | Synthesise app bugs, gaps, and coverage report into `APP_KNOWLEDGE.md` — enriches `analyze_prd` and `analyze_coverage` | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
+| `plan_e2e` | Plan a multi-page E2E journey — decompose into POMs/methods, cross-reference the POM Method Index for a step → view → POM → exists? → action checklist | [docs/plan-e2e.md](docs/plan-e2e.md) |
 
 ---
 
@@ -180,6 +181,9 @@ New page, no POM yet:
 
 Existing page:
   generate_test
+
+Multi-page E2E journey:
+  plan_e2e   →   review the checklist (reuse vs new methods)   →   generate_test
 
 Something failed:
   investigate_and_fix  /  npm run fix -- --pattern tests/ui/auth.spec.ts
@@ -245,7 +249,7 @@ qa-mcp-automation/
 │   └── update-visual-baselines.yml   ← manual Linux baseline generation
 │
 ├── src/                              ← MCP server + CLIs
-│   ├── index.ts                      ← MCP server entry point — 11 tools registered
+│   ├── index.ts                      ← MCP server entry point — 12 tools registered
 │   ├── cli.ts                        ← npm run generate
 │   ├── fix-cli.ts                    ← npm run fix
 │   ├── generate-api-test-cli.ts      ← npm run generate_api
@@ -271,6 +275,8 @@ qa-mcp-automation/
 │       ├── annotations.ts            ← APP BUG / BROKEN comments + auto test.fail()
 │       ├── site-audit.ts             ← site crawl + POM hierarchy recommendation
 │       ├── generate-app-knowledge.ts ← app bug/gap synthesis → APP_KNOWLEDGE.md
+│       ├── plan-e2e.ts               ← look-ahead E2E journey planner (POM checklist)
+│       ├── pom-index.ts              ← POM Method Index builder (shared by generate-test, plan-e2e)
 │       ├── inspect-page.ts           ← headless DOM extraction
 │       ├── test-registry.ts          ← reads/writes TESTS_*.md registries
 │       ├── local-llm.ts              ← Ollama client with startup prompt

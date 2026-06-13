@@ -1,9 +1,10 @@
 # qa-mcp-automation
 
 MCP server that generates Playwright tests for automationexercise.com using the
-Claude API and a local LLM. Eleven tools cover the full QA workflow from PRD
+Claude API and a local LLM. Twelve tools cover the full QA workflow from PRD
 analysis through test generation, auth fixture setup, network mocking, failure
-investigation, registry maintenance, and app knowledge synthesis.
+investigation, registry maintenance, app knowledge synthesis, and E2E journey
+planning.
 
 See [TOOLS.md](TOOLS.md) for a quick index, [docs/](docs/) for per-tool guides, and
 `.claude/skills/` for collaboration rules and conventions Claude Code loads on demand
@@ -66,7 +67,7 @@ npm run mcp                               # start MCP server manually
 
 ```
 src/
-  index.ts              — MCP server entry point, 11 tools registered
+  index.ts              — MCP server entry point, 12 tools registered
   cli.ts                — npm run generate (interactive, cost-tracked)
   fix-cli.ts            — npm run fix
   analyze-prd-cli.ts    — npm run analyze_prd
@@ -86,6 +87,8 @@ src/
     test-registry.ts    — shared read/write logic for TESTS_UI.md, TESTS_API.md and TESTS_E2E.md
     local-llm.ts        — Ollama client (qwen2.5-coder:14b, falls back to Claude)
     generate-app-knowledge.ts — synthesises APP_KNOWLEDGE.md from bugs, gaps, coverage report
+    plan-e2e.ts         — look-ahead E2E journey planner; cross-references the POM Method Index
+    pom-index.ts        — POM Method Index builder, shared by generate-test and plan-e2e
     annotations.ts      — writes /* ⚠️ APP BUG */ and /* ⚠️ BROKEN */ into specs
     budget.ts           — token cost tracking per session
   prompts/

@@ -1,6 +1,6 @@
 import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
-import { buildPomIndex, extractPomMethods, formatPomIndex } from './pom-index.js';
+import { buildPomIndex, extractPomMethods, formatPomIndex, type PomIndexEntry } from './pom-index.js';
 
 const ROOT = process.cwd();
 const DIRS = ['pages', 'fixtures', 'tests', 'utils'] as const;
@@ -111,6 +111,12 @@ export async function readFocusedContextForFeature(keywords: string[]): Promise<
   const pomIndex = formatPomIndex(buildPomIndex(all.filter((f) => f.name.startsWith('pages/'))));
   const context = buildFocusedContext(all, relevant);
   return pomIndex ? `${pomIndex}\n\n${context}` : context;
+}
+
+/** Build a POM Method Index over the real pages/*.ts files on disk. */
+export async function getPomIndex(): Promise<PomIndexEntry[]> {
+  const all = await readAllFiles();
+  return buildPomIndex(all.filter((f) => f.name.startsWith('pages/')));
 }
 
 /**
