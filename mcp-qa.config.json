@@ -1,0 +1,52 @@
+{
+  "project": {
+    "name": "automationexercise",
+    "siteUrl": "https://automationexercise.com"
+  },
+  "testing": {
+    "folders": {
+      "ui": "tests/ui",
+      "api": "tests/api",
+      "e2e": "tests/e2e",
+      "visual": "tests/visual"
+    },
+    "registries": {
+      "ui": "TESTS_UI.md",
+      "api": "TESTS_API.md",
+      "e2e": "TESTS_E2E.md",
+      "visual": "TESTS_VISUAL.md"
+    }
+  },
+  "riskTiers": {
+    "critical": ["checkout", "payment", "place.order", "order.confirm", "complete.purchase"],
+    "high": ["login", "register", "account", "password", "credential", "verify.login", "create.account", "delete.account", "auth"],
+    "medium": ["cart", "search", "product", "filter", "brand", "navigation"],
+    "low": []
+  },
+  "pom": {
+    "baseClass": "BasePage",
+    "siteClass": "SitePage",
+    "siteClassProvides": [
+      "logo", "navContactUs", "navProducts", "loggedInAs", "footer", "subscriptionHeading",
+      "subscribeEmailInput", "subscribeBtn", "subscribeSuccessMessage",
+      "scrollToFooter()", "subscribeToNewsletter()", "verifySubscriptionSuccess()",
+      "clickContactUs()", "clickProducts()"
+    ],
+    "intermediateClasses": [
+      {
+        "name": "ProductListPage",
+        "importFrom": "./ProductListPage",
+        "description": "pages with product card grid",
+        "paths": ["/products", "/category_products/:id", "/brand_products/:slug"],
+        "provides": [
+          "productCards", "cartModal", "continueShoppingBtn", "viewCartLink",
+          "hoverAndAddToCart()", "continueShopping()", "clickViewCart()", "getProductIdFromCard()"
+        ]
+      }
+    ]
+  },
+  "models": {
+    "primary": "claude-sonnet-4-6",
+    "local": "qwen2.5-coder:14b"
+  }
+}
