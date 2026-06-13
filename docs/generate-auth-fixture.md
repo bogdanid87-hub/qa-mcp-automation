@@ -159,7 +159,10 @@ TEST_PASSWORD=your-test-password
 ## Notes
 
 - Storage state files are automatically gitignored
-- Credentials are always read from env vars — never hardcoded
+- Credentials are always read from env vars — never hardcoded. `safeWrite`'s
+  secret scan (see [conventions.md](conventions.md#safe-writes--srclibsafe-writets))
+  refuses to write generated `.ts`/`.tsx` files that contain the literal value
+  of `TEST_EMAIL` or `TEST_PASSWORD` as a backstop.
 - The setup task name must be unique from `'save guest storage state'`
 - If the login page uses OAuth redirect, set `type: oauth` and describe the flow
   in `notes` — Claude will generate the appropriate redirect-handling setup
