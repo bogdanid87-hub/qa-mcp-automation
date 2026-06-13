@@ -20,9 +20,20 @@ export interface PomIndexEntry {
   methods: PomMethod[];
 }
 
+export interface PomLocator {
+  name: string;
+  selector: string;
+}
+
 const CLASS_RE = /export\s+class\s+(\w+)(?:\s+extends\s+(\w+))?/;
 
 const METHOD_RE = /async\s+(\w+)\s*(?:<[^>]*>)?\s*\(([^)]*)\)\s*(?::\s*([^{]+?))?\s*\{/g;
+
+// Matches `this.someLocator = page.locator('selector');` — a single string-literal
+// selector with no second argument (e.g. `{ hasText: ... }`). Locators built with
+// options or variables are skipped — the deterministic collision check can't reason
+// about a `hasText` filter without re-implementing it.
+const LOCATOR_RE = /this\.(\w+)\s*=\s*page\.locator\(\s*(['"`])((?:\\.|(?!\2).)*)\2\s*\)/g;
 
 function cleanDoc(rawDoc: string): string {
   return rawDoc
@@ -56,6 +67,11 @@ export function extractPomMethods(content: string): PomMethod[] {
     if (doc) method.doc = doc;
     return method;
   });
+}
+
+/** Extract `this.x = page.locator('...')` assignments with a single string-literal selector. */
+export function extractPomLocators(content: string): PomLocator[] {
+  return [...content.matchAll(LOCATOR_RE)].map((m) => ({ name: m[1], selector: m[3] }));
 }
 
 /** Extract top-level exported function names from a helpers file's content. */
