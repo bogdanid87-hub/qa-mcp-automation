@@ -1,11 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import { dirname, join } from 'path';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 import { chromium } from 'playwright';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { isLocalLlmAvailable, callLocalLlm, LOCAL_MODEL } from './local-llm.js';
 import { extractJson } from './llm-utils.js';
 import type { SiteAuditJson } from './site-audit.js';
+import { safeWrite } from '../lib/safe-write.js';
 
 const ROOT = process.cwd();
 const BASE_URL = 'https://automationexercise.com';
@@ -285,8 +286,9 @@ async function writeWithLocatorGuard(
       return { ok: false, reason: `would remove existing locators: ${missing.join(', ')}` };
     }
   } catch { /* new file — no guard needed */ }
-  await mkdir(dirname(abs), { recursive: true });
-  await writeFile(abs, content, 'utf-8');
+  // The checks above already vet locator preservation for this POM-only file —
+  // pass allowOverwrite so safeWrite's generic shrink check doesn't double-guard.
+  await safeWrite(abs, content, { allowOverwrite: true });
   return { ok: true };
 }
 

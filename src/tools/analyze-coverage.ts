@@ -1,7 +1,8 @@
 import { WORKSPACE, WORKSPACE_PATHS, ensureWorkspace } from '../workspace.js';
 import Anthropic from '@anthropic-ai/sdk';
-import { readFile, readdir, writeFile } from 'fs/promises';
+import { readFile, readdir } from 'fs/promises';
 import { join } from 'path';
+import { safeWrite } from '../lib/safe-write.js';
 import { TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH, registryForSpec } from './test-registry.js';
 import { readAppKnowledge, readAppLimitations } from './generate-app-knowledge.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
@@ -340,7 +341,7 @@ async function appendToGapsBacklog(gaps: Gap[], contextLabel: string, date: stri
     ? existing.replace(existingSection, section)
     : existing.trimEnd() + '\n\n' + section;
 
-  await writeFile(BACKLOG_PATH, updated, 'utf-8');
+  await safeWrite(BACKLOG_PATH, updated, { allowOverwrite: true });
 }
 
 /**
@@ -379,7 +380,7 @@ export async function markBacklogEntriesCovered(passingTestNames: string[]): Pro
     },
   );
 
-  if (updated !== content) await writeFile(BACKLOG_PATH, updated, 'utf-8');
+  if (updated !== content) await safeWrite(BACKLOG_PATH, updated, { allowOverwrite: true });
   return (updated.match(/✅/g) ?? []).length - (content.match(/✅/g) ?? []).length;
 }
 
@@ -513,7 +514,7 @@ export async function analyzeCoverageTool(args: {
   const outDir = args.outputDir ?? WORKSPACE;
   const reportPath = join(outDir, 'coverage-report.md');
   const report = buildReport(result, contextLabel);
-  await writeFile(reportPath, report, 'utf-8');
+  await safeWrite(reportPath, report, { allowOverwrite: true });
 
   const { critical = 0, high = 0, medium = 0, low = 0 } = result.priority_summary;
   const total = result.gaps.length;
@@ -526,7 +527,7 @@ export async function analyzeCoverageTool(args: {
 
   if (args.generateGaps && total > 0) {
     const gapsPath = join(outDir, 'coverage-gaps.txt');
-    await writeFile(gapsPath, buildGapsFile(result, contextLabel), 'utf-8');
+    await safeWrite(gapsPath, buildGapsFile(result, contextLabel), { allowOverwrite: true });
     await appendToGapsBacklog(result.gaps, contextLabel, new Date().toISOString().slice(0, 10));
     lines.push(`Gaps file written to: coverage-gaps.txt`);
     lines.push(`Backlog entry appended to: GAPS_BACKLOG.md`);

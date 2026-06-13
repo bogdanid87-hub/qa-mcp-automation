@@ -1,5 +1,6 @@
-import { readFile, writeFile } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { safeWrite } from '../lib/safe-write.js';
 
 const ROOT = process.cwd();
 export const TESTS_UI_PATH     = join(ROOT, 'TESTS_UI.md');
@@ -300,7 +301,7 @@ export async function recordPassingTests(
       }
     }
 
-    if (changed) await writeFile(reg, buildContent(existing, broken), 'utf-8');
+    if (changed) await safeWrite(reg, buildContent(existing, broken), { allowOverwrite: true });
   }
 }
 
@@ -321,7 +322,7 @@ export async function recordBrokenTest(
   // Auto-derive risk if not supplied by the caller
   const enriched: BrokenEntry = entry.risk ? entry : { ...entry, risk: deriveRisk(entry.spec, entry.describe) };
   broken.push(enriched);
-  await writeFile(registryPath, buildContent(passing, broken), 'utf-8');
+  await safeWrite(registryPath, buildContent(passing, broken), { allowOverwrite: true });
 }
 
 /** Remove entries whose tests now pass. */
@@ -337,7 +338,7 @@ export async function removeResolvedBrokenTests(
   const updated = broken.filter(e => !resolvedKeys.has(`${e.spec}::${e.name}`));
 
   if (updated.length !== broken.length) {
-    await writeFile(registryPath, buildContent(passing, updated), 'utf-8');
+    await safeWrite(registryPath, buildContent(passing, updated), { allowOverwrite: true });
   }
 }
 
@@ -378,7 +379,7 @@ export async function demoteTobroken(
     brokenKeys.add(key);
   }
 
-  await writeFile(registryPath, buildContent(updatedPassing, broken), 'utf-8');
+  await safeWrite(registryPath, buildContent(updatedPassing, broken), { allowOverwrite: true });
 }
 
 /** Read all broken/app-bug entries from the given registry (defaults to TEST_CASES.md). */

@@ -127,6 +127,50 @@ file a test goes into; `test_name` only names the `test()` and `describe()` bloc
 
 ---
 
+## Safe writes — `src/lib/safe-write.ts`
+
+Every file write in `src/tools/*` goes through `safeWrite(path, content, options)`
+instead of `fs.writeFile`. It:
+
+- Creates parent directories as needed.
+- Returns `{ ok, written, diff, reason? }` — `diff` is a unified diff of the change
+  (useful for previews and for surfacing rejected writes to the user).
+- Is a no-op (`ok: true, written: false`) when the new content is identical to
+  what's on disk.
+- By default (`allowOverwrite: false`), **refuses** to write when the new content
+  would either:
+  1. Drop an existing `test(...)` or `describe(...)` block present in the old file, or
+  2. Shrink a file of ≥5 non-empty lines to less than half its previous size.
+
+**`allowOverwrite: true`** is passed only for files where shrinkage on
+regeneration is expected and already vetted by other means:
+
+- POM files (`pages/*.ts`) — an exported-method/locator-drop guard runs first
+- `TESTS_UI.md` / `TESTS_API.md` / `TESTS_E2E.md`, `GAPS_BACKLOG.md`,
+  `APP_KNOWLEDGE.md`, `coverage-report.md`, `coverage-gaps.txt`,
+  `site-audit-report.{md,json}`, `test-data/constants.ts`, PRD output reports —
+  all full-regeneration "report/registry" artifacts
+
+Everything else (specs, fixtures, helpers, the fix loop's proposed file changes)
+uses the default `allowOverwrite: false`.
+
+**Why:** before this, individual tools (`generate-test.ts`, `generate-pom.ts`)
+had their own ad-hoc "don't drop existing tests/methods" checks, and
+`investigate-fix.ts`'s auto-fix loop had none — a bad fix could silently
+regenerate and shrink a spec. `safeWrite` consolidates the check into one place
+and gives the fix loop a way to *refuse* an unsafe rewrite instead of either
+applying it or crashing.
+
+**`blockedWrites` in the fix loop:** when `autoFixFailure` (in
+`investigate-fix.ts`) proposes a file change that `safeWrite` refuses, the file
+is left untouched and the rejection (`{ path, reason, diff }`) is collected in
+`AutoFixResult.blockedWrites`. `investigate_and_fix`, `npm run fix`, and the
+auto-fix step inside `generate_test` / `generate_api_test` all surface these as
+"⛔ Blocked writes — needs human review" so a bad proposed fix is visible
+instead of silently dropped.
+
+---
+
 ## `source: direct | suggested` — meaning differs by tool
 
 Both `analyze_prd` and `analyze_coverage` use the `source` field but with subtly

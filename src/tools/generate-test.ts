@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import { dirname, join } from 'path';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
+import { safeWrite } from '../lib/safe-write.js';
 import { getSystemBlocks, getSystemPrompt, buildUserBlocks, buildUserPrompt } from '../prompts/system.js';
 import { isLocalLlmAvailable, callLocalLlm, LOCAL_MODEL } from './local-llm.js';
 import { readFocusedContextForFeature, pomExistsForFeature } from './list-resources.js';
@@ -44,7 +45,8 @@ async function appendConstantsTodos(files: Array<{ path: string; content: string
   if (todos.length === 0) return;
 
   const block = `\n// ── Suggestions from generate_test — add to constants on next audit_site --mode data run\n${todos.join('\n')}\n`;
-  await writeFile(constantsPath, existing + block, 'utf-8');
+  const result = await safeWrite(constantsPath, existing + block);
+  if (!result.ok) process.stderr.write(`[generate-test] skipping constants.ts TODO append — ${result.reason}\n`);
 }
 
 interface GeneratedFile {
@@ -377,8 +379,9 @@ export async function generateTestTool(args: {
               .filter(name => !new RegExp(`async\\s+${name}[\\s<(]`).test(file.content));
             if (missing.length > 0) continue;
           } catch { /* new file — no guard needed */ }
-          await mkdir(dirname(abs), { recursive: true });
-          await writeFile(abs, file.content, 'utf-8');
+          // The method-drop guard above already vets this POM file —
+          // pass allowOverwrite so safeWrite's generic shrink check doesn't double-guard.
+          await safeWrite(abs, file.content, { allowOverwrite: true });
           written.push(file.path);
         }
 
@@ -415,8 +418,7 @@ Respond with the standard JSON:
             for (const file of fallbackParsed.files ?? []) {
               if (!file.path.startsWith('pages/')) continue;
               const abs = join(ROOT, file.path);
-              await mkdir(dirname(abs), { recursive: true });
-              await writeFile(abs, file.content, 'utf-8');
+              await safeWrite(abs, file.content, { allowOverwrite: true });
               written.push(file.path);
             }
           } catch { /* fallback failed — spec step will work with what's on disk */ }
@@ -487,8 +489,7 @@ Respond with the standard JSON:
             if (missing.length > 0) { pomGeneratedByLocal = false; continue; }
           } catch { /* new file */ }
         }
-        await mkdir(dirname(abs), { recursive: true });
-        await writeFile(abs, file.content, 'utf-8');
+        await safeWrite(abs, file.content, { allowOverwrite: true });
         written.push(file.path);
       }
     }
@@ -563,6 +564,7 @@ Never remove existing methods — only append new ones.` : '';
 
   for (const file of parsed.files ?? []) {
     const abs = join(ROOT, file.path);
+    let allowOverwrite = false;
     if (file.path.startsWith('pages/') || file.path.startsWith('tests/helpers/')) {
       // Guard: never write an update that drops existing exported functions
       try {
@@ -575,27 +577,25 @@ Never remove existing methods — only append new ones.` : '';
           continue;
         }
       } catch { /* new file — no guard needed */ }
+      // The exported-function guard above already vets this file —
+      // pass allowOverwrite so safeWrite's generic shrink check doesn't double-guard.
+      allowOverwrite = true;
     }
-    if (file.path.startsWith('tests/') && file.path.endsWith('.spec.ts')) {
-      // Guard: never write a spec update that drops existing test() calls
-      try {
-        const existing = await readFile(abs, 'utf-8');
-        const existingTests = [...existing.matchAll(/test\s*\(\s*['"`]([^'"`]+)['"`]/g)].map(m => m[1]);
-        const missing = existingTests.filter(name => !file.content.includes(name));
-        if (missing.length > 0) {
-          process.stderr.write(`[generate-test] skipping spec update — would drop tests: ${missing.join(', ')}\n`);
-          continue;
-        }
-      } catch { /* new file — no guard needed */ }
+    const result = await safeWrite(abs, file.content, { allowOverwrite });
+    if (result.ok) {
+      written.push(file.path);
+    } else {
+      process.stderr.write(`[generate-test] skipping update to ${file.path} — ${result.reason}\n`);
     }
-    await mkdir(dirname(abs), { recursive: true });
-    await writeFile(abs, file.content, 'utf-8');
-    written.push(file.path);
   }
 
   if (parsed.fixture_additions) {
-    await writeFile(join(ROOT, 'fixtures', 'index.ts'), parsed.fixture_additions, 'utf-8');
-    written.push('fixtures/index.ts (updated)');
+    const result = await safeWrite(join(ROOT, 'fixtures', 'index.ts'), parsed.fixture_additions);
+    if (result.ok) {
+      written.push('fixtures/index.ts (updated)');
+    } else {
+      process.stderr.write(`[generate-test] skipping fixtures/index.ts update — ${result.reason}\n`);
+    }
   }
 
   // ── Constants feedback loop ──────────────────────────────────────────────
@@ -666,6 +666,10 @@ Never remove existing methods — only append new ones.` : '';
         lastFailureOutput = fix.verifyOutput || testOutput;
         await writeTestAnnotation(specFile.path, lastFailureOutput, 'broken', fix.rootCause);
         testRunNote += [`❌ Could not auto-fix — annotated in the spec with ⚠️ BROKEN`, `  Root cause: ${fix.rootCause}`].join('\n');
+      }
+      if (fix.blockedWrites.length > 0) {
+        testRunNote += '\n⛔ Blocked writes — proposed fix would shrink or drop tests, needs human review:\n'
+          + fix.blockedWrites.map(b => `  - ${b.path}: ${b.reason}`).join('\n');
       }
     }
   }

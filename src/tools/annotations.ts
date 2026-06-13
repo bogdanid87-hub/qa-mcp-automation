@@ -1,6 +1,7 @@
-import { readFile, writeFile } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { recordBrokenTest, registryForSpec, parseFailingTestsFromOutput } from './test-registry.js';
+import { safeWrite } from '../lib/safe-write.js';
 
 const ROOT = process.cwd();
 
@@ -92,7 +93,8 @@ export async function writeTestAnnotation(
 
   // Write annotation comments into the spec file
   if (failingNames.length === 0) {
-    await writeFile(abs, buildComment(kind, '', rootCause, actualBehavior) + '\n\n' + src, 'utf-8');
+    const result = await safeWrite(abs, buildComment(kind, '', rootCause, actualBehavior) + '\n\n' + src);
+    if (!result.ok) process.stderr.write(`[annotations] skipping annotation for ${specPath} — ${result.reason}\n`);
   } else {
     let updated = src;
     for (const name of failingNames) {
@@ -121,7 +123,8 @@ export async function writeTestAnnotation(
         });
       }
     }
-    await writeFile(abs, updated, 'utf-8');
+    const result = await safeWrite(abs, updated);
+    if (!result.ok) process.stderr.write(`[annotations] skipping annotation for ${specPath} — ${result.reason}\n`);
   }
 
   // Record each failing test in the appropriate registry

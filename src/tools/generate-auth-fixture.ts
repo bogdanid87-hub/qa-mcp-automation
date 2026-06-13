@@ -1,8 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { readFile, writeFile, mkdir } from 'fs/promises';
+import { readFile, mkdir } from 'fs/promises';
 import { join, dirname } from 'path';
 import { getSystemBlocks } from '../prompts/system.js';
 import { cleanLlmCode, extractJson } from './llm-utils.js';
+import { safeWrite } from '../lib/safe-write.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -155,10 +156,11 @@ export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
 
   if (existingSetup) {
     const updated = existingSetup.trimEnd() + '\n\n' + cleanSetupTask + '\n';
-    await writeFile(setupPath, updated, 'utf-8');
+    const result = await safeWrite(setupPath, updated);
+    if (!result.ok) process.stderr.write(`[generate-auth-fixture] skipping global.setup.ts update — ${result.reason}\n`);
   } else {
     const header = `import { test as setup, chromium } from '@playwright/test';\nimport path from 'path';\n\n`;
-    await writeFile(setupPath, header + cleanSetupTask + '\n', 'utf-8');
+    await safeWrite(setupPath, header + cleanSetupTask + '\n');
   }
 
   // ── Append fixture entry to fixtures/index.ts ───────────────────────────
@@ -170,7 +172,8 @@ export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
     const updated = closeIdx !== -1
       ? existingFixtures.slice(0, closeIdx) + '\n\n  ' + cleanFixture.split('\n').join('\n  ') + existingFixtures.slice(closeIdx)
       : existingFixtures.trimEnd() + '\n\n' + cleanFixture + '\n';
-    await writeFile(FIXTURES_PATH, updated, 'utf-8');
+    const result = await safeWrite(FIXTURES_PATH, updated);
+    if (!result.ok) process.stderr.write(`[generate-auth-fixture] skipping fixtures/index.ts fixture-entry update — ${result.reason}\n`);
   }
 
   // ── Add fixture type to PageFixtures in fixtures/index.ts ────────────────
@@ -181,7 +184,8 @@ export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
     const typeClose = currentFixtures.indexOf('};', currentFixtures.indexOf('type PageFixtures'));
     if (typeClose !== -1) {
       const updated = currentFixtures.slice(0, typeClose) + `  ${fixtureTypeLine};\n` + currentFixtures.slice(typeClose);
-      await writeFile(FIXTURES_PATH, updated, 'utf-8');
+      const result = await safeWrite(FIXTURES_PATH, updated);
+      if (!result.ok) process.stderr.write(`[generate-auth-fixture] skipping fixtures/index.ts type update — ${result.reason}\n`);
     }
   }
 
@@ -190,7 +194,7 @@ export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
   try {
     const gi = await readFile(gitignorePath, 'utf-8');
     if (!gi.includes(parsed.storageStatePath)) {
-      await writeFile(gitignorePath, gi.trimEnd() + '\n' + parsed.storageStatePath + '\n', 'utf-8');
+      await safeWrite(gitignorePath, gi.trimEnd() + '\n' + parsed.storageStatePath + '\n');
     }
   } catch { /* no .gitignore */ }
 

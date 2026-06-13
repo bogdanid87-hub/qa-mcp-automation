@@ -1,8 +1,9 @@
 import { WORKSPACE_PATHS, ensureWorkspace } from '../workspace.js';
 import Anthropic from '@anthropic-ai/sdk';
 import { chromium } from '@playwright/test';
-import { readFile, writeFile, mkdir } from 'fs/promises';
+import { readFile, mkdir } from 'fs/promises';
 import { dirname, join } from 'path';
+import { safeWrite } from '../lib/safe-write.js';
 
 const ROOT = process.cwd();
 
@@ -601,8 +602,8 @@ export async function siteAuditTool(args: SiteAuditArgs): Promise<string> {
     const report = buildReport(result);
     const json = buildJson(result);
     await Promise.all([
-      writeFile(mdPath, report, 'utf-8'),
-      writeFile(jsonPath, JSON.stringify(json, null, 2), 'utf-8'),
+      safeWrite(mdPath, report, { allowOverwrite: true }),
+      safeWrite(jsonPath, JSON.stringify(json, null, 2), { allowOverwrite: true }),
     ]);
 
     const total = result.pageTypes.length;
@@ -652,7 +653,7 @@ export async function siteAuditTool(args: SiteAuditArgs): Promise<string> {
 
       const constants = await generateConstants(raw, apiKey, existingContent);
       await mkdir(dirname(constantsPath), { recursive: true });
-      await writeFile(constantsPath, constants, 'utf-8');
+      await safeWrite(constantsPath, constants, { allowOverwrite: true });
 
       const prevIds = existingContent
         ? [...existingContent.matchAll(/id:\s*(\d+)/g)].map(m => parseInt(m[1]))

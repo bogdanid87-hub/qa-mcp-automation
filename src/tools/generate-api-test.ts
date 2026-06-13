@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import { dirname, join } from 'path';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
+import { safeWrite } from '../lib/safe-write.js';
 import { TokenBudget } from './budget.js';
 import { isLocalLlmAvailable, callLocalLlm, LOCAL_MODEL } from './local-llm.js';
 import { runTests } from './run-tests.js';
@@ -318,15 +319,18 @@ export async function generateApiTestTool(args: {
   for (const file of parsed.files ?? []) {
     if (!file.path.startsWith('tests/api/')) continue;
     const abs = join(ROOT, file.path);
-    await mkdir(dirname(abs), { recursive: true });
 
     // When the spec file already has content, merge the new test() blocks from
     // the generated output rather than overwriting — the local model tends to
     // regenerate the whole file instead of appending.
     const onDisk = await readFile(abs, 'utf-8').catch(() => '');
     const finalContent = onDisk ? mergeTestBlocks(onDisk, file.content) : file.content;
-    await writeFile(abs, finalContent + (finalContent.endsWith('\n') ? '' : '\n'), 'utf-8');
-    written.push(file.path);
+    const result = await safeWrite(abs, finalContent + (finalContent.endsWith('\n') ? '' : '\n'));
+    if (result.ok) {
+      written.push(file.path);
+    } else {
+      process.stderr.write(`[generate-api-test] skipping update to ${file.path} — ${result.reason}\n`);
+    }
   }
 
   const specFile = (parsed.files ?? []).find(
@@ -390,6 +394,10 @@ export async function generateApiTestTool(args: {
           lastFailureOutput = fix.verifyOutput || testOutput;
           await writeTestAnnotation(specFile.path, lastFailureOutput, 'broken', fix.rootCause);
           testRunNote += `❌ Could not auto-fix — annotated in the spec with ⚠️ BROKEN\n  Root cause: ${fix.rootCause}`;
+        }
+        if (fix.blockedWrites.length > 0) {
+          testRunNote += '\n⛔ Blocked writes — proposed fix would shrink or drop tests, needs human review:\n'
+            + fix.blockedWrites.map(b => `  - ${b.path}: ${b.reason}`).join('\n');
         }
       }
     }

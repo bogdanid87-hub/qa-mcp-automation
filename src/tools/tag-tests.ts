@@ -1,10 +1,11 @@
-import { readFile, writeFile } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import { join } from 'path';
 import {
   readTestCases,
   registryForSpec,
   type TestEntry,
 } from './test-registry.js';
+import { safeWrite } from '../lib/safe-write.js';
 
 const ROOT = process.cwd();
 
@@ -75,7 +76,10 @@ export async function tagSpec(
     }
   }
 
-  if (tagged > 0 || updated > 0) await writeFile(abs, src, 'utf-8');
+  if (tagged > 0 || updated > 0) {
+    const result = await safeWrite(abs, src);
+    if (!result.ok) process.stderr.write(`[tag-tests] skipping tag update for ${specPath} — ${result.reason}\n`);
+  }
   return { tagged, updated, correct, notFound };
 }
 

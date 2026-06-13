@@ -1,7 +1,8 @@
 import { WORKSPACE_PATHS, ensureWorkspace } from '../workspace.js';
 import Anthropic from '@anthropic-ai/sdk';
-import { readFile, writeFile } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { safeWrite } from '../lib/safe-write.js';
 import {
   readBrokenTests,
   TESTS_UI_PATH,
@@ -149,7 +150,7 @@ export async function generateAppKnowledgeTool(args: {
     ? synthesised + '\n\n---\n\n' + manualContent.trim() + '\n'
     : synthesised + '\n';
 
-  await writeFile(outputPath, finalContent, 'utf-8');
+  await safeWrite(outputPath, finalContent, { allowOverwrite: true });
 
   const bugCount = ctx.appBugs === '(none recorded)' ? 0
     : ctx.appBugs.split('\n- [').length;

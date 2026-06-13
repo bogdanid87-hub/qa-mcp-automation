@@ -1,8 +1,9 @@
 import { WORKSPACE_PATHS, ensureWorkspace } from '../workspace.js';
 import Anthropic from '@anthropic-ai/sdk';
-import { readFile, writeFile } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import { readTestCases, readBrokenTests } from './test-registry.js';
 import { readAppKnowledge, readAppLimitations } from './generate-app-knowledge.js';
+import { safeWrite } from '../lib/safe-write.js';
 const MODEL = 'claude-sonnet-4-6';
 
 const SYSTEM_PROMPT = `\
@@ -292,7 +293,7 @@ export async function analyzePrdTool(args: {
     '',
   ].join('\n');
 
-  await writeFile(outputPath, header + raw.trim() + '\n', 'utf-8');
+  await safeWrite(outputPath, header + raw.trim() + '\n', { allowOverwrite: true });
 
   // Append to persistent gap backlog so identified gaps survive between sessions.
   // Each test_name is written as a "- name" bullet so readBacklogTestNames() can
@@ -323,7 +324,7 @@ export async function analyzePrdTool(args: {
   try {
     let existing = await readFile(BACKLOG_PATH, 'utf-8').catch(() => BACKLOG_HEADER);
     if (!existing.startsWith('# Gaps Backlog')) existing = BACKLOG_HEADER + existing;
-    await writeFile(BACKLOG_PATH, existing.trimEnd() + '\n\n' + backlogSection, 'utf-8');
+    await safeWrite(BACKLOG_PATH, existing.trimEnd() + '\n\n' + backlogSection, { allowOverwrite: true });
   } catch { /* non-fatal */ }
 
   const lines = [

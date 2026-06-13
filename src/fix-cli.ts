@@ -175,6 +175,13 @@ async function main(): Promise<void> {
     } else {
       console.log('\n  No files were changed.');
     }
+    if (fix.blockedWrites.length > 0) {
+      console.log('\n  ⛔ Blocked writes — proposed fix would shrink or drop tests, needs human review:');
+      for (const b of fix.blockedWrites) {
+        console.log(`    ~ ${b.path}: ${b.reason}`);
+        console.log(b.diff.trimEnd().split('\n').map(l => `      ${l}`).join('\n'));
+      }
+    }
     if (fix.lesson) {
       console.log(`\n  Lesson learned (added to rules):\n    ${fix.lesson.rule}`);
     }
