@@ -157,10 +157,13 @@ something each spec has to get right with manual hooks and shared state.
 | Task | Model | Reason |
 |------|-------|--------|
 | Spec generation | Claude API always | Requires reasoning about intent and test structure |
-| POM generation | Local LLM → Claude fallback | Mechanical DOM-to-TypeScript mapping; 14B model handles it reliably |
-| API test generation | Local LLM → Claude fallback | Most repetitive pattern in the project; ideal for local model |
-| Failure diagnosis and fix | Claude API always | Requires multimodal reasoning (screenshots + DOM) |
-| PRD analysis | Claude API always | Requires risk classification and multi-feature reasoning |
+| POM generation — simple flows (≤ 2 pages) | Local LLM → Claude fallback | Mechanical DOM-to-TypeScript mapping; 14B model handles it reliably |
+| POM generation — complex flows (> 2 pages) | Claude plans → Local LLM builds in parallel → Claude fills gaps | — |
+| API test generation | Local LLM (qwen2.5-coder:14b) → Claude fallback | Most repetitive pattern in the project; ideal for local model |
+| Failure investigation and fix | Claude API always | Requires multimodal reasoning (screenshots + DOM) |
+| Coverage gap analysis | Claude API always | — |
+| PRD risk analysis | Claude API always | Requires risk classification and multi-feature reasoning |
+| Similarity check (before generate) | Claude API (cached test list) | — |
 
 **Both generation and the fix loop run to completion by default** — stopping
 mid-generation or mid-fix wastes money and produces nothing useful. Cost is
