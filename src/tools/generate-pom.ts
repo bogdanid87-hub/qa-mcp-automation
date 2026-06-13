@@ -8,6 +8,7 @@ import { extractJson } from './llm-utils.js';
 import type { SiteAuditJson } from './site-audit.js';
 import { safeWrite } from '../lib/safe-write.js';
 import { TokenBudget } from './budget.js';
+import { compilePom, type PomSpec } from '../templates/pom.js';
 
 const ROOT = process.cwd();
 const BASE_URL = 'https://automationexercise.com';
@@ -144,8 +145,10 @@ function formatValidation(results: LocatorResult[]): string {
 const SYSTEM_PROMPT = `\
 You are a Playwright Page Object Model generator for automationexercise.com.
 
-Given a live DOM snapshot of a single page, output a TypeScript POM class containing
-ONLY locator properties — no async methods of any kind.
+Given a live DOM snapshot of a single page, identify the locators for a
+locator-only POM class — no async methods of any kind. You describe each
+locator structurally; the .ts file itself is compiled from a fixed template,
+so you never write TypeScript syntax directly.
 
 ## POM hierarchy — choose the correct parent class
 
@@ -188,43 +191,58 @@ If yes — skip it entirely. Do not re-declare it with a different property name
 - Skip purely decorative elements (icons, decorative images, ads, cookie consent sliders)
 - Skip #scrollUp, #aswift_0_host, and all #fc-preference-slider-* elements (ad/cookie tech noise)
 
-## Locator priority (strict order)
-1. page.locator('[data-qa="..."]')   ← always first when data-qa exists
-2. page.getByRole(...)
-3. page.getByLabel(...)
-4. page.getByPlaceholder(...)
-5. page.getByText(...)
-6. page.locator('#id')
+## Selector types (strict priority order — prefer earlier types when available)
+1. "data-qa"      — value is the data-qa attribute value, without brackets or quotes
+                    (e.g. "login-email") → compiles to page.locator('[data-qa="login-email"]')
+2. "role"         — value is the ARIA role (e.g. "button", "link", "heading");
+                    set roleName to the accessible name if there is one
+                    → compiles to page.getByRole('button', { name: 'Login' })
+3. "label"        — value is the label text → page.getByLabel('...')
+4. "placeholder"  — value is the placeholder text → page.getByPlaceholder('...')
+5. "text"         — value is the visible text → page.getByText('...')
+6. "css"          — value is a raw CSS selector, e.g. "#quantity" → page.locator('...')
+                    use this for #id selectors and anything not covered above
 
 ## Naming conventions
 - camelCase: emailInput, loginButton, errorMessage, cartHeading
 - Suffixes: Input, Button, Link, Message, Heading, Modal, Textarea
 
-## Hard constraints
-- NO async methods of any kind
-- Named export only — never "export default class"
-- All parent imports are named: import { SitePage } from './SitePage'
-
-## Output structure (example — extends SitePage)
-import { Page, Locator } from '@playwright/test';
-import { SitePage } from './SitePage';
-
-export class SomePage extends SitePage {
-  readonly propName: Locator;
-
-  constructor(page: Page) {
-    super(page);
-    this.propName = page.locator('[data-qa="..."]');
-  }
-}
-
 ## Output format
 Raw JSON only (no markdown fences, no explanation):
 {
   "file": "pages/SomePage.ts",
-  "content": "full TypeScript file content"
+  "className": "SomePage",
+  "parentClass": "SitePage",
+  "locators": [
+    { "name": "emailInput", "selectorType": "data-qa", "value": "login-email" },
+    { "name": "loginButton", "selectorType": "role", "value": "button", "roleName": "Login" }
+  ]
 }`;
 
+
+interface PomSpecResponse extends PomSpec {
+  file: string;
+}
+
+function isPomSpecResponse(value: unknown): value is PomSpecResponse {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return typeof v.file === 'string' && typeof v.className === 'string'
+    && typeof v.parentClass === 'string' && Array.isArray(v.locators);
+}
+
+/**
+ * Parse the model's structured POM response and compile it to a .ts file via
+ * the template in src/templates/pom.ts. Throws if the response is missing
+ * required fields or describes an invalid spec (compilePom validates).
+ */
+function compileResponse(raw: string): { file: string; content: string } {
+  const parsed = JSON.parse(extractJson(raw));
+  if (!isPomSpecResponse(parsed)) {
+    throw new Error('response missing file/className/parentClass/locators fields');
+  }
+  return { file: parsed.file, content: compilePom(parsed) };
+}
 
 async function generateForSnapshot(opts: {
   path: string;
@@ -242,9 +260,7 @@ async function generateForSnapshot(opts: {
   if (opts.localAvailable) {
     try {
       const raw = await callLocalLlm(SYSTEM_PROMPT, userPrompt);
-      const parsed = JSON.parse(extractJson(raw)) as { file: string; content: string };
-      if (parsed.file && parsed.content) return parsed;
-      process.stderr.write(`[local-llm] POM response missing file/content fields — falling back to Claude API\n`);
+      return compileResponse(raw);
     } catch (err) {
       process.stderr.write(`[local-llm] POM generation failed (${(err as Error).message}) — falling back to Claude API\n`);
     }
@@ -277,8 +293,7 @@ async function generateForSnapshot(opts: {
       .filter(b => b.type === 'text')
       .map(b => (b as { type: 'text'; text: string }).text)
       .join('');
-    const parsed = JSON.parse(extractJson(raw)) as { file: string; content: string };
-    if (parsed.file && parsed.content) return parsed;
+    return compileResponse(raw);
   } catch { /* */ }
 
   return null;
