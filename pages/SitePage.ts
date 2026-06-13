@@ -46,11 +46,11 @@ export class SitePage extends BasePage {
 
   async clickContactUs(): Promise<void> {
     await this.navContactUs.click();
-    await this.page.waitForLoadState('load');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   async clickProducts(): Promise<void> {
     await this.navProducts.click();
-    await this.page.waitForLoadState('load');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 }

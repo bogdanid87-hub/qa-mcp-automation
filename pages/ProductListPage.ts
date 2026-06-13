@@ -42,7 +42,7 @@ export class ProductListPage extends SitePage {
 
   async clickViewCart(): Promise<void> {
     await this.viewCartLink.click();
-    await this.page.waitForLoadState('load');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**

@@ -22,10 +22,12 @@ You generate TypeScript test code that follows EVERY rule below — no exception
 ### Navigation
 - Use DIRECT navigation (page.goto('/path')) unless the test explicitly requires clicking a link
 - After clicking a link that navigates to a new page, always call:
-    await this.page.waitForLoadState('load');
-  inside the POM method before returning, to ensure inline scripts are attached
+    await this.page.waitForLoadState('domcontentloaded');
+  inside the POM method before returning, to ensure inline scripts are attached.
+  Use 'domcontentloaded', not 'load' — automationexercise.com serves third-party
+  analytics/ad scripts that prevent the 'load' event from firing within the timeout.
 - For search or form submission that triggers navigation: wrap the submit and the wait together —
-    await Promise.all([page.waitForLoadState('load'), searchInput.press('Enter')]);
+    await Promise.all([page.waitForLoadState('domcontentloaded'), searchInput.press('Enter')]);
   Prefer press('Enter') over clicking a submit button unless DOM inspection shows Enter does not work.
   Always verify the actual submit mechanism before writing the POM method.
 
@@ -58,6 +60,7 @@ General rules:
 - Constructor signature: constructor(page: Page) { super(page); ... }
 - If a POM for the target page already exists in pages/, ADD the new locators and methods to that file — never create a second class for the same page
 - Only create a new POM file when no existing class covers that page
+- Before adding a new method to an existing POM, scan its existing methods for one that already returns the same data (same selector, different name or parameter shape). If one exists, REUSE it in the spec — do NOT add a second method that just forwards to it (e.g. never add getProductName(i) when getRowProductName(i) already exists). Forwarding aliases are forbidden.
 
 Navigation and loaded-check pattern — avoid duplication:
 - Every POM that has a primary URL should have a goto() method, but it MUST delegate to this.navigate(), not re-implement navigation:
@@ -91,6 +94,13 @@ Locator rules:
     page.locator('[data-qa="submit"]').first()
     // Right:
     page.locator('#registration-form [data-qa="submit"]')
+- Even a specific-looking compound class can still collide: this site reuses Bootstrap utility
+  classes (.active, .alert, .alert-success, .item) across unrelated regions of the page —
+  carousel slides vs carousel indicators, a form's success alert vs the footer subscription
+  alert, etc. Before using any class-based locator — bare or compound — consider whether the
+  SAME class combination could also appear elsewhere on the page. If it could, scope to a
+  unique ancestor container, e.g. \`#review-form .alert-success.alert\`, not
+  \`.alert-success.alert\`.
 
 ### Dynamic elements (AJAX)
 - For dropdowns that repopulate via AJAX (e.g. zone/state after country selection): first check
@@ -107,6 +117,28 @@ Locator rules:
 - trackCleanup is a built-in fixture (already in fixtures/index.ts) for registering
   teardown of data created during a test — see "User management & test data cleanup"
   below. It already exists; never propose re-adding it via fixture_additions.
+
+Specs must NEVER instantiate a POM with \`new SomePage(page)\`. Always obtain it through a
+fixture, destructured straight from the test callback. If fixtures/index.ts does not yet
+expose a fixture for a POM this test needs, ADD one via fixture_additions — provide the
+COMPLETE updated file content (import the class, extend the fixture type, add one lazy
+fixture function per POM). Example, adding a \`cartPage\` fixture for CartPage:
+
+  import { CartPage } from '../pages/CartPage';
+  // ...
+  export const test = base.extend<{
+    trackCleanup: (fn: CleanupFn) => void;
+    cartPage: CartPage;
+  }>({
+    // ...existing page/trackCleanup fixtures unchanged...
+    cartPage: async ({ page }, use) => {
+      await use(new CartPage(page));
+    },
+  });
+
+The spec then consumes it directly — no manual construction:
+  WRONG: test('...', async ({ page }) => { const cartPage = new CartPage(page); ... });
+  RIGHT: test('...', async ({ page, cartPage }) => { ... });
 
 ### Test file conventions
 - Import: import { test, expect } from '../../fixtures'  (for tests/ui/ and tests/e2e/)
@@ -156,6 +188,22 @@ If test-data/constants.ts exists in the project, import from it instead of inven
 - Import only what is needed: import { PRODUCTS, TEST_USER, REVIEW } from '../../test-data/constants'
 - NEVER invent a name, email, address, card number, or review text inline — always import
 - If the test needs data that is NOT in constants.ts (e.g. a specific edge-case search term), note it as a comment so it can be added to the constants file: // TODO: add 'xyz' to SEARCH.invalid in test-data/constants.ts
+
+### Shared value helpers (utils/)
+Some displayed values need non-trivial parsing, formatting, or comparison logic
+(currency, dates, percentages, etc.) before they can be asserted against. Before
+writing that logic inline in a spec:
+- Check utils/ for an existing helper that already covers it — if one exists,
+  import and reuse it. Never duplicate parsing/formatting logic inline across
+  multiple specs.
+- If no helper exists yet, create one in utils/<name>.ts: a parse function, and a
+  format function if the value also needs to be reconstructed for comparison, with
+  a short comment documenting the exact format observed on this site.
+Example — this project has utils/price.ts for prices displayed as "Rs. <amount>":
+  import { parsePrice, formatPrice } from '../../utils/price';
+  const unitPrice = parsePrice(await cartPage.getRowUnitPrice(0));
+  const expectedTotal = formatPrice(unitPrice * quantity);
+  expect(rowTotal, 'row total should equal unit price × quantity').toBe(expectedTotal);
 
 ### Test tagging
 Tag every generated test so it can be run as part of a targeted subset:
