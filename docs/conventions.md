@@ -169,6 +169,10 @@ auto-fix step inside `generate_test` / `generate_api_test` all surface these as
 "⛔ Blocked writes — needs human review" so a bad proposed fix is visible
 instead of silently dropped.
 
+The same `blockedWrites` list also collects fixes to `tests/**/*.spec.ts` that
+would change *what* an existing test asserts (rather than how it reaches the
+assertion) — see [investigate-and-fix.md](investigate-and-fix.md#objective-preservation--intent-signature-guard).
+
 ---
 
 ## `source: direct | suggested` — meaning differs by tool

@@ -60,6 +60,38 @@ directly before the failing `test()` call and records the defect in the registry
 
 ---
 
+## Objective preservation — intent-signature guard
+
+A **Code bug** fix may change *how* a test reaches an assertion (locators,
+waits, navigation, helper structure) but never *what* it asserts. Before
+applying a proposed fix to a `tests/**/*.spec.ts` file, the tool computes an
+"intent signature" for every `test(...)` (including `.skip`/`.only`/`.fixme`,
+but not `test.describe(...)`) in both the current file and the proposed
+replacement:
+
+- For each `expect(...)` call, the signature captures everything chained
+  *after* it — e.g. `.toBe(5)`, `.not.toBeVisible()`, `.toHaveText('foo')` —
+  sorted for stable comparison.
+- The `expect(...)` *subject* (the locator/value being checked) is
+  deliberately excluded — that's the "how", and is exactly what a legitimate
+  fix is allowed to change.
+
+If any `test()` title that exists in both versions has a different signature
+after the fix, the write is **refused** — same as a `safeWrite` rejection —
+and added to `AutoFixResult.blockedWrites` with a `reason` showing the
+before/after assertion lists and a `diff` of the proposed change. The fix
+loop reports this as "⛔ Blocked writes — needs human review" (see
+[conventions.md](conventions.md#safe-writes--srclibsafe-writets)) instead of
+applying it.
+
+A locator-only fix (same assertions, different selector/wait/navigation) is
+**not** affected — its signature is unchanged, so it applies normally.
+
+Tests dropped entirely (present before but not after) aren't reported here —
+`safeWrite`'s drop-guard already refuses those writes.
+
+---
+
 ## What the tool sees
 
 Beyond just the failure output text, the tool automatically gathers:

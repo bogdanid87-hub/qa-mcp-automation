@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { getSystemBlocks, appendLearnedRule } from '../prompts/system.js';
-import { safeWrite } from '../lib/safe-write.js';
+import { safeWrite, unifiedDiff } from '../lib/safe-write.js';
 import { readFocusedContextForFailure } from './list-resources.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { runTests, runTestsTool } from './run-tests.js';
@@ -71,6 +71,131 @@ async function extractUrlsFromSpec(specPath: string): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+// ── Intent-signature helpers ────────────────────────────────────────────────
+//
+// "Objective preservation": a fix may change HOW a test reaches an assertion
+// (locators, waits, navigation) but never WHAT it asserts. We capture, per
+// test() title, the sorted list of "assertion chains" — everything chained
+// after expect(...) such as ".toBe(5)" or ".not.toBeVisible()" — while
+// deliberately excluding the expect() subject itself (the locator/value,
+// which is the "how"). If a proposed fix changes this signature for a test
+// that exists in both the old and new content, the write is blocked.
+
+/**
+ * Find the index of the bracket matching the opening bracket at `openIdx`
+ * (one of '(', '{', '['), skipping over string/template literal contents.
+ * Returns -1 if unmatched.
+ */
+function findMatchingBracket(content: string, openIdx: number): number {
+  const open = content[openIdx];
+  const close = open === '(' ? ')' : open === '{' ? '}' : ']';
+  let depth = 0;
+  let inString: string | null = null;
+  for (let i = openIdx; i < content.length; i++) {
+    const ch = content[i];
+    if (inString) {
+      if (ch === '\\') { i++; continue; }
+      if (ch === inString) inString = null;
+      continue;
+    }
+    if (ch === '\'' || ch === '"' || ch === '`') { inString = ch; continue; }
+    if (ch === open) depth++;
+    else if (ch === close) {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+/** Return the index of the first non-whitespace character at or after `idx`. */
+function skipWhitespace(content: string, idx: number): number {
+  while (idx < content.length && /\s/.test(content[idx])) idx++;
+  return idx;
+}
+
+/**
+ * Extract the sorted list of assertion chains in `body` — for each
+ * expect(...) call, everything chained afterwards (e.g. ".toBe(5)",
+ * ".not.toBeVisible()", ".toHaveText('foo')"), with whitespace collapsed.
+ */
+function extractExpectChains(body: string): string[] {
+  const chains: string[] = [];
+  const expectRe = /\bexpect(?:\.\w+)?\s*\(/g;
+  while (expectRe.exec(body) !== null) {
+    const openIdx = expectRe.lastIndex - 1;
+    const closeIdx = findMatchingBracket(body, openIdx);
+    if (closeIdx === -1) break;
+
+    let i = closeIdx + 1;
+    while (true) {
+      const next = skipWhitespace(body, i);
+      if (body[next] !== '.') break;
+      const callMatch = /^\.\w+/.exec(body.slice(next));
+      if (!callMatch) break;
+      let j = skipWhitespace(body, next + callMatch[0].length);
+      if (body[j] === '(') {
+        const argsClose = findMatchingBracket(body, j);
+        if (argsClose === -1) break;
+        j = argsClose + 1;
+      }
+      i = j;
+    }
+
+    chains.push(body.slice(closeIdx + 1, i).replace(/\s+/g, ' ').trim());
+    expectRe.lastIndex = i;
+  }
+  return chains.sort();
+}
+
+/**
+ * Map each test() title in `content` to its sorted assertion-chain signature
+ * (see extractExpectChains). test.describe(...) is excluded — only individual
+ * test() (including test.skip/.only/.fixme) bodies are signed.
+ */
+export function extractIntentSignatures(content: string): Map<string, string[]> {
+  const signatures = new Map<string, string[]>();
+  const testRe = /\btest(?:\.(?!describe\b)\w+)?\s*\(\s*(['"`])((?:\\.|(?!\1).)*)\1/g;
+  let m: RegExpExecArray | null;
+  while ((m = testRe.exec(content)) !== null) {
+    const title = m[2];
+    const arrowIdx = content.indexOf('=>', testRe.lastIndex);
+    if (arrowIdx === -1) continue;
+    const braceIdx = content.indexOf('{', arrowIdx);
+    if (braceIdx === -1) continue;
+    const braceEnd = findMatchingBracket(content, braceIdx);
+    if (braceEnd === -1) continue;
+    signatures.set(title, extractExpectChains(content.slice(braceIdx + 1, braceEnd)));
+  }
+  return signatures;
+}
+
+/**
+ * Compare intent signatures between the existing spec and a proposed fix.
+ * Returns null when every test present in both still asserts the same
+ * things; otherwise a human-readable description of what changed.
+ * Tests dropped entirely are not reported here — safeWrite's block-drop
+ * guard already refuses those writes.
+ */
+export function describeIntentViolation(existing: string, next: string): string | null {
+  const before = extractIntentSignatures(existing);
+  const after = extractIntentSignatures(next);
+
+  const changes: string[] = [];
+  for (const [title, beforeChains] of before) {
+    const afterChains = after.get(title);
+    if (!afterChains) continue;
+    if (JSON.stringify(beforeChains) !== JSON.stringify(afterChains)) {
+      changes.push(
+        `"${title}"\n      before: ${beforeChains.join(', ') || '(no assertions)'}\n      after:  ${afterChains.join(', ') || '(no assertions)'}`,
+      );
+    }
+  }
+
+  if (changes.length === 0) return null;
+  return `would change WHAT ${changes.length === 1 ? 'a test' : 'tests'} assert — a fix may change HOW a test reaches an assertion, never WHAT it asserts:\n    ${changes.join('\n    ')}`;
 }
 
 interface InvestigateResponse {
@@ -269,12 +394,24 @@ If the failure is not reproducible or the cause is unclear, set "lesson" to null
   }
 
   // Code bug or unclear — attempt to fix the test code. A proposed fix that would
-  // shrink a populated spec or drop existing test()/describe() blocks is refused —
-  // a fix may change *how* a test reaches an assertion, never *what* it asserts.
+  // shrink a populated spec, drop existing test()/describe() blocks, or change
+  // WHAT a test asserts (rather than HOW it reaches the assertion) is refused.
   const fixedFiles: string[] = [];
   const blockedWrites: { path: string; reason: string; diff: string }[] = [];
   for (const file of parsed.files ?? []) {
     const abs = join(ROOT, file.path);
+
+    if (file.path.startsWith('tests/') && file.path.endsWith('.spec.ts')) {
+      try {
+        const existing = await readFile(abs, 'utf-8');
+        const violation = describeIntentViolation(existing, file.content);
+        if (violation) {
+          blockedWrites.push({ path: file.path, reason: violation, diff: unifiedDiff(existing, file.content, abs) });
+          continue;
+        }
+      } catch { /* new file — nothing to preserve */ }
+    }
+
     const result = await safeWrite(abs, file.content);
     if (result.ok) {
       fixedFiles.push(file.path);
