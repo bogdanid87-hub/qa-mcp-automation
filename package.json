@@ -1,7 +1,7 @@
 {
   "name": "qa-mcp-automation",
   "version": "1.0.0",
-  "description": "",
+  "description": "AI-powered Playwright test generation engine (MCP server) — config-driven via mcp-qa.config.json, with a complete reference implementation for automationexercise.com.",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/server.ts"

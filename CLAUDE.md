@@ -1,10 +1,14 @@
 # qa-mcp-automation
 
-MCP server that generates Playwright tests for automationexercise.com using the
-Claude API and a local LLM. Thirteen tools cover the full QA workflow from PRD
-analysis through test generation, auth fixture setup, network mocking, failure
-investigation, registry maintenance, app knowledge synthesis, and E2E journey
-planning.
+MCP server that generates Playwright tests for any web project — config-driven via
+`mcp-qa.config.json`, with `init_project` bootstrapping new sites. Thirteen tools
+cover the full QA workflow from PRD analysis through test generation, auth fixture
+setup, network mocking, failure investigation, registry maintenance, app knowledge
+synthesis, and E2E journey planning.
+
+This repo doubles as the reference implementation, validated end-to-end against
+automationexercise.com — its `pages/`, `tests/`, `fixtures/`, and `learned-rules.md`
+are real, accumulated output of the tools above, not placeholders.
 
 See [TOOLS.md](TOOLS.md) for a quick index, [docs/](docs/) for per-tool guides, and
 `.claude/skills/` for collaboration rules and conventions Claude Code loads on demand
