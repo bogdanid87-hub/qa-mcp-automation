@@ -20,5 +20,6 @@ export const WORKSPACE_PATHS = {
   gapsBacklog:     join(WORKSPACE, 'GAPS_BACKLOG.md'),
   appKnowledge:    join(WORKSPACE, 'APP_KNOWLEDGE.md'),
   appKnowledgeManual: join(WORKSPACE, 'APP_KNOWLEDGE_MANUAL.md'),
+  appKnowledgeCandidates: join(WORKSPACE, 'APP_KNOWLEDGE_CANDIDATES.md'),
   siteAuditReport: join(WORKSPACE, 'site-audit-report.md'),
 };

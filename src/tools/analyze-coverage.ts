@@ -5,7 +5,7 @@ import { join } from 'path';
 import { safeWrite } from '../lib/safe-write.js';
 import { TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH, registryForSpec } from './test-registry.js';
 import { computeRequirementsCoverage, RequirementsCoverage } from './requirements-registry.js';
-import { readAppKnowledge, readAppLimitations } from './generate-app-knowledge.js';
+import { readAppKnowledge, readAppLimitations, appendKnowledgeCandidates, KnowledgeCandidate } from './generate-app-knowledge.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { chromium } from '@playwright/test';
 
@@ -133,6 +133,13 @@ Include a note when priority diverges from risk, or when there is something
 unusual about this gap that the developer should know before implementing.
 Omit it when the gap is straightforward.
 
+## App knowledge candidates (optional)
+Separately from test gaps, note anything you observed about how the app actually
+BEHAVES — quirks, missing features, unusual validation, structural facts — that is
+NOT already covered by the "App knowledge base" / "App limitations" sections in the
+context above (when present). This is about app behavior, not test coverage. Omit
+entirely (empty array) if there is nothing new to report.
+
 ## Output format — raw JSON only, no markdown fences:
 {
   "summary": "2-3 sentence overall assessment of coverage quality and key concerns",
@@ -151,7 +158,10 @@ Omit it when the gap is straightforward.
     }
   ],
   "priority_summary": { "critical": 0, "high": 0, "medium": 0, "low": 0 },
-  "recommendations": "2-3 prioritised next steps"
+  "recommendations": "2-3 prioritised next steps",
+  "app_knowledge_candidates": [
+    { "area": "short feature/area name", "note": "one or two sentences describing the observation" }
+  ]
 }
 `;
 
@@ -175,6 +185,7 @@ interface CoverageResult {
   gaps: Gap[];
   priority_summary: Record<string, number>;
   recommendations: string;
+  app_knowledge_candidates?: KnowledgeCandidate[];
 }
 
 export function buildReport(result: CoverageResult, contextLabel: string, reqCoverage?: RequirementsCoverage | null): string {
@@ -540,6 +551,7 @@ export async function analyzeCoverageTool(args: {
   }
 
   // ── Write outputs ────────────────────────────────────────────────────────────
+  const date = new Date().toISOString().slice(0, 10);
   const outDir = args.outputDir ?? WORKSPACE;
   const reportPath = join(outDir, 'coverage-report.md');
   const report = buildReport(result, contextLabel, reqCoverage);
@@ -567,10 +579,15 @@ export async function analyzeCoverageTool(args: {
   if (args.generateGaps && total > 0) {
     const gapsPath = join(outDir, 'coverage-gaps.txt');
     await safeWrite(gapsPath, buildGapsFile(result, contextLabel), { allowOverwrite: true });
-    await appendToGapsBacklog(result.gaps, contextLabel, new Date().toISOString().slice(0, 10));
+    await appendToGapsBacklog(result.gaps, contextLabel, date);
     lines.push(`Gaps file written to: coverage-gaps.txt`);
     lines.push(`Backlog entry appended to: GAPS_BACKLOG.md`);
     lines.push(`Run: npm run generate -- --file coverage-gaps.txt`);
+  }
+
+  if (result.app_knowledge_candidates?.length) {
+    await appendKnowledgeCandidates(result.app_knowledge_candidates, `analyze_coverage — ${contextLabel}`, date);
+    lines.push(`Knowledge candidates (${result.app_knowledge_candidates.length}) appended to: workspace/APP_KNOWLEDGE_CANDIDATES.md`);
   }
 
   return { content: [{ type: 'text', text: lines.join('\n') }] };

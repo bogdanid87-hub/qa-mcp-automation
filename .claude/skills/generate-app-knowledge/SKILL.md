@@ -77,6 +77,14 @@ for a feature that exists but is broken — use the test registry instead
 - No cart item counter in nav bar — Cart link is plain text, no badge element.
 ```
 
+## Staging area: APP_KNOWLEDGE_CANDIDATES.md
+
+`analyze_coverage` and `audit_site` append candidate observations here
+(`workspace/APP_KNOWLEDGE_CANDIDATES.md`, gitignored, not read by any tool). Each run
+writes/replaces a dated section per source. Review periodically — promote durable
+notes into `APP_KNOWLEDGE_MANUAL.md` or missing-feature notes into
+`APP_LIMITATIONS.md`, then delete the entry.
+
 ## Cost
 
 One Claude Sonnet 4.6 call, well under $0.01.

@@ -106,6 +106,20 @@ The file is committed — contributors don't need to re-run it just to run tests
 
 ---
 
+## App knowledge candidates
+
+Both modes also append observations to `workspace/APP_KNOWLEDGE_CANDIDATES.md` for
+human review (see
+[generate-app-knowledge](generate-app-knowledge.md#staging-area-workspaceapp_knowledge_candidatesmd)).
+Structure mode notes the universal elements/partial-overlap groups found (a "Site
+structure" entry, useful for spotting structural facts worth keeping in
+`APP_KNOWLEDGE_MANUAL.md`); data mode flags when no search input is found on
+`/products` (a "Search" entry, useful for confirming whether search genuinely doesn't
+exist and recording it in `APP_LIMITATIONS.md`). Re-running the same mode against the
+same URL replaces that source's section rather than duplicating it.
+
+---
+
 ## Interpreting the structure output
 
 **Universal elements** — IDs/classes present on every page. Belong in `SitePage` / `BasePage`.

@@ -4,6 +4,7 @@ import { chromium } from '@playwright/test';
 import { readFile, mkdir } from 'fs/promises';
 import { dirname, join } from 'path';
 import { safeWrite } from '../lib/safe-write.js';
+import { appendKnowledgeCandidates } from './generate-app-knowledge.js';
 
 const ROOT = process.cwd();
 
@@ -609,6 +610,8 @@ export async function siteAuditTool(args: SiteAuditArgs): Promise<string> {
     const total = result.pageTypes.length;
     const universalIds = [...result.idPresence.entries()]
       .filter(([, p]) => p.length === total).map(([id]) => id);
+    const universalClasses = [...result.classPresence.entries()]
+      .filter(([, p]) => p.length === total).map(([cls]) => cls);
     const sharedGroups = [...new Set(
       [...result.idPresence.entries()]
         .filter(([, p]) => p.length >= 2 && p.length < total)
@@ -622,6 +625,24 @@ export async function siteAuditTool(args: SiteAuditArgs): Promise<string> {
       `\n   Markdown report : ${mdPath}`,
       `   Machine-readable: ${jsonPath}`,
     );
+
+    const structureNote = (universalIds.length || universalClasses.length)
+      ? `Universal elements across all ${total} page types: ` +
+        [...universalIds.map(id => `#${id}`), ...universalClasses.map(c => `.${c}`)].join(', ') + '.'
+      : `No elements are universal across all ${total} page types.`;
+
+    await appendKnowledgeCandidates(
+      [{
+        area: 'Site structure',
+        note: `${structureNote} ${sharedGroups} partial-overlap group(s). See site-audit-report.md ` +
+          `for the full POM hierarchy recommendation — review for anything that suggests a ` +
+          `missing/limited feature (record in APP_LIMITATIONS.md) or a structural fact worth ` +
+          `keeping (APP_KNOWLEDGE_MANUAL.md).`,
+      }],
+      `audit_site — ${args.url} (structure)`,
+      new Date().toISOString().slice(0, 10),
+    );
+    lines.push(`   Knowledge candidate appended to: workspace/APP_KNOWLEDGE_CANDIDATES.md`);
   }
 
   // ── Test data ─────────────────────────────────────────────────────────────
@@ -635,6 +656,20 @@ export async function siteAuditTool(args: SiteAuditArgs): Promise<string> {
 
       const raw = await collectRawTestData(base);
       process.stdout.write(`  Found ${raw.products.length} products, ${raw.categories.length} categories\n`);
+
+      if (!raw.searchExists) {
+        await appendKnowledgeCandidates(
+          [{
+            area: 'Search',
+            note: 'No #search_product element found on /products — search functionality ' +
+              'may not exist, or this site uses a different selector/page for search. ' +
+              'Confirm and record in APP_LIMITATIONS.md if genuinely absent.',
+          }],
+          `audit_site — ${base} (data)`,
+          new Date().toISOString().slice(0, 10),
+        );
+        lines.push(`   ⚠️  No search input found — candidate noted in APP_KNOWLEDGE_CANDIDATES.md`);
+      }
 
       const constantsPath = join(ROOT, 'test-data', 'constants.ts');
 
