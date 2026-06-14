@@ -255,7 +255,8 @@ qa-mcp-automation/
 │   └── update-visual-baselines.yml   ← manual Linux baseline generation
 │
 ├── src/                              ← MCP server + CLIs
-│   ├── index.ts                      ← MCP server entry point — 13 tools registered
+│   ├── server.ts                     ← createServer(): McpServer factory — all 13 tools registered; library entry point
+│   ├── index.ts                      ← MCP server entry point — connects createServer() to stdio (npm run mcp)
 │   ├── cli.ts                        ← npm run generate
 │   ├── fix-cli.ts                    ← npm run fix
 │   ├── generate-api-test-cli.ts      ← npm run generate_api

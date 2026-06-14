@@ -73,7 +73,8 @@ npm run mcp                               # start MCP server manually
 ```
 src/
   config.ts             — loads mcp-qa.config.json; derives SITE_URL, registry paths, risk tiers, POM hierarchy
-  index.ts              — MCP server entry point, 13 tools registered
+  server.ts             — createServer(): McpServer factory, all 13 tools registered; library entry point (package.json "exports")
+  index.ts              — MCP server entry point, connects createServer() to stdio (npm run mcp)
   cli.ts                — npm run generate (interactive, cost-tracked)
   fix-cli.ts            — npm run fix
   analyze-prd-cli.ts    — npm run analyze_prd
