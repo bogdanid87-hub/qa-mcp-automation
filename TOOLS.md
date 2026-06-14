@@ -21,6 +21,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 | `generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
 | `generate_app_knowledge` | Synthesise app bugs, coverage gaps, and coverage report into `APP_KNOWLEDGE.md` — enriches subsequent `analyze_prd` and `analyze_coverage` calls | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
 | `plan_e2e` | Plan a multi-page E2E journey before generating it — decomposes the flow into POMs/methods and cross-references the POM Method Index for a step → view → POM → exists? → action checklist | [docs/plan-e2e.md](docs/plan-e2e.md) |
+| `init_project` | Bootstrap `mcp-qa.config.json` plus a minimal pages/fixtures/tests scaffold for a new project — picks a riskTiers profile, prints next steps (audit_site → generate_pom → generate_test) | [docs/init-project.md](docs/init-project.md) |
 
 ---
 
@@ -34,6 +35,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 | `npm run generate_auth` | Generate a Playwright auth fixture for form or OAuth login — saves storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
 | `npm run generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
 | `npm run audit_site` | Crawl a site, build a page-type × UI-component matrix, and recommend a POM hierarchy | [docs/audit-site.md](docs/audit-site.md) |
+| `npm run init_project` | Bootstrap `mcp-qa.config.json` plus a minimal pages/fixtures/tests scaffold for a new project | [docs/init-project.md](docs/init-project.md) |
 | `npm run generate_knowledge` | CLI version of `generate_app_knowledge` — synthesises `APP_KNOWLEDGE.md` from registries, backlog, and coverage report | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
 | `npm run generate` | Generate a test from `my-test.txt` (or any batch `.txt` file) | [docs/generate-test.md](docs/generate-test.md) |
 | `npm run fix` | Interactive fix loop for failing tests | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
@@ -54,9 +56,9 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 
 ```
 Starting a new project:
-  npm run audit_site -- --url <site>  → read site-audit-report.md
-  → design POM hierarchy → write base classes → update system prompt
-  → then generate tests
+  init_project / npm run init_project -- --name <name> --url <site>  → mcp-qa.config.json + scaffold
+  → npm run audit_site -- --url <site>  → read site-audit-report.md
+  → fill in pom/riskTiers from the report → generate_pom → generate_test
 
 From a PRD:
   analyze_prd / npm run analyze_prd → review prd-tests.txt → npm run generate --file prd-tests.txt

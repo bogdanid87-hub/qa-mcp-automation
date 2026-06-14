@@ -14,6 +14,7 @@ import { generateAuthFixtureTool } from './tools/generate-auth-fixture.js';
 import { generateMockTool } from './tools/generate-mock.js';
 import { generateAppKnowledgeTool } from './tools/generate-app-knowledge.js';
 import { planE2eTool } from './tools/plan-e2e.js';
+import { initProjectTool } from './tools/init-project.js';
 
 const server = new McpServer({ name: 'qa-mcp-automation', version: '1.0.0' });
 
@@ -235,6 +236,39 @@ server.registerTool(
     },
   },
   (args) => planE2eTool(args),
+);
+
+server.registerTool(
+  'init_project',
+  {
+    description:
+      'Bootstrap mcp-qa.config.json plus a minimal pages/fixtures/tests scaffold for a new project. ' +
+      'Generates a config with the standard ui/api/e2e/visual registries, a starting riskTiers profile, ' +
+      'and a BasePage/SitePage/fixtures placeholder hierarchy — then prints next steps ' +
+      '(audit_site, generate_pom, generate_test). Writes no files outside the config\'s directory tree ' +
+      'and runs no audit or LLM calls.',
+    inputSchema: {
+      project_name: z.string().describe('Name for the new project, e.g. "my-shop"'),
+      site_url: z.string().describe('Base URL of the site to test, e.g. "https://example.com"'),
+      profile: z.enum(['generic', 'ecommerce']).optional().describe('Risk-tier keyword profile (default: "generic"). "ecommerce" matches shop-like demo sites.'),
+      output_path: z.string().optional().describe('Where to write mcp-qa.config.json (default: ./mcp-qa.config.json). Use a different path to scaffold without touching the current project.'),
+      force: z.boolean().optional().describe('Overwrite an existing mcp-qa.config.json (default: false — refuses if one already exists). Scaffold files are always create-if-missing regardless of this flag.'),
+      risk_tiers: z.object({
+        critical: z.array(z.string()).optional(),
+        high: z.array(z.string()).optional(),
+        medium: z.array(z.string()).optional(),
+        low: z.array(z.string()).optional(),
+      }).optional().describe('Per-tier overrides applied on top of the chosen profile.'),
+    },
+  },
+  (args) => initProjectTool({
+    projectName: args.project_name,
+    siteUrl: args.site_url,
+    profile: args.profile,
+    outputPath: args.output_path,
+    force: args.force,
+    riskTiers: args.risk_tiers,
+  }),
 );
 
 async function main() {

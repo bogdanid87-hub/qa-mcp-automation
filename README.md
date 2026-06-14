@@ -13,7 +13,7 @@ Describe a test scenario in plain English. The server uses **Claude Sonnet 4.6**
 ## What this project demonstrates
 
 ### MCP server architecture
-A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes twelve AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
+A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes thirteen AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
 
 ### Server-side quality engineering
 The MCP server itself is held to the same quality bar as the tests it generates:
@@ -150,7 +150,7 @@ NO_LOCAL_LLM=1 npm run generate -- --file my-test.txt   # same via env var
 
 ## Tools
 
-Twelve tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
+Thirteen tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
 
 | Tool | One-liner | Guide |
 |------|-----------|-------|
@@ -166,12 +166,17 @@ Twelve tools are available in Claude Code chat and (most) from the terminal. See
 | `generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
 | `generate_app_knowledge` | Synthesise app bugs, gaps, and coverage report into `APP_KNOWLEDGE.md` — enriches `analyze_prd` and `analyze_coverage` | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
 | `plan_e2e` | Plan a multi-page E2E journey — decompose into POMs/methods, cross-reference the POM Method Index for a step → view → POM → exists? → action checklist | [docs/plan-e2e.md](docs/plan-e2e.md) |
+| `init_project` | Bootstrap `mcp-qa.config.json` plus a minimal pages/fixtures/tests scaffold for a new project | [docs/init-project.md](docs/init-project.md) |
 
 ---
 
 ## Recommended workflow
 
 ```
+Starting a new project:
+  init_project / npm run init_project -- --name <name> --url <site>  →  mcp-qa.config.json + scaffold
+  npm run audit_site -- --url <site>  →  fill in pom/riskTiers from the report  →  generate_pom
+
 From a PRD:
   npm run analyze_prd -- --file prd.md   →  review prd-tests.txt
   npm run generate -- --file prd-tests.txt
@@ -204,6 +209,7 @@ npm run generate_mock -- --name stripe --url 'https://api.stripe.com/**' --respo
 npm run analyze_prd -- --file prd.md     # generate test backlog from PRD
 npm run analyze_coverage                  # find coverage gaps
 npm run audit_site -- --url https://...  # crawl site and recommend POM hierarchy
+npm run init_project -- --name my-shop --url https://example.com  # bootstrap config + scaffold for a new project
 npm run generate_knowledge               # synthesise APP_KNOWLEDGE.md from accumulated data
 npm run fix                               # investigate and fix failing tests
 npm run status                            # suite health at a glance
@@ -249,7 +255,7 @@ qa-mcp-automation/
 │   └── update-visual-baselines.yml   ← manual Linux baseline generation
 │
 ├── src/                              ← MCP server + CLIs
-│   ├── index.ts                      ← MCP server entry point — 12 tools registered
+│   ├── index.ts                      ← MCP server entry point — 13 tools registered
 │   ├── cli.ts                        ← npm run generate
 │   ├── fix-cli.ts                    ← npm run fix
 │   ├── generate-api-test-cli.ts      ← npm run generate_api
@@ -263,6 +269,7 @@ qa-mcp-automation/
 │   ├── status-cli.ts                 ← npm run status
 │   ├── site-audit-cli.ts             ← npm run audit_site
 │   ├── generate-app-knowledge-cli.ts ← npm run generate_knowledge
+│   ├── init-project-cli.ts           ← npm run init_project
 │   └── tools/
 │       ├── generate-test.ts          ← unified test gen (UI/API/E2E/visual auto-detected)
 │       ├── generate-api-test.ts      ← API test generation (local LLM first)
@@ -277,6 +284,8 @@ qa-mcp-automation/
 │       ├── generate-app-knowledge.ts ← app bug/gap synthesis → APP_KNOWLEDGE.md
 │       ├── plan-e2e.ts               ← look-ahead E2E journey planner (POM checklist)
 │       ├── pom-index.ts              ← POM Method Index builder (shared by generate-test, plan-e2e)
+│       ├── init-project.ts           ← bootstrap mcp-qa.config.json + pages/fixtures/tests scaffold
+│       ├── init-project-templates.ts ← BasePage/SitePage/fixtures placeholder templates
 │       ├── inspect-page.ts           ← headless DOM extraction
 │       ├── test-registry.ts          ← reads/writes TESTS_*.md registries
 │       ├── local-llm.ts              ← Ollama client with startup prompt

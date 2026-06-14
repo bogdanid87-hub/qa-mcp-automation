@@ -68,7 +68,7 @@ function loadConfig(): MqaConfig {
   }
 }
 
-function validate(cfg: MqaConfig): void {
+export function validate(cfg: MqaConfig): void {
   const required: Array<[string, unknown]> = [
     ['project.name',             cfg.project?.name],
     ['project.siteUrl',          cfg.project?.siteUrl],
