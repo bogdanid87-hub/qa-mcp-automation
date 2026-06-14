@@ -6,7 +6,7 @@ description: Project conventions for qa-mcp-automation's Playwright suite — PO
 # QA Conventions
 
 For the full rule set the MCP tool uses when *generating* tests, see
-`src/prompts/system.ts` (CORE_RULES) and `src/prompts/learned-rules.md` (also
+`src/prompts/system.ts` (CORE_RULES) and `learned-rules.md` (also
 loaded by [learned-rules-loader](../learned-rules-loader/SKILL.md)). This skill is
 the quick reference for editing `pages/`, `tests/`, and `fixtures/` directly.
 
@@ -117,5 +117,5 @@ finishes, pass or fail, each wrapped in try/catch.
 | `TESTS_UI.md` | `generate_test`, `npm run sync_registry`, `npm run update_registry` |
 | `TESTS_E2E.md` | same — `tests/e2e/` only |
 | `TESTS_API.md` | same — `tests/api/` only |
-| `src/prompts/learned-rules.md` | `investigate_and_fix` (auto-appends after every fix) |
+| `learned-rules.md` | `investigate_and_fix` (auto-appends after every fix) |
 | `test-data/.auth/guest.json` | `global.setup.ts` (Playwright setup) |

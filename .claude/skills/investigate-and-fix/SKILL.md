@@ -69,7 +69,7 @@ dropped entirely are caught by `safeWrite`'s drop-guard separately. See
 ## Learned rules
 
 After every successful fix, a lesson is appended to
-[`src/prompts/learned-rules.md`](../learned-rules-loader/SKILL.md):
+[`learned-rules.md`](../learned-rules-loader/SKILL.md):
 
 ```markdown
 ## Rule 008 — Mismatched import style causes undefined class

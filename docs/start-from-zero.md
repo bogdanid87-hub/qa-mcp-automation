@@ -158,7 +158,7 @@ npm run fix -- --pattern tests/ui/cart.spec.ts
 
 The fix tool reads the Playwright screenshot and live DOM at point of failure, classifies the
 root cause as a code bug or app bug, and either patches the test or annotates it. A lesson is
-appended to `src/prompts/learned-rules.md` so the same issue doesn't recur.
+appended to `learned-rules.md` so the same issue doesn't recur.
 
 ---
 

@@ -59,6 +59,15 @@ export class SitePage extends BasePage {
 }
 `;
 
+export const LEARNED_RULES_TEMPLATE = `# Learned Rules
+
+Rules discovered by investigating real test failures.
+Each rule is injected into the system prompt automatically.
+
+<!-- rules-start -->
+<!-- rules-end -->
+`;
+
 export const FIXTURES_INDEX_TEMPLATE = `import { test as base } from '@playwright/test';
 
 /**

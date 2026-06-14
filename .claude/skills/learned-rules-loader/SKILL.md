@@ -1,16 +1,16 @@
 ---
 name: learned-rules-loader
-description: Loads src/prompts/learned-rules.md — lessons from real test-failure investigations that supplement CORE_RULES. Load when investigating a failing test, writing or reviewing a POM/spec, or asking "why does this convention exist".
+description: Loads learned-rules.md — lessons from real test-failure investigations that supplement CORE_RULES. Load when investigating a failing test, writing or reviewing a POM/spec, or asking "why does this convention exist".
 ---
 
 # Learned Rules Loader
 
-`src/prompts/learned-rules.md` is a single project's worth of rules discovered by
+`learned-rules.md` (project root) is this project's rules discovered by
 `investigate_and_fix` from real test failures on automationexercise.com. Each rule
 is auto-appended after a fix and injected into the system prompt (CORE_RULES) for
 every subsequent `generate_test` / `investigate_and_fix` call.
 
-**Read the file directly** — `src/prompts/learned-rules.md` — for the current rule
+**Read the file directly** — `learned-rules.md` — for the current rule
 set (entries are numbered, between `<!-- rules-start -->` and `<!-- rules-end -->`).
 
 Each rule follows the same shape:
@@ -34,6 +34,7 @@ Each rule follows the same shape:
 This file is the file-management target for `investigate_and_fix` — do not edit it
 manually (see [qa-conventions](../qa-conventions/SKILL.md#files-that-are-auto-managed--do-not-edit-manually)).
 
-This project is currently the only one using this loader, so there's no namespacing
-— if a second project is onboarded, this skill will need to point at a
-project-scoped rules file instead.
+`learned-rules.md` lives at the project root, resolved via `process.cwd()` — so each
+project's accumulated lessons live in that project's own repo, not inside this
+package. No further change is needed when onboarding a new project: its
+`learned-rules.md` is already scoped to it by virtue of living in its own root.

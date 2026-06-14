@@ -17,7 +17,7 @@ const DEFAULT_BUDGET_USD = Infinity;
 
 const ROOT = process.cwd();
 const TRACKED_DIRS = ['pages', 'tests', 'fixtures'];
-const TRACKED_EXTRAS = ['TESTS_UI.md', 'TESTS_API.md', 'TESTS_E2E.md', 'src/prompts/learned-rules.md'];
+const TRACKED_EXTRAS = ['TESTS_UI.md', 'TESTS_API.md', 'TESTS_E2E.md', 'learned-rules.md'];
 
 // ---------------------------------------------------------------------------
 // API key — read from environment or fall back to .claude/settings.local.json
