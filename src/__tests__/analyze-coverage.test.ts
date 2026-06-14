@@ -78,7 +78,7 @@ describe('buildReport', () => {
   });
 
   it('shows an all-covered message when there are no uncovered requirements', () => {
-    const report = buildReport(minimalResult, 'all registries', { total: 12, covered: 12, uncovered: [] });
+    const report = buildReport(minimalResult, 'all registries', { total: 12, covered: 12, uncovered: [], functionalOnly: [] });
     expect(report).toContain('## Requirements coverage (deterministic)');
     expect(report).toContain('REQUIREMENTS.md: 12/12 requirements covered by at least one test. ✅');
   });
@@ -91,6 +91,7 @@ describe('buildReport', () => {
         { id: 'REQ-API-009', text: 'POST to checkout returns 402 when payment fails' },
         { id: 'REQ-UI-003', text: 'Cart shows empty state message' },
       ],
+      functionalOnly: [],
     };
     const report = buildReport(minimalResult, 'all registries', reqCoverage);
     expect(report).toContain('## Requirements coverage (deterministic)');
@@ -104,8 +105,31 @@ describe('buildReport', () => {
       total: 4,
       covered: 3,
       uncovered: [{ id: 'REQ-005', text: 'Single uncovered requirement' }],
+      functionalOnly: [],
     };
     const report = buildReport(minimalResult, 'all registries', reqCoverage);
     expect(report).toContain('(1 gap)');
+  });
+
+  it('omits the functional-only section when there are none', () => {
+    const reqCoverage = { total: 5, covered: 5, uncovered: [], functionalOnly: [] };
+    const report = buildReport(minimalResult, 'all registries', reqCoverage);
+    expect(report).not.toContain('Covered by functional tests only');
+  });
+
+  it('lists functional-only requirements with counts and ids', () => {
+    const reqCoverage = {
+      total: 5,
+      covered: 5,
+      uncovered: [],
+      functionalOnly: [
+        { id: 'REQ-API-005', text: 'POST to search_product returns matching results' },
+        { id: 'REQ-004', text: 'Registering with a used email shows an error' },
+      ],
+    };
+    const report = buildReport(minimalResult, 'all registries', reqCoverage);
+    expect(report).toContain('**Covered by functional tests only** (no @negative/@boundary test yet — 2):');
+    expect(report).toContain('- REQ-API-005: POST to search_product returns matching results');
+    expect(report).toContain('- REQ-004: Registering with a used email shows an error');
   });
 });

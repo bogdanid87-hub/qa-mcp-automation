@@ -4,6 +4,7 @@ import { join } from 'path';
 import {
   readTestCases,
   readBrokenTests,
+  extractTestType,
   TESTS_UI_PATH,
   TESTS_API_PATH,
   TESTS_E2E_PATH,
@@ -114,6 +115,7 @@ async function main(): Promise<void> {
 
   let grandPassing = 0, grandBroken = 0, grandBugs = 0;
   const taggedStats: Array<{ prefix: string; tagged: number; total: number }> = [];
+  const typeCounts = { functional: 0, negative: 0, boundary: 0 };
 
   console.log('  Registries:');
   for (const { path, label, prefix } of registries) {
@@ -127,6 +129,10 @@ async function main(): Promise<void> {
     grandPassing += passing.length;
     grandBroken  += brokenOnly;
     grandBugs    += bugs;
+
+    if (prefix !== 'Visual') {
+      for (const entry of passing) typeCounts[extractTestType(entry.name)]++;
+    }
 
     const passingStr  = `${passing.length} passing`.padEnd(12);
     const brokenStr   = `${brokenOnly} broken`.padEnd(10);
@@ -153,6 +159,9 @@ async function main(): Promise<void> {
   if (totTagged < totTaggable) {
     console.log('     Run: npm run tag_tests');
   }
+
+  // ── Test types ───────────────────────────────────────────────────────────────
+  console.log(`\n  🏷️  Test types: ${typeCounts.functional} functional · ${typeCounts.negative} negative · ${typeCounts.boundary} boundary`);
 
   // ── Gaps Backlog ─────────────────────────────────────────────────────────────
   const { totalOpen, scopes } = await readBacklogStatus();
@@ -181,6 +190,13 @@ async function main(): Promise<void> {
     for (const [i, r] of reqCoverage.uncovered.entries()) {
       const connector = i === reqCoverage.uncovered.length - 1 ? '└' : '├';
       console.log(`     ${connector} ${r.id}: ${r.text}`);
+    }
+    if (reqCoverage.functionalOnly.length > 0) {
+      console.log(`     🟡 Functional-only (no @negative/@boundary test yet):`);
+      for (const [i, r] of reqCoverage.functionalOnly.entries()) {
+        const connector = i === reqCoverage.functionalOnly.length - 1 ? '└' : '├';
+        console.log(`        ${connector} ${r.id}: ${r.text}`);
+      }
     }
   }
 

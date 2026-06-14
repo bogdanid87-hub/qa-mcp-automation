@@ -10,8 +10,10 @@ import {
   formatReqHint,
   assignReqIds,
   findUncoveredRequirements,
+  findFunctionalOnlyRequirements,
   computeRequirementsCoverage,
 } from '../tools/requirements-registry';
+import type { TestType } from '../tools/test-registry';
 
 describe('normalizeReqId', () => {
   const cases: [string, string | null][] = [
@@ -206,6 +208,42 @@ describe('findUncoveredRequirements', () => {
 
   it('returns an empty array for an empty requirements list', () => {
     expect(findUncoveredRequirements([], new Set(['REQ-API-005']))).toEqual([]);
+  });
+});
+
+describe('findFunctionalOnlyRequirements', () => {
+  const requirements = [
+    { id: 'REQ-API-005', text: 'POST to search_product returns matching results' },
+    { id: 'REQ-004', text: 'Registering with a used email shows an error' },
+    { id: 'REQ-UI-003', text: 'Cart shows empty state message' },
+  ];
+
+  const typesMap = (entries: Array<[string, TestType[]]>): Map<string, Set<TestType>> =>
+    new Map(entries.map(([id, types]) => [id, new Set(types)]));
+
+  it('includes a requirement covered only by functional tests', () => {
+    const coveredTypes = typesMap([['REQ-API-005', ['functional']]]);
+    expect(findFunctionalOnlyRequirements(requirements, coveredTypes)).toEqual([requirements[0]]);
+  });
+
+  it('excludes a requirement that also has a negative test', () => {
+    const coveredTypes = typesMap([['REQ-API-005', ['functional', 'negative']]]);
+    expect(findFunctionalOnlyRequirements(requirements, coveredTypes)).toEqual([]);
+  });
+
+  it('excludes a requirement covered only by a boundary test', () => {
+    const coveredTypes = typesMap([['REQ-UI-003', ['boundary']]]);
+    expect(findFunctionalOnlyRequirements(requirements, coveredTypes)).toEqual([]);
+  });
+
+  it('excludes requirements with no covering tests at all', () => {
+    const coveredTypes = typesMap([['REQ-API-005', ['functional']]]);
+    expect(findFunctionalOnlyRequirements(requirements, coveredTypes)).not.toContainEqual(requirements[1]);
+    expect(findFunctionalOnlyRequirements(requirements, coveredTypes)).not.toContainEqual(requirements[2]);
+  });
+
+  it('returns an empty array for an empty requirements list', () => {
+    expect(findFunctionalOnlyRequirements([], typesMap([['REQ-API-005', ['functional']]]))).toEqual([]);
   });
 });
 

@@ -4,6 +4,7 @@ import {
   parseFailingTestsFromOutput,
   normalizeTestName,
   extractReqIds,
+  extractTestType,
   deriveRisk,
   registryForSpec,
   parseTestCases,
@@ -121,6 +122,26 @@ describe('extractReqIds', () => {
 
   it('extracts multiple @req: tags', () => {
     expect(extractReqIds('should do two things @req:REQ-001 @req:REQ-API-002')).toEqual(['REQ-001', 'REQ-API-002']);
+  });
+});
+
+// ── extractTestType ───────────────────────────────────────────────────────────
+
+describe('extractTestType', () => {
+  it('returns functional when neither tag is present', () => {
+    expect(extractTestType('should add product to cart @smoke @regression')).toBe('functional');
+  });
+
+  it('returns negative when @negative is present among other tags', () => {
+    expect(extractTestType('should show an error for invalid login @regression @negative')).toBe('negative');
+  });
+
+  it('returns boundary when @boundary is present among other tags', () => {
+    expect(extractTestType('should show empty cart message @regression @boundary @req:REQ-UI-003')).toBe('boundary');
+  });
+
+  it('prefers negative when both @negative and @boundary are present', () => {
+    expect(extractTestType('should reject an over-limit invalid input @regression @negative @boundary')).toBe('negative');
   });
 });
 

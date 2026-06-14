@@ -213,6 +213,19 @@ export function extractReqIds(name: string): string[] {
   return [...name.matchAll(/@req:(REQ-[A-Z0-9-]+)/g)].map(m => m[1]);
 }
 
+export type TestType = 'functional' | 'negative' | 'boundary';
+
+/**
+ * Classify a test by its @negative/@boundary tags. Absence of both means
+ * 'functional' — the default, same optional convention as @req:. If both are
+ * present (CORE_RULES says at most one), @negative takes precedence.
+ */
+export function extractTestType(name: string): TestType {
+  if (/@negative\b/.test(name)) return 'negative';
+  if (/@boundary\b/.test(name)) return 'boundary';
+  return 'functional';
+}
+
 // ─── Output parsers ───────────────────────────────────────────────────────────
 
 export interface FailingTestResult {

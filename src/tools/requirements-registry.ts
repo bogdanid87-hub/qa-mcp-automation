@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { readTestCases, TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH, extractReqIds } from './test-registry.js';
+import { readTestCases, TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH, extractReqIds, extractTestType, TestType } from './test-registry.js';
 
 /**
  * Requirements traceability ledger (REQUIREMENTS.md) — maps stable REQ IDs
@@ -171,6 +171,7 @@ export interface RequirementsCoverage {
   total: number;
   covered: number;
   uncovered: RequirementEntry[];
+  functionalOnly: RequirementEntry[];
 }
 
 /** Pure set difference: requirements with no covering @req: tag. */
@@ -179,6 +180,21 @@ export function findUncoveredRequirements(
   coveredReqIds: Set<string>,
 ): RequirementEntry[] {
   return requirements.filter(r => !coveredReqIds.has(r.id));
+}
+
+/**
+ * Among covered requirements, find those where every covering test is
+ * 'functional' — i.e. no @negative/@boundary test exists for this requirement yet.
+ */
+export function findFunctionalOnlyRequirements(
+  requirements: RequirementEntry[],
+  coveredTypesByReqId: Map<string, Set<TestType>>,
+): RequirementEntry[] {
+  return requirements.filter(r => {
+    const types = coveredTypesByReqId.get(r.id);
+    if (!types || types.size === 0) return false; // uncovered, not "functional-only"
+    return !types.has('negative') && !types.has('boundary');
+  });
 }
 
 /**
@@ -196,13 +212,24 @@ export async function computeRequirementsCoverage(): Promise<RequirementsCoverag
   const registries = await Promise.all(
     [TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH].map(p => readTestCases(p)),
   );
-  const covered = new Set<string>();
+  const coveredTypesByReqId = new Map<string, Set<TestType>>();
   for (const entries of registries) {
     for (const entry of entries) {
-      for (const reqId of extractReqIds(entry.name)) covered.add(reqId);
+      const type = extractTestType(entry.name);
+      for (const reqId of extractReqIds(entry.name)) {
+        if (!coveredTypesByReqId.has(reqId)) coveredTypesByReqId.set(reqId, new Set());
+        coveredTypesByReqId.get(reqId)!.add(type);
+      }
     }
   }
 
+  const covered = new Set(coveredTypesByReqId.keys());
   const uncovered = findUncoveredRequirements(requirements, covered);
-  return { total: requirements.length, covered: requirements.length - uncovered.length, uncovered };
+  const functionalOnly = findFunctionalOnlyRequirements(requirements, coveredTypesByReqId);
+  return {
+    total: requirements.length,
+    covered: requirements.length - uncovered.length,
+    uncovered,
+    functionalOnly,
+  };
 }
