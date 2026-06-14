@@ -9,6 +9,8 @@ import {
   extractRequirementText,
   formatReqHint,
   assignReqIds,
+  findUncoveredRequirements,
+  computeRequirementsCoverage,
 } from '../tools/requirements-registry';
 
 describe('normalizeReqId', () => {
@@ -177,5 +179,38 @@ describe('assignReqIds', () => {
 
     expect(second.newEntries).toEqual([]);
     expect(parseRequirements(second.updatedRequirementsContent)).toEqual(parseRequirements(first.updatedRequirementsContent));
+  });
+});
+
+describe('findUncoveredRequirements', () => {
+  const requirements = [
+    { id: 'REQ-API-005', text: 'POST to search_product returns matching results' },
+    { id: 'REQ-004', text: 'Registering with a used email shows an error' },
+  ];
+
+  it('returns all requirements when none are covered', () => {
+    expect(findUncoveredRequirements(requirements, new Set())).toEqual(requirements);
+  });
+
+  it('filters out covered requirements', () => {
+    expect(findUncoveredRequirements(requirements, new Set(['REQ-API-005']))).toEqual([requirements[1]]);
+  });
+
+  it('returns an empty array when all requirements are covered', () => {
+    expect(findUncoveredRequirements(requirements, new Set(['REQ-API-005', 'REQ-004']))).toEqual([]);
+  });
+
+  it('ignores covered ids that are not in the requirements list', () => {
+    expect(findUncoveredRequirements(requirements, new Set(['REQ-999']))).toEqual(requirements);
+  });
+
+  it('returns an empty array for an empty requirements list', () => {
+    expect(findUncoveredRequirements([], new Set(['REQ-API-005']))).toEqual([]);
+  });
+});
+
+describe('computeRequirementsCoverage', () => {
+  it('returns null when REQUIREMENTS.md does not exist (this project has not run analyze_prd against a numbered PRD yet)', async () => {
+    expect(await computeRequirementsCoverage()).toBeNull();
   });
 });

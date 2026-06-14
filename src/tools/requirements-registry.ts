@@ -1,4 +1,6 @@
+import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { readTestCases, TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH, extractReqIds } from './test-registry.js';
 
 /**
  * Requirements traceability ledger (REQUIREMENTS.md) — maps stable REQ IDs
@@ -163,4 +165,44 @@ export function assignReqIds(rawText: string, requirementsContent: string): Assi
     updatedRequirementsContent: appendRequirements(requirementsContent, newEntries),
     newEntries,
   };
+}
+
+export interface RequirementsCoverage {
+  total: number;
+  covered: number;
+  uncovered: RequirementEntry[];
+}
+
+/** Pure set difference: requirements with no covering @req: tag. */
+export function findUncoveredRequirements(
+  requirements: RequirementEntry[],
+  coveredReqIds: Set<string>,
+): RequirementEntry[] {
+  return requirements.filter(r => !coveredReqIds.has(r.id));
+}
+
+/**
+ * Cross-references REQUIREMENTS.md against @req: tags in all three test
+ * registries (UI/API/E2E). Returns null when REQUIREMENTS.md doesn't exist or
+ * its ledger is empty — nothing to report.
+ */
+export async function computeRequirementsCoverage(): Promise<RequirementsCoverage | null> {
+  const content = await readFile(REQUIREMENTS_PATH, 'utf-8').catch(() => null);
+  if (content === null) return null;
+
+  const requirements = parseRequirements(content);
+  if (requirements.length === 0) return null;
+
+  const registries = await Promise.all(
+    [TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH].map(p => readTestCases(p)),
+  );
+  const covered = new Set<string>();
+  for (const entries of registries) {
+    for (const entry of entries) {
+      for (const reqId of extractReqIds(entry.name)) covered.add(reqId);
+    }
+  }
+
+  const uncovered = findUncoveredRequirements(requirements, covered);
+  return { total: requirements.length, covered: requirements.length - uncovered.length, uncovered };
 }

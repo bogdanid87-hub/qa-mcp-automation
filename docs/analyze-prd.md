@@ -243,6 +243,10 @@ When a `# req_id`-bearing block is generated via `generate_test` (see
 `@req:REQ-...`, making `REQUIREMENTS.md` entries greppable back to their covering
 test(s).
 
+Once `REQUIREMENTS.md` has entries, `analyze_coverage` and `npm run status` both
+surface "requirements with zero covering tests" as a free, deterministic cross-check
+— see [analyze-coverage.md](analyze-coverage.md#requirements-coverage-deterministic).
+
 ---
 
 ### Custom output file
