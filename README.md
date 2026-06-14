@@ -75,14 +75,24 @@ See `examples/` for two worked PRD analyses — a Save for Later cart feature an
 > **Format note:** Registries are intentionally stored as human-readable Markdown files (`TESTS_UI.md`, `TESTS_API.md`, `TESTS_E2E.md`). This works well at the scale of a typical automation project (hundreds of tests) and makes test status immediately visible without tooling. At very large scale (thousands of tests), SQLite would be the correct storage choice — indexed lookups, atomic writes, no full-file rewrites on every update — with Markdown generated on demand as a report. This portfolio project uses Markdown because human readability and zero-dependency simplicity are the right trade-offs here.
 `TESTS_UI.md` is a markdown file maintained automatically — passing tests, app bugs, and broken tests each have their own section. The `sync-registry` command runs the full suite, adds any undocumented passing tests, promotes resolved broken entries, and flags regressions — but only after running the spec twice to rule out transient failures (the site runs on shared infrastructure with variable load). Fuzzy name matching (normalising articles and punctuation) prevents stale broken entries when test names drift between generation attempts.
 
-### Reusable skeleton
+### Config-driven engine — automationexercise.com is the reference project
 
-A config-driven version of this server is available as a private repo. All
-automationexercise.com-specific content is replaced by a single `mcp-qa.config.json`
-(site URL, folder structure, registry names, POM hierarchy, risk tiers). The skeleton
-includes the site audit tool for POM hierarchy discovery, the same tool suite, and a
-6-step setup guide that takes a new project from zero to generating tests in under an
-hour. Validated against a separate demo site. **Available on request.**
+Every project-specific value — site URL, folder/registry layout, risk-tier keywords,
+POM class hierarchy — lives in [`mcp-qa.config.json`](mcp-qa.config.json), loaded by
+[`src/config.ts`](src/config.ts). This repo's own `pages/`, `tests/`, `fixtures/`,
+and `learned-rules.md` are the **reference implementation**: real, accumulated output
+of the tool suite running end-to-end against automationexercise.com, not
+placeholders.
+
+To point the same engine at a different site, `init_project` bootstraps a fresh
+`mcp-qa.config.json` plus a minimal `pages/`/`fixtures/`/`tests/`/`test-data/`
+scaffold, picks a risk-tier profile (`generic` or `ecommerce`), and prints the
+next-steps checklist (`audit_site` → `generate_pom` → `generate_test`). The engine
+itself (`src/`, `package.json`, CI workflows, `playwright.config.ts`) still needs its
+own clone per project — `mcp-qa-skeleton` is a ready-to-clone starting point with the
+engine pre-installed. See
+[docs/init-project.md#multi-project-setup](docs/init-project.md#multi-project-setup)
+for the full walkthrough.
 
 ---
 
@@ -318,6 +328,8 @@ qa-mcp-automation/
 │   ├── dynamicCart-analysis.txt      ← analyze_prd output: 8 critical / 1 high / 5 medium-low
 │   └── subscription-coverage-analysis.md  ← analyze_coverage output for subscription spec
 │
+├── mcp-qa.config.json                ← project config — site URL, folders, registries, risk tiers, POM hierarchy
+├── learned-rules.md                  ← lessons auto-appended by investigate_and_fix, injected into the system prompt
 ├── CLAUDE.md                         ← auto-loaded by Claude Code — project context
 ├── TOOLS.md                          ← quick tool index
 ├── TESTS_UI.md                       ← auto-updated registry for UI tests
