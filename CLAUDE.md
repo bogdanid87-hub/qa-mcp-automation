@@ -102,6 +102,7 @@ src/
     pom-index.ts        — POM Method Index builder, shared by generate-test and plan-e2e
     init-project.ts     — bootstraps mcp-qa.config.json + pages/fixtures/tests scaffold for a new project
     init-project-templates.ts — BasePage/SitePage/fixtures placeholder templates used by init-project.ts
+    requirements-registry.ts — REQ ID normalization + REQUIREMENTS.md ledger (used by analyze-prd.ts and init-project-templates.ts)
     review-generation.ts — hybrid pre-write reviewer (deterministic checks + 1 LLM call) for generate-test
     annotations.ts      — writes /* ⚠️ APP BUG */ and /* ⚠️ BROKEN */ into specs
     budget.ts           — token cost tracking per session

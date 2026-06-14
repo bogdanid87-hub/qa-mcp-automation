@@ -118,4 +118,5 @@ finishes, pass or fail, each wrapped in try/catch.
 | `TESTS_E2E.md` | same — `tests/e2e/` only |
 | `TESTS_API.md` | same — `tests/api/` only |
 | `learned-rules.md` | `investigate_and_fix` (auto-appends after every fix) |
+| `REQUIREMENTS.md` | `analyze_prd` (auto-appends new `REQ-...` IDs; append-only — descriptions may be hand-edited, IDs may not) |
 | `test-data/.auth/guest.json` | `global.setup.ts` (Playwright setup) |

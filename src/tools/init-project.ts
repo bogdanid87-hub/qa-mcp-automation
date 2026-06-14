@@ -3,7 +3,7 @@ import { dirname, join } from 'path';
 
 import { safeWrite } from '../lib/safe-write.js';
 import { validate, type MqaConfig } from '../config.js';
-import { BASE_PAGE_TEMPLATE, FIXTURES_INDEX_TEMPLATE, LEARNED_RULES_TEMPLATE, SITE_PAGE_TEMPLATE } from './init-project-templates.js';
+import { BASE_PAGE_TEMPLATE, FIXTURES_INDEX_TEMPLATE, LEARNED_RULES_TEMPLATE, REQUIREMENTS_TEMPLATE, SITE_PAGE_TEMPLATE } from './init-project-templates.js';
 
 export type RiskTiers = MqaConfig['riskTiers'];
 
@@ -104,6 +104,7 @@ async function scaffoldProject(root: string, config: MqaConfig): Promise<Scaffol
     { relPath: 'pages/SitePage.ts', content: SITE_PAGE_TEMPLATE },
     { relPath: 'fixtures/index.ts', content: FIXTURES_INDEX_TEMPLATE },
     { relPath: 'learned-rules.md', content: LEARNED_RULES_TEMPLATE },
+    { relPath: 'REQUIREMENTS.md', content: REQUIREMENTS_TEMPLATE },
   ];
 
   const entries: ScaffoldEntry[] = [];

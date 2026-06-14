@@ -93,6 +93,10 @@ describe('initProjectTool', () => {
     const learnedRules = await readFile(join(dir, 'learned-rules.md'), 'utf-8');
     expect(learnedRules).toContain('<!-- rules-start -->');
     expect(learnedRules).toContain('<!-- rules-end -->');
+
+    const requirements = await readFile(join(dir, 'REQUIREMENTS.md'), 'utf-8');
+    expect(requirements).toContain('<!-- requirements-start -->');
+    expect(requirements).toContain('<!-- requirements-end -->');
   });
 
   it('reports created vs skipped scaffold entries', async () => {
