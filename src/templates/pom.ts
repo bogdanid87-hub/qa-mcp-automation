@@ -8,6 +8,8 @@
  * matter what the model returns.
  */
 
+import { config } from '../config.js';
+
 export type SelectorType = 'data-qa' | 'role' | 'label' | 'placeholder' | 'text' | 'css';
 
 export interface PomLocatorSpec {
@@ -28,18 +30,21 @@ export interface PomLocatorSpec {
   roleName?: string;
 }
 
-export type ParentClass = 'SitePage' | 'ProductListPage' | 'BasePage';
-
 export interface PomSpec {
   className: string;
-  parentClass: ParentClass;
+  parentClass: string;
   locators: PomLocatorSpec[];
 }
 
-const PARENT_IMPORT_PATH: Record<ParentClass, string> = {
-  SitePage: './SitePage',
-  ProductListPage: './ProductListPage',
-  BasePage: './BasePage',
+/**
+ * Maps each parent class this project's POMs can extend to its import path —
+ * derived from config.pom so a project with different/no intermediate classes
+ * doesn't get a hardcoded ProductListPage/SitePage/BasePage union.
+ */
+const PARENT_IMPORT_PATH: Record<string, string> = {
+  [config.pom.baseClass]: `./${config.pom.baseClass}`,
+  [config.pom.siteClass]: `./${config.pom.siteClass}`,
+  ...Object.fromEntries(config.pom.intermediateClasses.map((ic) => [ic.name, ic.importFrom])),
 };
 
 const SELECTOR_TYPES: SelectorType[] = ['data-qa', 'role', 'label', 'placeholder', 'text', 'css'];

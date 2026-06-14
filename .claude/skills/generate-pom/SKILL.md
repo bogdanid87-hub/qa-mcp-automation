@@ -27,6 +27,11 @@ Same hierarchy as [qa-conventions](../qa-conventions/SKILL.md#pom-hierarchy):
 for pages with no site nav/footer. Locators already owned by parent classes are
 never re-declared.
 
+This hierarchy and the "already owned" locators/methods are generated from
+`mcp-qa.config.json`'s `pom` section plus the live `pages/<SiteClass>.ts` /
+intermediate-class files — `ProductListPage`/`/products`/etc. are this project's
+current values, not fixed in the prompt.
+
 ## Locator priority
 
 Same order as [qa-conventions](../qa-conventions/SKILL.md#locators): `[data-qa]` →

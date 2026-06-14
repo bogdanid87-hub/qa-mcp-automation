@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { compilePom, validatePomSpec, type PomSpec } from '../templates/pom';
+import { config } from '../config';
 
 const BASE_SPEC: PomSpec = {
   className: 'LoginPage',
@@ -29,6 +30,13 @@ describe('compilePom', () => {
     const base = compilePom({ ...BASE_SPEC, parentClass: 'BasePage' });
     expect(base).toContain(`import { BasePage } from './BasePage';`);
     expect(base).toContain('export class LoginPage extends BasePage {');
+  });
+
+  it('derives the parent import path from config.pom rather than a hardcoded map', () => {
+    const intermediate = config.pom.intermediateClasses[0];
+    const out = compilePom({ ...BASE_SPEC, parentClass: intermediate.name });
+    expect(out).toContain(`import { ${intermediate.name} } from '${intermediate.importFrom}';`);
+    expect(out).toContain(`export class LoginPage extends ${intermediate.name} {`);
   });
 
   it('compiles each selector type to the expected locator expression', () => {
@@ -82,7 +90,7 @@ describe('validatePomSpec', () => {
 
   it('rejects an unrecognised parent class', () => {
     expect(() =>
-      validatePomSpec({ ...BASE_SPEC, parentClass: 'Bogus' as PomSpec['parentClass'] }),
+      validatePomSpec({ ...BASE_SPEC, parentClass: 'Bogus' }),
     ).toThrow(/invalid parent class/);
   });
 

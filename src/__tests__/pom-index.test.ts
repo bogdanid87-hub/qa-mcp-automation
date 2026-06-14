@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { buildPomIndex, extractExportedFunctionNames, extractPomMethods, formatPomIndex } from '../tools/pom-index';
+import { buildPomIndex, extractExportedFunctionNames, extractPomMethods, formatOwnedElements, formatPomIndex } from '../tools/pom-index';
 
 const ROOT = process.cwd();
 
@@ -178,6 +178,101 @@ async function asyncHelper() {}
 export function syncExport() {}
 `;
     expect(extractExportedFunctionNames(content)).toEqual(['helper', 'asyncHelper', 'syncExport']);
+  });
+});
+
+describe('formatOwnedElements', () => {
+  it('lists locators for an entry with locators only', () => {
+    const content = `
+export class FooPage extends BasePage {
+  readonly emailInput: Locator;
+
+  constructor(page: Page) {
+    super(page);
+    this.emailInput = page.locator('#email');
+  }
+}
+`;
+    const out = formatOwnedElements([{ name: 'FooPage', file: 'pages/FooPage.ts', content }]);
+    expect(out).toContain('**FooPage** (pages/FooPage.ts) already owns');
+    expect(out).toContain('#email → emailInput');
+  });
+
+  it('lists methods for an entry with methods only', () => {
+    const content = `
+export class FooPage extends BasePage {
+  async clickSubmit(): Promise<void> {
+    await this.page.click('#submit');
+  }
+}
+`;
+    const out = formatOwnedElements([{ name: 'FooPage', file: 'pages/FooPage.ts', content }]);
+    expect(out).toContain('**FooPage** (pages/FooPage.ts) already owns');
+    expect(out).toContain('clickSubmit()');
+  });
+
+  it('lists both locators and methods for one entry', () => {
+    const content = `
+export class FooPage extends BasePage {
+  readonly emailInput: Locator;
+
+  constructor(page: Page) {
+    super(page);
+    this.emailInput = page.locator('#email');
+  }
+
+  async submit(email: string): Promise<void> {
+    await this.emailInput.fill(email);
+  }
+}
+`;
+    const out = formatOwnedElements([{ name: 'FooPage', file: 'pages/FooPage.ts', content }]);
+    expect(out).toContain('#email → emailInput');
+    expect(out).toContain('submit(email: string)');
+  });
+
+  it('renders one block per entry for multiple entries', () => {
+    const siteContent = `
+export class SitePage extends BasePage {
+  readonly footer: Locator;
+  constructor(page: Page) {
+    super(page);
+    this.footer = page.locator('#footer');
+  }
+}
+`;
+    const listContent = `
+export class ProductListPage extends SitePage {
+  readonly productCards: Locator;
+  constructor(page: Page) {
+    super(page);
+    this.productCards = page.locator('.product-image-wrapper');
+  }
+}
+`;
+    const out = formatOwnedElements([
+      { name: 'SitePage', file: 'pages/SitePage.ts', content: siteContent },
+      { name: 'ProductListPage', file: 'pages/ProductListPage.ts', content: listContent },
+    ]);
+    expect(out).toContain('**SitePage** (pages/SitePage.ts) already owns');
+    expect(out).toContain('#footer → footer');
+    expect(out).toContain('**ProductListPage** (pages/ProductListPage.ts) already owns');
+    expect(out).toContain('.product-image-wrapper → productCards');
+  });
+
+  it('returns an empty string when no entry has locators or methods', () => {
+    const content = `
+export class SitePage extends BasePage {
+  constructor(page: Page) {
+    super(page);
+  }
+}
+`;
+    expect(formatOwnedElements([{ name: 'SitePage', file: 'pages/SitePage.ts', content }])).toBe('');
+  });
+
+  it('returns an empty string for an empty entries array', () => {
+    expect(formatOwnedElements([])).toBe('');
   });
 });
 
