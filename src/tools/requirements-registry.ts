@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { readTestCases, TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH, extractReqIds, extractTestType, TestType } from './test-registry.js';
+import { readTestCases, TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH, extractReqIds, extractTestType, TestType, TestEntry } from './test-registry.js';
 
 /**
  * Requirements traceability ledger (REQUIREMENTS.md) — maps stable REQ IDs
@@ -232,4 +232,60 @@ export async function computeRequirementsCoverage(): Promise<RequirementsCoverag
     uncovered,
     functionalOnly,
   };
+}
+
+export interface StaleReqTag {
+  reqId: string;
+  spec: string;
+  name: string;
+}
+
+/**
+ * Tests tagged @req:REQ-XXX where REQ-XXX has no entry in REQUIREMENTS.md — a
+ * typo, a hand-added tag, or a ledger entry removed by hand-editing the
+ * (nominally append-only) file.
+ */
+export function findStaleReqTags(
+  requirements: RequirementEntry[],
+  allEntries: TestEntry[],
+): StaleReqTag[] {
+  const knownIds = new Set(requirements.map(r => r.id));
+  const stale: StaleReqTag[] = [];
+  for (const entry of allEntries) {
+    for (const reqId of extractReqIds(entry.name)) {
+      if (!knownIds.has(reqId)) stale.push({ reqId, spec: entry.spec, name: entry.name });
+    }
+  }
+  return stale;
+}
+
+export interface RequirementsDrift {
+  staleReqTags: StaleReqTag[];
+  uncovered: RequirementEntry[];
+}
+
+/**
+ * Cross-references REQUIREMENTS.md against @req: tags across all three test
+ * registries for sync_registry's drift report. Returns null when
+ * REQUIREMENTS.md doesn't exist, its ledger is empty, or there's nothing to
+ * report (no stale tags, no uncovered requirements).
+ */
+export async function computeRequirementsDrift(): Promise<RequirementsDrift | null> {
+  const content = await readFile(REQUIREMENTS_PATH, 'utf-8').catch(() => null);
+  if (content === null) return null;
+
+  const requirements = parseRequirements(content);
+  if (requirements.length === 0) return null;
+
+  const registries = await Promise.all(
+    [TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH].map(p => readTestCases(p)),
+  );
+  const allEntries = registries.flat();
+
+  const staleReqTags = findStaleReqTags(requirements, allEntries);
+  const coveredReqIds = new Set(allEntries.flatMap(e => extractReqIds(e.name)));
+  const uncovered = findUncoveredRequirements(requirements, coveredReqIds);
+
+  if (staleReqTags.length === 0 && uncovered.length === 0) return null;
+  return { staleReqTags, uncovered };
 }

@@ -20,6 +20,7 @@ import {
 } from './tools/test-registry.js';
 import { readAnnotationFromSpec } from './tools/annotations.js';
 import { markBacklogEntriesCovered } from './tools/analyze-coverage.js';
+import { computeRequirementsDrift } from './tools/requirements-registry.js';
 
 async function main(): Promise<void> {
   console.log('\n⏳ Running full test suite...\n');
@@ -257,6 +258,26 @@ async function main(): Promise<void> {
     console.log('✅ TEST_CASES.md and TEST_API.md are already in sync — nothing to update.\n');
   } else {
     console.log(`✅ Registries updated (${changed} change${changed === 1 ? '' : 's'}).\n`);
+  }
+
+  // ── Requirements ledger drift (REQUIREMENTS.md <-> @req: tags) ────────────
+  const reqDrift = await computeRequirementsDrift();
+  if (reqDrift) {
+    if (reqDrift.staleReqTags.length > 0) {
+      console.log(`⚠️  ${reqDrift.staleReqTags.length} test(s) tagged with a @req: ID not in REQUIREMENTS.md:`);
+      for (const t of reqDrift.staleReqTags) {
+        console.log(`   ${t.spec} › ${t.name}`);
+        console.log(`     @req:${t.reqId} has no entry in REQUIREMENTS.md`);
+      }
+      console.log('   Fix manually: correct the tag, or add the missing entry to REQUIREMENTS.md.\n');
+    }
+    if (reqDrift.uncovered.length > 0) {
+      console.log(`📋 ${reqDrift.uncovered.length} requirement(s) in REQUIREMENTS.md have no covering test:`);
+      for (const r of reqDrift.uncovered) {
+        console.log(`   ${r.id}: ${r.text}`);
+      }
+      console.log('   Run `npm run analyze_coverage` for the full deterministic gap report.\n');
+    }
   }
 }
 
