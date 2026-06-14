@@ -19,7 +19,7 @@ asked for it or you're making a direct edit yourself.
   happening outside the normal tool flow — explain what's changing and why before
   touching the file.
 - **When given permission to fix tests manually**, also close the root cause:
-  update `src/prompts/system.ts` (CORE_RULES), `src/prompts/learned-rules.md`, or
+  update `src/prompts/system.ts` (CORE_RULES), `learned-rules.md`, or
   the relevant tool code so the same issue can't recur. A fix that only patches one
   file without addressing the cause is incomplete.
 

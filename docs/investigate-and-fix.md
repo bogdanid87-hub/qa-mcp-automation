@@ -109,7 +109,7 @@ code alone, it sees the real page.
 
 ## Learned rules
 
-After every successful fix, the lesson is written to `src/prompts/learned-rules.md`
+After every successful fix, the lesson is written to `learned-rules.md`
 in this format:
 
 ```markdown

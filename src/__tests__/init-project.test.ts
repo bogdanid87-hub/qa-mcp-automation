@@ -89,6 +89,10 @@ describe('initProjectTool', () => {
 
     const fixtures = await readFile(join(dir, 'fixtures/index.ts'), 'utf-8');
     expect(fixtures).toContain('base.extend');
+
+    const learnedRules = await readFile(join(dir, 'learned-rules.md'), 'utf-8');
+    expect(learnedRules).toContain('<!-- rules-start -->');
+    expect(learnedRules).toContain('<!-- rules-end -->');
   });
 
   it('reports created vs skipped scaffold entries', async () => {
@@ -97,6 +101,7 @@ describe('initProjectTool', () => {
     expect(text).toContain('✅ created  pages/BasePage.ts');
     expect(text).toContain('✅ created  pages/SitePage.ts');
     expect(text).toContain('✅ created  fixtures/index.ts');
+    expect(text).toContain('✅ created  learned-rules.md');
   });
 
   it('refuses to overwrite an existing config without force, and skips scaffolding', async () => {
@@ -123,11 +128,14 @@ describe('initProjectTool', () => {
   it('never overwrites an existing scaffold file, even with force: true', async () => {
     await mkdir(join(dir, 'pages'), { recursive: true });
     await writeFile(join(dir, 'pages/SitePage.ts'), '// my custom SitePage\n', 'utf-8');
+    await writeFile(join(dir, 'learned-rules.md'), '# My existing rules\n', 'utf-8');
 
     const result = await initProjectTool({ ...BASE_ARGS, outputPath, force: true });
     expect(result.content[0].text).toContain('⏭️  skipped (already exists)  pages/SitePage.ts');
+    expect(result.content[0].text).toContain('⏭️  skipped (already exists)  learned-rules.md');
 
     expect(await readFile(join(dir, 'pages/SitePage.ts'), 'utf-8')).toBe('// my custom SitePage\n');
+    expect(await readFile(join(dir, 'learned-rules.md'), 'utf-8')).toBe('# My existing rules\n');
   });
 
   it('rejects an invalid siteUrl without writing anything', async () => {

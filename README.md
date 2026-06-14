@@ -47,7 +47,7 @@ Several deliberate decisions to reduce API spend while preserving output quality
 - **No-progress detection** — the fix loop computes a signature from each failure's failing tests + normalized error/locator/expectation lines; if a fix attempt's re-verification produces the same signature as before, the loop stops rather than repeating a fix that had no effect
 
 ### Self-improving rule system
-Every time `investigate_and_fix` resolves a failure, the root cause and the corrective rule are appended to `src/prompts/learned-rules.md`. This file is injected into the system prompt on every subsequent generation call. Twenty-two lessons have been accumulated so far (wrong import styles, carousel visibility quirks, `waitForLoadState` timing on this specific site, etc.) — the system gets measurably better with each fixed bug.
+Every time `investigate_and_fix` resolves a failure, the root cause and the corrective rule are appended to `learned-rules.md`. This file is injected into the system prompt on every subsequent generation call. Twenty-two lessons have been accumulated so far (wrong import styles, carousel visibility quirks, `waitForLoadState` timing on this specific site, etc.) — the system gets measurably better with each fixed bug.
 
 ### Failure classification before fixing
 The fix tool classifies every failure as a **code bug** or an **app bug** before touching anything. Code bugs (wrong locator, bad selector, import error) are fixed automatically. App bugs — where the test is correct but the application under test behaves differently from the assertion — are never "fixed" by changing the test. Instead a structured `/* ⚠️ APP BUG */` annotation is written into the spec and the entry is recorded in `TESTS_UI.md` under a separate section. This preserves the test as documentation of a real defect.
@@ -332,7 +332,7 @@ qa-mcp-automation/
 
 ## Rules Claude follows
 
-Enforced via `src/prompts/system.ts`; lessons from failures auto-appended to `src/prompts/learned-rules.md`.
+Enforced via `src/prompts/system.ts`; lessons from failures auto-appended to `learned-rules.md`.
 
 | Rule | Detail |
 |------|--------|

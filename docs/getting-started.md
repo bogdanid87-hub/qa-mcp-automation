@@ -157,7 +157,7 @@ failing page, then asks Claude to diagnose and patch the code. If it works:
   Lesson learned: Always verify data-qa values against the live DOM before writing locators.
 ```
 
-The lesson is appended to `src/prompts/learned-rules.md` and injected into every
+The lesson is appended to `learned-rules.md` and injected into every
 future generation call.
 
 ### When auto-fix can't resolve it

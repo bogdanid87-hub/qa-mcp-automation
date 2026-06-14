@@ -102,7 +102,6 @@ src/
     budget.ts           — token cost tracking per session
   prompts/
     system.ts           — system prompt sent to Claude on every generate call
-    learned-rules.md    — lessons auto-appended by investigate_and_fix
 ```
 
 ---

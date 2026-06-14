@@ -2,7 +2,9 @@ import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { buildPomHierarchyDescription } from '../config.js';
 
-const LEARNED_RULES_PATH = join(__dirname, 'learned-rules.md');
+// Resolved against the consuming project's root (not __dirname/engine-relative) so
+// each project's accumulated lessons live in its own repo, not inside this package.
+const LEARNED_RULES_PATH = join(process.cwd(), 'learned-rules.md');
 
 /**
  * Core rules — static, version-controlled, hand-maintained.
@@ -435,15 +437,22 @@ Only include files that are NEW or CHANGED. Do not repeat unchanged existing fil
 `;
 
 /**
+ * Extract the content between the <!-- rules-start --> / <!-- rules-end --> markers,
+ * falling back to the trimmed full content if the markers aren't present.
+ */
+export function extractRulesSection(content: string): string {
+  const match = content.match(/<!-- rules-start -->([\s\S]*?)<!-- rules-end -->/);
+  return match ? match[1].trim() : content.trim();
+}
+
+/**
  * Read the auto-generated learned rules file and return its content.
  * Returns an empty string if the file doesn't exist yet.
  */
 async function loadLearnedRules(): Promise<string> {
   try {
     const content = await readFile(LEARNED_RULES_PATH, 'utf-8');
-    // Extract just the rules section between the markers
-    const match = content.match(/<!-- rules-start -->([\s\S]*?)<!-- rules-end -->/);
-    return match ? match[1].trim() : content.trim();
+    return extractRulesSection(content);
   } catch {
     return '';
   }
@@ -506,6 +515,28 @@ export function buildUserBlocks(opts: {
 }
 
 /**
+ * Compute the updated learned-rules.md content with a new rule appended inside the
+ * <!-- rules-start/end --> markers. Pure — the rule number is derived from the count
+ * of existing `## Rule NNN` headings in `content`.
+ */
+export function appendRuleToContent(content: string, rule: { problemClass: string; rule: string }): string {
+  // Count existing rules to assign a number
+  const existingCount = (content.match(/^## Rule \d+/gm) ?? []).length;
+  const num = String(existingCount + 1).padStart(3, '0');
+
+  // Extract a short title from the first sentence of problemClass
+  const title = rule.problemClass.split('.')[0].replace(/^Problem class:\s*/i, '').trim();
+
+  const entry = `
+## Rule ${num} — ${title}
+**Problem class**: ${rule.problemClass}
+**Rule**: ${rule.rule}
+`;
+
+  return content.replace('<!-- rules-end -->', `${entry}<!-- rules-end -->`);
+}
+
+/**
  * Persist a new rule discovered during failure investigation.
  * Appends inside the <!-- rules-start/end --> markers.
  */
@@ -521,21 +552,7 @@ export async function appendLearnedRule(rule: {
     content = `# Learned Rules\n\n<!-- rules-start -->\n<!-- rules-end -->\n`;
   }
 
-  // Count existing rules to assign a number
-  const existingCount = (content.match(/^## Rule \d+/gm) ?? []).length;
-  const num = String(existingCount + 1).padStart(3, '0');
-
-  // Extract a short title from the first sentence of problemClass
-  const title = rule.problemClass.split('.')[0].replace(/^Problem class:\s*/i, '').trim();
-
-  const entry = `
-## Rule ${num} — ${title}
-**Problem class**: ${rule.problemClass}
-**Rule**: ${rule.rule}
-`;
-
-  const updated = content.replace('<!-- rules-end -->', `${entry}<!-- rules-end -->`);
-  await writeFile(LEARNED_RULES_PATH, updated, 'utf-8');
+  await writeFile(LEARNED_RULES_PATH, appendRuleToContent(content, rule), 'utf-8');
 }
 
 /** Build the user-turn prompt that includes existing codebase context + test description. */

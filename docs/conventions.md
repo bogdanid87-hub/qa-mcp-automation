@@ -111,7 +111,7 @@ file.
 
 **Why:** previously the model emitted the full `.ts` file as a JSON string
 field, which could (and did) contain markdown fences or other malformed TS —
-see Rule 010 in `src/prompts/learned-rules.md`. Asking for locator metadata
+see Rule 010 in `learned-rules.md`. Asking for locator metadata
 instead and compiling the file ourselves makes fences/malformed-TS
 structurally impossible for generated POMs.
 
