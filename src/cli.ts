@@ -145,7 +145,7 @@ function parseArgs(argv: string[]): {
 // Batch mode (multiple tests in one file)
 // ---------------------------------------------------------------------------
 async function runBatch(
-  sections: Array<{ description: string; testName?: string; pagePaths?: string[]; specFile?: string }>,
+  sections: Array<{ description: string; testName?: string; pagePaths?: string[]; specFile?: string; reqId?: string }>,
   budget: TokenBudget,
 ): Promise<void> {
   console.log(`\n📋 Batch mode — ${sections.length} tests to generate\n`);
@@ -176,7 +176,10 @@ async function runBatch(
     const combinedDescription = group.length === 1
       ? group[0].description
       : `Generate ALL of the following ${group.length} tests in one complete spec file:\n\n` +
-        group.map((s) => `### ${s.testName ?? 'Test'}:\n${s.description}`).join('\n\n---\n\n');
+        group.map((s) => {
+          const reqSuffix = s.reqId && s.reqId.toLowerCase() !== 'none' ? ` (tag with @req:${s.reqId})` : '';
+          return `### ${s.testName ?? 'Test'}${reqSuffix}:\n${s.description}`;
+        }).join('\n\n---\n\n');
 
     console.log(`⏳ Generating ${group.length} test${group.length === 1 ? '' : 's'} in one call (no auto-fix in batch)...\n`);
     const before = await snapshotFiles();
@@ -184,6 +187,7 @@ async function runBatch(
       description: combinedDescription,
       spec_file:   specFile,
       type:        'api',
+      req_id:      group.length === 1 ? group[0].reqId : undefined,
       budget,
     });
     console.log(result.content[0]?.text ?? '');
@@ -211,6 +215,7 @@ async function runBatch(
         test_name: section.testName,
         page_paths: section.pagePaths,
         spec_file: section.specFile,
+        req_id: section.reqId,
         budget,
       });
     } catch (err) {
@@ -375,6 +380,7 @@ async function main(): Promise<void> {
   let testName = args.testName;
   let pagePaths = args.pagePaths;
   let specFile: string | undefined;
+  let reqId: string | undefined;
 
   // Default input file to workspace/my-test.txt if nothing else provided
   const resolvedFilePath = args.filePath ?? (!args.description ? WORKSPACE_PATHS.myTest : undefined);
@@ -407,6 +413,7 @@ async function main(): Promise<void> {
     if (!testName && meta.testName) testName = meta.testName;
     if (!pagePaths && meta.pagePaths) pagePaths = meta.pagePaths;
     if (meta.specFile) specFile = meta.specFile;
+    reqId = meta.reqId;
   }
 
   if (!description) {
@@ -527,7 +534,7 @@ async function main(): Promise<void> {
   console.log('\n⏳ Generating test...\n');
 
   let before = await snapshotFiles();
-  const result = await generateTestTool({ description, page_paths: pagePaths, test_name: testName, spec_file: specFile, type: args.type, budget });
+  const result = await generateTestTool({ description, page_paths: pagePaths, test_name: testName, spec_file: specFile, req_id: reqId, type: args.type, budget });
   const output = result.content[0]?.text ?? '';
   console.log(output);
 

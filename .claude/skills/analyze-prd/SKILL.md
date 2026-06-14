@@ -88,7 +88,9 @@ comments — they don't affect generation.
 - **`source_ref`** / **`req_id`** — for `direct` blocks traced to a numbered PRD
   item ("API 5", "US-01"...), `req_id` is a stable `REQ-...` ID derived from
   `source_ref` and recorded in the root-level, append-only `REQUIREMENTS.md`
-  ledger. Both are `none` for `suggested`/unnumbered blocks.
+  ledger. Both are `none` for `suggested`/unnumbered blocks. When such a block is
+  generated via [generate-test](../generate-test/SKILL.md), the resulting test is
+  tagged `@req:REQ-...`, linking it back to its `REQUIREMENTS.md` entry.
 
 **Ordering:** all `direct` first, then `suggested`. Within `direct`, numbered
 source items keep their order; otherwise critical → high → medium → low. Within

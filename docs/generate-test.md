@@ -49,6 +49,7 @@ generating it. Three directives at the top control metadata:
 # test_name: login-happy-path       ← names the test() and describe() blocks
 # spec_file: tests/ui/auth.spec.ts  ← target file (created if missing, appended if exists)
 # page_paths: /login, /             ← pages to inspect live for correct locators
+# req_id: REQ-API-005                ← optional — tags the generated test @req:REQ-API-005
 
 Test the login flow with valid credentials.
 1. Navigate to the login page
@@ -56,6 +57,11 @@ Test the login flow with valid credentials.
 3. Click the Login button
 4. Verify "Logged in as <username>" appears in the nav
 ```
+
+`req_id` is typically pre-filled by `analyze_prd` in `prd-tests.txt` blocks (see
+[analyze-prd.md](analyze-prd.md)) — when present, the generated test's name gets an
+`@req:REQ-...` tag alongside `@smoke`/`@regression`/`@critical`, linking it back to
+the matching entry in `REQUIREMENTS.md`.
 
 Run it:
 ```bash
@@ -119,6 +125,7 @@ Generate a test for the login flow — page_paths: /login
 | `test_name` | no | Names the `test()` and `describe()` blocks — does not control the filename |
 | `spec_file` | no | Target spec file, e.g. `"tests/ui/auth.spec.ts"` or `"tests/e2e/place-order.spec.ts"` |
 | `page_paths` | no (recommended) | Pages to inspect live for accurate locators |
+| `req_id` | no | REQ ID from `REQUIREMENTS.md` / a `prd-tests.txt` block's `# req_id` field — when set, the generated test is tagged `@req:REQ-NNN` |
 | `dry_run` | no | When `true`: generate code but do NOT write files or run the test. Returns a preview showing the target spec path and proposed code — call again without it to proceed. |
 
 > **Always provide `page_paths`** when you know which pages the test touches.

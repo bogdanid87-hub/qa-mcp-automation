@@ -33,6 +33,7 @@ export function createServer(): McpServer {
         description: z.string().describe('What to test — plain text or numbered steps. For API tests describe the endpoint, method, and assertions. For UI tests describe the user flow.'),
         test_name: z.string().optional().describe('Names the test() and describe() blocks. Does not control the filename.'),
         spec_file: z.string().optional().describe('Target spec file, e.g. "tests/ui/cart.spec.ts", "tests/api/products.spec.ts", or "tests/e2e/checkout.spec.ts". Inferred if omitted. tests/api/ prefix forces API generation.'),
+        req_id: z.string().optional().describe('REQ ID from REQUIREMENTS.md / prd-tests.txt\'s # req_id field — when set, the generated test is tagged @req:REQ-NNN for traceability'),
         page_paths: z.array(z.string()).optional().describe('Page paths to inspect live for accurate locators (UI/E2E tests). The server navigates each page headlessly and extracts real DOM elements.'),
         dry_run: z.boolean().optional().describe('When true: generate the test but do NOT write files or run it. Returns a preview showing the target spec path and proposed code. Call again without dry_run to write and run.'),
         type: z.enum(['auto', 'ui', 'e2e', 'api', 'visual']).optional().describe('Override auto-detection: "api" → request fixture, "visual" → screenshot comparison in tests/visual/, "ui"/"e2e" → browser. Omit to auto-detect.'),

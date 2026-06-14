@@ -19,6 +19,16 @@ describe('parseFileMetadata', () => {
     expect(parseFileMetadata(raw).pagePaths).toEqual(['/login', '/']);
   });
 
+  it('extracts req_id directive', () => {
+    const raw = '# req_id: REQ-API-005\nShould search for a product.';
+    expect(parseFileMetadata(raw).reqId).toBe('REQ-API-005');
+  });
+
+  it('leaves reqId undefined when no req_id directive is present', () => {
+    const raw = 'Should submit the contact form successfully.';
+    expect(parseFileMetadata(raw).reqId).toBeUndefined();
+  });
+
   it('strips other comment lines from description', () => {
     const raw = '# This is just a comment\nActual description.';
     const result = parseFileMetadata(raw);
@@ -97,5 +107,18 @@ describe('parseMultipleSections', () => {
     const sections = parseMultipleSections(raw);
     expect(sections[0].specFile).toBe('tests/ui/a.spec.ts');
     expect(sections[1].specFile).toBe('tests/ui/b.spec.ts');
+  });
+
+  it('carries reqId per section', () => {
+    const raw = [
+      '# req_id: REQ-API-005',
+      'Description A.',
+      '---',
+      '# req_id: none',
+      'Description B.',
+    ].join('\n');
+    const sections = parseMultipleSections(raw);
+    expect(sections[0].reqId).toBe('REQ-API-005');
+    expect(sections[1].reqId).toBe('none');
   });
 });

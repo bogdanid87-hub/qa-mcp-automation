@@ -7,6 +7,7 @@ import {
   extractSourceRef,
   injectReqId,
   extractRequirementText,
+  formatReqHint,
   assignReqIds,
 } from '../tools/requirements-registry';
 
@@ -83,6 +84,23 @@ describe('extractRequirementText', () => {
 
   it('returns "" when no description line exists', () => {
     expect(extractRequirementText('# test_name: x\n# reason: y')).toBe('');
+  });
+});
+
+describe('formatReqHint', () => {
+  it('returns "" when reqId is undefined', () => {
+    expect(formatReqHint(undefined)).toBe('');
+  });
+
+  it('returns "" for the literal "none" (case-insensitive)', () => {
+    expect(formatReqHint('none')).toBe('');
+    expect(formatReqHint('NONE')).toBe('');
+  });
+
+  it('returns a hint sentence containing @req:<id> for a real req id', () => {
+    const hint = formatReqHint('REQ-API-005');
+    expect(hint).toContain('@req:REQ-API-005');
+    expect(hint).toContain('Requirement hint');
   });
 });
 

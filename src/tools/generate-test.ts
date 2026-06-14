@@ -18,6 +18,7 @@ import { extractJson } from './llm-utils.js';
 import { extractExportedFunctionNames, extractPomMethods } from './pom-index.js';
 import { reviewGeneratedFiles } from './review-generation.js';
 import { TokenBudget } from './budget.js';
+import { formatReqHint } from './requirements-registry.js';
 
 const ROOT = process.cwd();
 export const MODEL = 'claude-sonnet-4-6';
@@ -198,6 +199,8 @@ export async function generateTestTool(args: {
   test_name?: string;
   page_paths?: string[];
   spec_file?: string;
+  /** REQ ID from prd-tests.txt's # req_id field — when set (and not "none"), the generated test is tagged @req:REQ-NNN. */
+  req_id?: string;
   proposalsOnly?: boolean;
   /**
    * When true: generate the test and POM code but do NOT write any files or run the test.
@@ -251,6 +254,7 @@ export async function generateTestTool(args: {
       description: args.description,
       test_name:   args.test_name,
       spec_file:   args.spec_file,
+      req_id:      args.req_id,
     });
   }
 
@@ -338,6 +342,7 @@ export async function generateTestTool(args: {
   const description = [
     args.test_name ? `Test name hint: ${args.test_name}` : '',
     args.spec_file ? `Spec file hint: write this test into ${args.spec_file} — create the file if it does not exist, or add to it if it does` : '',
+    formatReqHint(args.req_id),
     args.description + limitationsNote,
   ].filter(Boolean).join('\n\n');
 

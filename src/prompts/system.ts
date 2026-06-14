@@ -206,6 +206,11 @@ Apply tags in the test() call:
 Playwright can then filter: npx playwright test --grep @smoke
 Every generated test should have at least @regression. Add @smoke only to the primary happy-path test per feature. Add @critical to any test that touches cart totals, payment, or order placement.
 
+If the test description includes a "Requirement hint: tag this test with
+@req:REQ-NNN", append @req:REQ-NNN to the test name as well, after the other tags:
+  test('should add product to cart @smoke @critical @req:REQ-API-005', async (...) => { ... });
+This is an optional traceability tag — only add it when a Requirement hint is present.
+
 ### E2E helper functions — extract shared flows
 E2E tests frequently share multi-step setup flows (login, add product to cart, navigate to
 checkout). Never duplicate these flows across test bodies — extract them as helper functions.

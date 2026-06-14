@@ -120,6 +120,17 @@ export function extractRequirementText(block: string): string {
   return text.length > 140 ? `${text.slice(0, 137)}...` : text;
 }
 
+/**
+ * Build the "Requirement hint" line for generate_test's prompt, or '' when no
+ * req_id is provided (undefined, empty, or the literal "none" written by
+ * analyze_prd for unnumbered/suggested blocks).
+ */
+export function formatReqHint(reqId?: string): string {
+  if (!reqId || reqId.toLowerCase() === 'none') return '';
+  return `Requirement hint: tag this test with @req:${reqId} — append it to the ` +
+    `test name after any @smoke/@regression/@critical tags.`;
+}
+
 export interface AssignReqIdsResult {
   rawText: string;
   updatedRequirementsContent: string;
