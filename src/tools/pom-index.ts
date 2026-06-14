@@ -25,6 +25,14 @@ export interface PomLocator {
   selector: string;
 }
 
+export interface OwnedElementsEntry {
+  /** Class name, e.g. "SitePage" or "ProductListPage". */
+  name: string;
+  /** Path relative to the project root, e.g. "pages/SitePage.ts". */
+  file: string;
+  content: string;
+}
+
 const CLASS_RE = /export\s+class\s+(\w+)(?:\s+extends\s+(\w+))?/;
 
 const METHOD_RE = /async\s+(\w+)\s*(?:<[^>]*>)?\s*\(([^)]*)\)\s*(?::\s*([^{]+?))?\s*\{/g;
@@ -79,6 +87,43 @@ export function extractExportedFunctionNames(content: string): string[] {
   return [...content.matchAll(/(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*[(<]/g)]
     .map((m) => m[1])
     .filter((name) => name !== 'default');
+}
+
+/**
+ * Render a "selectors/methods already owned by parent classes" block for
+ * generate_pom's system prompt, derived from each entry's actual file content
+ * via extractPomLocators/extractPomMethods. Returns '' if no entry has any
+ * locators or methods (e.g. a fresh project's placeholder SitePage.ts).
+ *
+ * Coverage matches extractPomLocators's documented limitation — locators built
+ * with getByRole/.filter()/variables aren't listed, so the prompt also tells
+ * the model to check the file directly for anything that looks related.
+ */
+export function formatOwnedElements(entries: OwnedElementsEntry[]): string {
+  const blocks: string[] = [];
+  for (const entry of entries) {
+    const locators = extractPomLocators(entry.content);
+    const methods = extractPomMethods(entry.content);
+    if (locators.length === 0 && methods.length === 0) continue;
+
+    const lines = [`**${entry.name}** (${entry.file}) already owns — do NOT re-declare these under a different name:`];
+    for (const loc of locators) lines.push(`  ${loc.selector} → ${loc.name}`);
+    for (const m of methods) lines.push(`  ${m.name}(${m.params})`);
+    blocks.push(lines.join('\n'));
+  }
+  if (blocks.length === 0) return '';
+
+  return [
+    '',
+    '## Elements already owned by parent classes',
+    '',
+    ...blocks,
+    '',
+    'Before writing any locator, check whether its selector matches one of the entries above — if yes, skip it ' +
+      'entirely instead of re-declaring it under a different name. Additional nav/footer/modal locators may exist ' +
+      "on these classes beyond what's listed above — check the file directly if a selector you're about to add " +
+      'looks related.',
+  ].join('\n');
 }
 
 /** Build a method-signature index for a set of POM files. Files with no `export class` are skipped. */

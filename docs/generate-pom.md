@@ -24,10 +24,17 @@ The test rarely fails due to bad locators because they came from the real page.
 
 ## What the generated file looks like
 
-The tool selects the correct parent class based on the page being inspected:
+The tool selects the correct parent class based on the page being inspected. The
+hierarchy below — and the "already owned, do not re-declare" locators/methods — are
+derived from `mcp-qa.config.json`'s `pom` section plus the live `pages/<SiteClass>.ts`
+and intermediate-class files, not hardcoded in the prompt:
 - `SitePage` for any full site page (has nav bar and footer)
 - `ProductListPage` for pages with a product card grid (`/products`, `/category_products/:id`, `/brand_products/:slug`)
 - `BasePage` only for pages with no site nav/footer
+
+(`ProductListPage`/`/products`/etc. are this project's current `pom.intermediateClasses`
+values — a project with a different hierarchy, or none yet, gets correct guidance
+generated from its own config instead.)
 
 ```typescript
 import { Page, Locator } from '@playwright/test';

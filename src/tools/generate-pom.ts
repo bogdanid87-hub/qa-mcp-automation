@@ -9,7 +9,8 @@ import type { SiteAuditJson } from './site-audit.js';
 import { safeWrite } from '../lib/safe-write.js';
 import { TokenBudget } from './budget.js';
 import { compilePom, type PomSpec } from '../templates/pom.js';
-import { SITE_URL, SITE_HOST } from '../config.js';
+import { config, SITE_URL, SITE_HOST, buildPomHierarchyDescription } from '../config.js';
+import { formatOwnedElements, type OwnedElementsEntry } from './pom-index.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -142,7 +143,42 @@ function formatValidation(results: LocatorResult[]): string {
 
 // ── System prompt ────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `\
+/**
+ * Read the source of config.pom's site class and each intermediate class
+ * (e.g. SitePage, ProductListPage) so buildSystemPrompt can list the
+ * locators/methods they already own. Missing files (a fresh project's
+ * not-yet-written classes) are skipped, not errors.
+ */
+async function loadOwnedElements(): Promise<OwnedElementsEntry[]> {
+  const { pom } = config;
+  const classes = [
+    { name: pom.siteClass, importFrom: `./${pom.siteClass}` },
+    ...pom.intermediateClasses.map((ic) => ({ name: ic.name, importFrom: ic.importFrom })),
+  ];
+
+  const entries: OwnedElementsEntry[] = [];
+  for (const c of classes) {
+    const relPath = `pages/${c.importFrom.replace(/^\.\//, '')}.ts`;
+    try {
+      const content = await readFile(join(ROOT, relPath), 'utf-8');
+      entries.push({ name: c.name, file: relPath, content });
+    } catch {
+      // Class not written yet (e.g. fresh project) — nothing to report.
+    }
+  }
+  return entries;
+}
+
+/**
+ * Build the system prompt for generate_pom. The POM hierarchy and "already
+ * owned" locators/methods are derived from config.pom + the live pages/*.ts
+ * files, so a project with a different hierarchy (or none yet) gets correct
+ * guidance instead of this project's hardcoded SitePage/ProductListPage shape.
+ */
+export async function buildSystemPrompt(): Promise<string> {
+  const ownedElementsBlock = formatOwnedElements(await loadOwnedElements());
+
+  return `\
 You are a Playwright Page Object Model generator for ${SITE_HOST}.
 
 Given a live DOM snapshot of a single page, identify the locators for a
@@ -152,37 +188,13 @@ so you never write TypeScript syntax directly.
 
 ## POM hierarchy — choose the correct parent class
 
-Step 1 — Does the page have a grid of multiple product cards (class "product-image-wrapper" repeated)?
-  YES → extend ProductListPage (import from './ProductListPage')
-        Only these pages qualify: /products, /category_products/:id, /brand_products/:slug
-  NO  → continue to step 2
+${buildPomHierarchyDescription()}
 
-Step 2 — Does the page have the site nav bar and footer (#header, #footer)?
-  YES → extend SitePage (import from './SitePage')
-        This includes single-product pages (/product_details/:id), cart, login, checkout, contact, etc.
-  NO  → extend BasePage (import from './BasePage')
-
-## Locators already owned by parent classes — NEVER re-declare these
-
-SitePage owns (selector → property name):
-  #header             → (nav container, no direct locator)
-  #footer             → footer
-  .navbar-nav a[href="/"] → logo (approx)
-  a[href="/contact_us"] → navContactUs
-  a[href="/products"]  → navProducts
-  [data-qa="logged-in-as"] → loggedInAs
-  #susbscribe_email   → subscribeEmailInput
-  #subscribe          → subscribeBtn
-  #success-subscribe  → subscribeSuccessMessage
-
-ProductListPage additionally owns:
-  .product-image-wrapper  → productCards
-  #cartModal              → cartModal
-  .close-modal (continue shopping btn) → continueShoppingBtn
-  a[href="/view_cart"] inside cartModal → viewCartLink
-
-Before writing any locator, check: does its selector match anything in the lists above?
-If yes — skip it entirely. Do not re-declare it with a different property name.
+If the page's URL path matches one of the "paths" patterns listed above for an
+intermediate class, extend that class. Otherwise, if the page has the site's
+universal nav/footer elements (see the site class above), extend it. Otherwise,
+extend the base class.
+${ownedElementsBlock}
 
 ## What to include
 - The primary CTA of the page (the main submit/add-to-cart/place-order button) — always include this
@@ -212,12 +224,13 @@ Raw JSON only (no markdown fences, no explanation):
 {
   "file": "pages/SomePage.ts",
   "className": "SomePage",
-  "parentClass": "SitePage",
+  "parentClass": "${config.pom.siteClass}",
   "locators": [
     { "name": "emailInput", "selectorType": "data-qa", "value": "login-email" },
     { "name": "loginButton", "selectorType": "role", "value": "button", "roleName": "Login" }
   ]
 }`;
+}
 
 
 interface PomSpecResponse extends PomSpec {
@@ -251,6 +264,7 @@ async function generateForSnapshot(opts: {
   apiKey: string;
   localAvailable: boolean;
   auditContext: string | null;
+  systemPrompt: string;
   budget?: TokenBudget;
 }): Promise<{ file: string; content: string } | null> {
   const nameHint = opts.nameHint ? `\n\nClass name to use: ${opts.nameHint}` : '';
@@ -259,7 +273,7 @@ async function generateForSnapshot(opts: {
 
   if (opts.localAvailable) {
     try {
-      const raw = await callLocalLlm(SYSTEM_PROMPT, userPrompt);
+      const raw = await callLocalLlm(opts.systemPrompt, userPrompt);
       return compileResponse(raw);
     } catch (err) {
       process.stderr.write(`[local-llm] POM generation failed (${(err as Error).message}) — falling back to Claude API\n`);
@@ -271,7 +285,7 @@ async function generateForSnapshot(opts: {
   // Soft pre-flight warning only — same TokenBudget.wouldExceed() check as the
   // fix loop, but POM generation never aborts on it (see investigate-fix.ts).
   if (opts.budget) {
-    const estimatedInputTokens = TokenBudget.estimateTokens(SYSTEM_PROMPT + userPrompt);
+    const estimatedInputTokens = TokenBudget.estimateTokens(opts.systemPrompt + userPrompt);
     if (opts.budget.wouldExceed(estimatedInputTokens, MAX_OUTPUT_TOKENS)) {
       console.warn(
         `\n⚠️  Generating ${opts.path} may push spend past the $${opts.budget.limitUsd.toFixed(2)} budget ` +
@@ -286,7 +300,7 @@ async function generateForSnapshot(opts: {
     const message = await client.messages.create({
       model: MODEL,
       max_tokens: MAX_OUTPUT_TOKENS,
-      system: SYSTEM_PROMPT,
+      system: opts.systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
     const raw = message.content
@@ -346,6 +360,8 @@ export async function generatePomTool(args: {
     return { content: [{ type: 'text', text: `Page inspection failed: ${err.message}` }] };
   }
 
+  const systemPrompt = await buildSystemPrompt();
+
   // Load audit context and generate POMs in parallel
   const results = await Promise.all(
     snapshots.map(async (snap) => {
@@ -357,6 +373,7 @@ export async function generatePomTool(args: {
         apiKey,
         localAvailable,
         auditContext,
+        systemPrompt,
         budget: args.budget,
       });
     }),
