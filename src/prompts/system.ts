@@ -211,6 +211,18 @@ If the test description includes a "Requirement hint: tag this test with
   test('should add product to cart @smoke @critical @req:REQ-API-005', async (...) => { ... });
 This is an optional traceability tag — only add it when a Requirement hint is present.
 
+Also classify each test's *type* by adding at most one of these tags, after @req: if
+present:
+- @negative — the test exercises invalid input, missing/incorrect data, or an
+  error/failure path (wrong credentials, missing required fields, malformed
+  requests, 4xx/5xx responses, validation messages).
+- @boundary — the test exercises an edge value or limit (empty results, zero/one/
+  many items, maximum length, exact counts).
+
+Leave both tags off for ordinary happy-path tests — the absence of @negative and
+@boundary means "functional" by default, the same optional convention as @req::
+  test('should show an error for invalid login credentials @regression @negative', async (...) => { ... });
+
 ### E2E helper functions — extract shared flows
 E2E tests frequently share multi-step setup flows (login, add product to cart, navigate to
 checkout). Never duplicate these flows across test bodies — extract them as helper functions.

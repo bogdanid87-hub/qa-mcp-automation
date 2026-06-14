@@ -63,6 +63,13 @@ Test the login flow with valid credentials.
 `@req:REQ-...` tag alongside `@smoke`/`@regression`/`@critical`, linking it back to
 the matching entry in `REQUIREMENTS.md`.
 
+Every generated test is also self-classified by *type*: Claude adds `@negative` (an
+invalid-input or error/failure-path test) or `@boundary` (an edge-value or limit
+test) when applicable — at most one, after `@req:` if present. Ordinary happy-path
+tests get neither tag; absence of both means "functional", the same optional
+convention as `@req:`. Example: `should show an error for invalid login credentials
+@regression @negative`.
+
 Run it:
 ```bash
 npm run generate -- --file my-test.txt

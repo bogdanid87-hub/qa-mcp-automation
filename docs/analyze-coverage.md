@@ -139,6 +139,21 @@ gap analysis above. The same counts also appear as a "Requirements: X/Y covered"
 line in `npm run status` output. When `REQUIREMENTS.md` doesn't exist yet (the
 default for most projects), both are omitted entirely.
 
+Each covering test is also classified by *type* — `functional`/`negative`/`boundary`,
+from its `@negative`/`@boundary` tags (see [generate-test](generate-test.md)). When a
+covered requirement's tests are all `functional` (no `@negative`/`@boundary` test
+yet), it's listed separately under "**Covered by functional tests only**", and the
+"Requirements: X/Y covered" summary line gets a `, N functional-only` suffix.
+
+### Test types (`npm run status`)
+
+Independent of `REQUIREMENTS.md`, `npm run status` always shows a project-wide
+"🏷️ Test types: N functional · N negative · N boundary" line, counting
+`@negative`/`@boundary` tags across TESTS_UI.md/TESTS_API.md/TESTS_E2E.md (Visual is
+excluded — screenshot-diff tests don't fit this taxonomy). When `REQUIREMENTS.md` has
+entries, `npm run status`'s "Requirements" section also lists any functional-only
+requirements under a "🟡 Functional-only" sub-heading.
+
 ---
 
 ## Deep mode (--deep)

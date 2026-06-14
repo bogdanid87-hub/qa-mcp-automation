@@ -71,6 +71,11 @@ Test the login flow with valid credentials.
 [analyze-prd](../analyze-prd/SKILL.md) and
 [docs/analyze-prd.md#requirements-traceability--requirementsmd](../../../docs/analyze-prd.md#requirements-traceability--requirementsmd).
 
+Every generated test is also self-classified by type: `@negative` (invalid input /
+error path) or `@boundary` (edge value / limit) — at most one, after `@req:` if
+present. Absence of both means "functional" (the default for ordinary happy-path
+tests).
+
 ```bash
 npm run generate -- --file my-test.txt
 ```

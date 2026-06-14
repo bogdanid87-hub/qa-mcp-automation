@@ -37,6 +37,14 @@ registries) — requirements with zero covering tests. Zero token cost, always
 project-wide. The same counts appear in `npm run status` as "Requirements: X/Y
 covered". Omitted entirely when `REQUIREMENTS.md` doesn't exist or is empty.
 
+Covering tests are also classified by `@negative`/`@boundary` tags (see
+[generate-test](../generate-test/SKILL.md)). Requirements covered only by
+`functional` tests are listed under "**Covered by functional tests only**", and the
+summary line gets a `, N functional-only` suffix.
+
+Independent of `REQUIREMENTS.md`, `npm run status` always shows "🏷️ Test types: N
+functional · N negative · N boundary" (project-wide, UI/API/E2E only).
+
 ## Priority vs Risk
 
 **Risk** = intrinsic criticality of the *feature* (critical: checkout/payment/cart

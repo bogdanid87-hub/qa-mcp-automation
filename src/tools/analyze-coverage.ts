@@ -243,6 +243,13 @@ export function buildReport(result: CoverageResult, contextLabel: string, reqCov
         '',
       );
     }
+    if (reqCoverage.functionalOnly.length > 0) {
+      lines.push(
+        `**Covered by functional tests only** (no @negative/@boundary test yet — ${reqCoverage.functionalOnly.length}):`,
+        ...reqCoverage.functionalOnly.map(r => `- ${r.id}: ${r.text}`),
+        '',
+      );
+    }
   }
 
   return lines.join('\n');
@@ -551,7 +558,10 @@ export async function analyzeCoverageTool(args: {
     const gapSuffix = reqCoverage.uncovered.length > 0
       ? ` (${reqCoverage.uncovered.length} gap${reqCoverage.uncovered.length === 1 ? '' : 's'})`
       : '';
-    lines.push(`Requirements: ${reqCoverage.covered}/${reqCoverage.total} covered${gapSuffix}`);
+    const functionalOnlySuffix = reqCoverage.functionalOnly.length > 0
+      ? `, ${reqCoverage.functionalOnly.length} functional-only`
+      : '';
+    lines.push(`Requirements: ${reqCoverage.covered}/${reqCoverage.total} covered${gapSuffix}${functionalOnlySuffix}`);
   }
 
   if (args.generateGaps && total > 0) {
