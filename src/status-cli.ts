@@ -9,6 +9,7 @@ import {
   TESTS_E2E_PATH,
   TESTS_VISUAL_PATH,
 } from './tools/test-registry.js';
+import { computeRequirementsCoverage } from './tools/requirements-registry.js';
 
 const ROOT = process.cwd();
 
@@ -170,6 +171,17 @@ async function main(): Promise<void> {
       console.log(`     ${connector} ${s.scope}  —  ${tiers}`);
     }
     console.log('     Run: npm run analyze_coverage -- --gaps  (to refresh)');
+  }
+
+  // ── Requirements coverage ────────────────────────────────────────────────────
+  const reqCoverage = await computeRequirementsCoverage();
+  if (reqCoverage) {
+    const icon = reqCoverage.uncovered.length === 0 ? '✅' : '⚠️ ';
+    console.log(`\n  ${icon} Requirements: ${reqCoverage.covered}/${reqCoverage.total} covered`);
+    for (const [i, r] of reqCoverage.uncovered.entries()) {
+      const connector = i === reqCoverage.uncovered.length - 1 ? '└' : '├';
+      console.log(`     ${connector} ${r.id}: ${r.text}`);
+    }
   }
 
   // ── Spec files on disk ───────────────────────────────────────────────────────

@@ -126,6 +126,19 @@ runnable:
 npm run generate -- --file coverage-gaps.txt
 ```
 
+### Requirements coverage (deterministic)
+
+When `REQUIREMENTS.md` exists and has at least one entry (see
+[analyze-prd](analyze-prd.md)'s traceability ledger), `coverage-report.md` ends with
+a "## Requirements coverage (deterministic)" section — a free, zero-token cross-check
+computed as `requirementIds (from REQUIREMENTS.md) − reqIdsCoveredByTests (parsed
+from `@req:REQ-NNN` tags across TESTS_UI.md/TESTS_API.md/TESTS_E2E.md)`. It lists any
+requirements with zero covering tests. This is computed project-wide regardless of
+`spec_path`/`registry_path` scoping, and complements (doesn't replace) the LLM-driven
+gap analysis above. The same counts also appear as a "Requirements: X/Y covered"
+line in `npm run status` output. When `REQUIREMENTS.md` doesn't exist yet (the
+default for most projects), both are omitted entirely.
+
 ---
 
 ## Deep mode (--deep)

@@ -28,6 +28,15 @@ batch format for direct generation.
 Complementary: `analyze_prd` builds the initial backlog; `analyze_coverage` finds
 what drifted or was never written. See [analyze-prd](../analyze-prd/SKILL.md).
 
+## Requirements coverage (deterministic)
+
+When `REQUIREMENTS.md` has entries (assigned by `analyze_prd`), `coverage-report.md`
+ends with a free "## Requirements coverage (deterministic)" section: `requirementIds
+− reqIdsCoveredByTests` (parsed from `@req:REQ-NNN` tags across all three
+registries) — requirements with zero covering tests. Zero token cost, always
+project-wide. The same counts appear in `npm run status` as "Requirements: X/Y
+covered". Omitted entirely when `REQUIREMENTS.md` doesn't exist or is empty.
+
 ## Priority vs Risk
 
 **Risk** = intrinsic criticality of the *feature* (critical: checkout/payment/cart

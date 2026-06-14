@@ -208,6 +208,11 @@ export function normalizeTestName(name: string): string {
     .trim();
 }
 
+/** Extract all @req:REQ-... tags from a test name, e.g. "...@req:REQ-API-005" -> ["REQ-API-005"]. */
+export function extractReqIds(name: string): string[] {
+  return [...name.matchAll(/@req:(REQ-[A-Z0-9-]+)/g)].map(m => m[1]);
+}
+
 // ─── Output parsers ───────────────────────────────────────────────────────────
 
 export interface FailingTestResult {

@@ -4,6 +4,7 @@ import { readFile, readdir } from 'fs/promises';
 import { join } from 'path';
 import { safeWrite } from '../lib/safe-write.js';
 import { TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH, registryForSpec } from './test-registry.js';
+import { computeRequirementsCoverage, RequirementsCoverage } from './requirements-registry.js';
 import { readAppKnowledge, readAppLimitations } from './generate-app-knowledge.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { chromium } from '@playwright/test';
@@ -176,7 +177,7 @@ interface CoverageResult {
   recommendations: string;
 }
 
-function buildReport(result: CoverageResult, contextLabel: string): string {
+export function buildReport(result: CoverageResult, contextLabel: string, reqCoverage?: RequirementsCoverage | null): string {
   const date = new Date().toISOString().slice(0, 10);
   const total = result.gaps.length;
   const { critical = 0, high = 0, medium = 0, low = 0 } = result.priority_summary;
@@ -227,6 +228,23 @@ function buildReport(result: CoverageResult, contextLabel: string): string {
   }
 
   lines.push('---', '', '## Recommendations', '', result.recommendations, '');
+
+  if (reqCoverage) {
+    lines.push('---', '', '## Requirements coverage (deterministic)', '');
+    if (reqCoverage.uncovered.length === 0) {
+      lines.push(`REQUIREMENTS.md: ${reqCoverage.covered}/${reqCoverage.total} requirements covered by at least one test. ✅`, '');
+    } else {
+      lines.push(
+        `REQUIREMENTS.md: ${reqCoverage.covered}/${reqCoverage.total} requirements covered by at least one test ` +
+        `(${reqCoverage.uncovered.length} gap${reqCoverage.uncovered.length === 1 ? '' : 's'})`,
+        '',
+        '**Uncovered:**',
+        ...reqCoverage.uncovered.map(r => `- ${r.id}: ${r.text}`),
+        '',
+      );
+    }
+  }
+
   return lines.join('\n');
 }
 
@@ -404,6 +422,10 @@ export async function analyzeCoverageTool(args: {
   const contextParts: string[] = [];
   const labels: string[] = [];
 
+  // Deterministic, zero-token cross-check: REQUIREMENTS.md vs @req: tags in the
+  // registries — independent of spec/registry scoping (project-wide always).
+  const reqCoverage = await computeRequirementsCoverage();
+
   // Include app knowledge base and limitations if they exist.
   const [appKnowledge, appLimitations] = await Promise.all([readAppKnowledge(), readAppLimitations()]);
   if (appKnowledge) {
@@ -513,7 +535,7 @@ export async function analyzeCoverageTool(args: {
   // ── Write outputs ────────────────────────────────────────────────────────────
   const outDir = args.outputDir ?? WORKSPACE;
   const reportPath = join(outDir, 'coverage-report.md');
-  const report = buildReport(result, contextLabel);
+  const report = buildReport(result, contextLabel, reqCoverage);
   await safeWrite(reportPath, report, { allowOverwrite: true });
 
   const { critical = 0, high = 0, medium = 0, low = 0 } = result.priority_summary;
@@ -524,6 +546,13 @@ export async function analyzeCoverageTool(args: {
     '',
     `Report written to: coverage-report.md`,
   ];
+
+  if (reqCoverage) {
+    const gapSuffix = reqCoverage.uncovered.length > 0
+      ? ` (${reqCoverage.uncovered.length} gap${reqCoverage.uncovered.length === 1 ? '' : 's'})`
+      : '';
+    lines.push(`Requirements: ${reqCoverage.covered}/${reqCoverage.total} covered${gapSuffix}`);
+  }
 
   if (args.generateGaps && total > 0) {
     const gapsPath = join(outDir, 'coverage-gaps.txt');

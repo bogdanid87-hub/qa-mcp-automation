@@ -3,6 +3,7 @@ import {
   parsePassingTests,
   parseFailingTestsFromOutput,
   normalizeTestName,
+  extractReqIds,
   deriveRisk,
   registryForSpec,
   parseTestCases,
@@ -104,6 +105,22 @@ describe('normalizeTestName', () => {
 
   it('makes "should place an order" and "should place order" compare equal', () => {
     expect(normalizeTestName('should place an order')).toBe(normalizeTestName('should place order'));
+  });
+});
+
+// ── extractReqIds ──────────────────────────────────────────────────────────────
+
+describe('extractReqIds', () => {
+  it('extracts a @req: tag among other tags', () => {
+    expect(extractReqIds('should add product to cart @smoke @critical @req:REQ-API-005')).toEqual(['REQ-API-005']);
+  });
+
+  it('returns an empty array when no @req: tag is present', () => {
+    expect(extractReqIds('should add product to cart @smoke @critical')).toEqual([]);
+  });
+
+  it('extracts multiple @req: tags', () => {
+    expect(extractReqIds('should do two things @req:REQ-001 @req:REQ-API-002')).toEqual(['REQ-001', 'REQ-API-002']);
   });
 });
 
