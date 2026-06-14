@@ -238,6 +238,11 @@ append-only ledger.
 - `suggested` blocks and `direct` blocks from an unnumbered source get
   `# req_id: none` — no fake granularity is invented for prose PRDs.
 
+When a `# req_id`-bearing block is generated via `generate_test` (see
+[generate-test.md](generate-test.md)), the resulting test's name is tagged
+`@req:REQ-...`, making `REQUIREMENTS.md` entries greppable back to their covering
+test(s).
+
 ---
 
 ### Custom output file

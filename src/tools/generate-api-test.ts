@@ -11,6 +11,7 @@ import { markBacklogEntriesCovered } from './analyze-coverage.js';
 import { autoFixFailure } from './investigate-fix.js';
 import { writeTestAnnotation } from './annotations.js';
 import { extractJson } from './llm-utils.js';
+import { formatReqHint } from './requirements-registry.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -253,6 +254,8 @@ export async function generateApiTestTool(args: {
   description: string;
   test_name?: string;
   spec_file?: string;
+  /** REQ ID from prd-tests.txt's # req_id field — when set (and not "none"), the generated test is tagged @req:REQ-NNN. */
+  req_id?: string;
   budget?: TokenBudget;
   noAutoFix?: boolean;
 }): Promise<{
@@ -283,6 +286,7 @@ export async function generateApiTestTool(args: {
   const userPrompt = [
     args.test_name ? `Test name hint: ${args.test_name}` : '',
     specInstruction,
+    formatReqHint(args.req_id),
     args.description,
   ].filter(Boolean).join('\n\n');
 

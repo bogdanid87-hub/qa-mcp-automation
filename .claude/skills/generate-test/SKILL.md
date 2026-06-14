@@ -44,6 +44,7 @@ Generate a test for the login flow — page_paths: /login
 | `test_name` | no | Names `test()`/`describe()` — not the filename |
 | `spec_file` | no | Target spec, e.g. `"tests/ui/auth.spec.ts"` |
 | `page_paths` | no (recommended) | Pages to inspect live for accurate locators |
+| `req_id` | no | REQ ID from `REQUIREMENTS.md` / a `prd-tests.txt` block's `# req_id` — tags the generated test `@req:REQ-NNN` |
 | `dry_run` | no | `true` = generate code but don't write/run — preview only |
 
 **Always provide `page_paths`** when known — without it, locators are invented
@@ -59,11 +60,16 @@ tokens to the auto-fix loop — recommended for any page without an existing POM
 # test_name: login-happy-path       ← names test()/describe()
 # spec_file: tests/ui/auth.spec.ts  ← target file (created/appended)
 # page_paths: /login, /             ← pages to inspect live
+# req_id: REQ-API-005                ← optional, tags the test @req:REQ-API-005
 
 Test the login flow with valid credentials.
 1. Navigate to the login page
 ...
 ```
+
+`req_id` is typically pre-filled by `analyze_prd` in `prd-tests.txt` blocks — see
+[analyze-prd](../analyze-prd/SKILL.md) and
+[docs/analyze-prd.md#requirements-traceability--requirementsmd](../../../docs/analyze-prd.md#requirements-traceability--requirementsmd).
 
 ```bash
 npm run generate -- --file my-test.txt

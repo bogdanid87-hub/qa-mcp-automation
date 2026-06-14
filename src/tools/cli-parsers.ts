@@ -11,15 +11,17 @@ export function parseFileMetadata(raw: string): {
   testName?: string;
   pagePaths?: string[];
   specFile?: string;
+  reqId?: string;
 } {
   const lines = raw.split('\n');
   let testName: string | undefined;
   let pagePaths: string[] | undefined;
   let specFile: string | undefined;
+  let reqId: string | undefined;
   const descLines: string[] = [];
 
   for (const line of lines) {
-    const meta = line.match(/^#\s*(test_name|page_paths|spec_file)\s*:\s*(.+)/i);
+    const meta = line.match(/^#\s*(test_name|page_paths|spec_file|req_id)\s*:\s*(.+)/i);
     if (meta) {
       const [, key, value] = meta;
       if (key.toLowerCase() === 'test_name') testName = value.trim();
@@ -28,6 +30,7 @@ export function parseFileMetadata(raw: string): {
         if (paths.length) pagePaths = paths;
       }
       if (key.toLowerCase() === 'spec_file') specFile = value.trim();
+      if (key.toLowerCase() === 'req_id') reqId = value.trim();
     } else if (line.startsWith('#')) {
       // skip other comment/instruction lines
     } else {
@@ -35,7 +38,7 @@ export function parseFileMetadata(raw: string): {
     }
   }
 
-  return { description: descLines.join('\n').trim(), testName, pagePaths, specFile };
+  return { description: descLines.join('\n').trim(), testName, pagePaths, specFile, reqId };
 }
 
 /**
@@ -49,6 +52,7 @@ export function parseMultipleSections(raw: string): Array<{
   testName?: string;
   pagePaths?: string[];
   specFile?: string;
+  reqId?: string;
 }> {
   const sections = raw.split(/^-{3,}\s*$/m).map(s => s.trim()).filter(Boolean);
   if (sections.length <= 1) return [];
