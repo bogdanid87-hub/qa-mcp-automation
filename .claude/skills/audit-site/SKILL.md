@@ -40,6 +40,14 @@ uniqueness per run), `PAYMENT` (card data with `expiryYear` always 2 years out).
 Re-run with `--mode data` when the catalogue changes. The file is committed —
 contributors don't need to re-run it.
 
+## App knowledge candidates
+
+Both modes append observations to `workspace/APP_KNOWLEDGE_CANDIDATES.md` for human
+review (see [generate-app-knowledge](../generate-app-knowledge/SKILL.md)): structure
+mode notes universal elements/partial-overlap groups; data mode flags when no search
+input is found on `/products`. Re-running the same mode against the same URL
+replaces that source's section.
+
 ## Interpreting the structure output
 
 - **Universal elements** → `SitePage`/`BasePage`

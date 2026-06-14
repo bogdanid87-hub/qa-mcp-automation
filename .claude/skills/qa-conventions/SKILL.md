@@ -119,4 +119,5 @@ finishes, pass or fail, each wrapped in try/catch.
 | `TESTS_API.md` | same — `tests/api/` only |
 | `learned-rules.md` | `investigate_and_fix` (auto-appends after every fix) |
 | `REQUIREMENTS.md` | `analyze_prd` (auto-appends new `REQ-...` IDs; append-only — descriptions may be hand-edited, IDs may not) |
+| `workspace/APP_KNOWLEDGE_CANDIDATES.md` | `analyze_coverage`, `audit_site` (appends/replaces a dated section per source; staging area for human review — promote into `APP_KNOWLEDGE_MANUAL.md`/`APP_LIMITATIONS.md`, then delete; not read by any tool) |
 | `test-data/.auth/guest.json` | `global.setup.ts` (Playwright setup) |

@@ -15,6 +15,7 @@ const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
 export const APP_KNOWLEDGE_PATH = WORKSPACE_PATHS.appKnowledge;
 export const APP_KNOWLEDGE_MANUAL_PATH = WORKSPACE_PATHS.appKnowledgeManual;
+export const APP_KNOWLEDGE_CANDIDATES_PATH = WORKSPACE_PATHS.appKnowledgeCandidates;
 export const APP_LIMITATIONS_PATH = join(ROOT, 'APP_LIMITATIONS.md');
 const GAPS_BACKLOG_PATH = WORKSPACE_PATHS.gapsBacklog;
 const COVERAGE_REPORT_PATH = WORKSPACE_PATHS.coverageReport;
@@ -190,4 +191,60 @@ export async function readAppLimitations(): Promise<string> {
   } catch {
     return '';
   }
+}
+
+// ── App knowledge candidates ─────────────────────────────────────────────────
+
+export interface KnowledgeCandidate {
+  area: string;
+  note: string;
+}
+
+const CANDIDATES_HEADER = `# App Knowledge Candidates
+
+Observations from \`analyze_coverage\` / \`audit_site\` that may be worth promoting
+into \`APP_KNOWLEDGE_MANUAL.md\` (durable app-behavior knowledge, picked up by the
+next \`generate_app_knowledge\` run) or \`APP_LIMITATIONS.md\` (missing features — edit
+by hand). Not read by any tool. Review periodically and delete entries once promoted
+or dismissed.
+
+`;
+
+/**
+ * Format one dated section for a source (e.g. "analyze_coverage — <scope>" or
+ * "audit_site — <url> (structure|data)"). Pure — no file I/O.
+ */
+export function buildCandidatesSection(candidates: KnowledgeCandidate[], source: string, date: string): string {
+  const items = candidates.map(c => `- **${c.area}**: ${c.note}`).join('\n');
+  return [`## ${date} — ${source}`, '', items, '', '---', ''].join('\n');
+}
+
+/**
+ * Replace an existing section for the same `source`, or append. Mirrors
+ * analyze-coverage.ts's appendToGapsBacklog regex-replace pattern. Pure — no file I/O.
+ */
+export function mergeCandidatesSection(existing: string, section: string, source: string): string {
+  const escapedSource = source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const existingSection = new RegExp(`## [^\\n]+ — ${escapedSource}\\n[\\s\\S]*?---\\n`);
+  return existingSection.test(existing)
+    ? existing.replace(existingSection, section)
+    : existing.trimEnd() + '\n\n' + section;
+}
+
+/**
+ * Append candidate APP_KNOWLEDGE entries from analyze_coverage / audit_site to
+ * APP_KNOWLEDGE_CANDIDATES.md for human review. Replaces any existing section for
+ * the same `source`. No-op when `candidates` is empty.
+ */
+export async function appendKnowledgeCandidates(candidates: KnowledgeCandidate[], source: string, date: string): Promise<void> {
+  if (candidates.length === 0) return;
+  let existing: string;
+  try {
+    existing = await readFile(APP_KNOWLEDGE_CANDIDATES_PATH, 'utf-8');
+  } catch {
+    existing = CANDIDATES_HEADER;
+  }
+  if (!existing.startsWith('# App Knowledge Candidates')) existing = CANDIDATES_HEADER + existing;
+  const section = buildCandidatesSection(candidates, source, date);
+  await safeWrite(APP_KNOWLEDGE_CANDIDATES_PATH, mergeCandidatesSection(existing, section, source), { allowOverwrite: true });
 }

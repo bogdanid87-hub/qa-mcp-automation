@@ -126,6 +126,17 @@ runnable:
 npm run generate -- --file coverage-gaps.txt
 ```
 
+### App knowledge candidates
+
+Separately from test gaps, Claude may note observations about how the app
+*behaves* — quirks, missing features, unusual validation — that aren't already
+captured in `APP_KNOWLEDGE.md`/`APP_LIMITATIONS.md`. When present, these are
+appended to `workspace/APP_KNOWLEDGE_CANDIDATES.md` under an
+`analyze_coverage — <scope>` section for human review (see
+[generate-app-knowledge](generate-app-knowledge.md#staging-area-workspaceapp_knowledge_candidatesmd)).
+Re-running against the same scope replaces that section rather than duplicating it.
+Often empty — only populated when there's something genuinely new to report.
+
 ### Requirements coverage (deterministic)
 
 When `REQUIREMENTS.md` exists and has at least one entry (see

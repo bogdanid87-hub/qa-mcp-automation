@@ -126,6 +126,41 @@ features" block in Claude's prompt.
 
 ---
 
+## Staging area: `workspace/APP_KNOWLEDGE_CANDIDATES.md`
+
+`analyze_coverage` and `audit_site` write **candidate** knowledge entries here —
+observations about app behaviour or site structure that aren't yet captured in
+`APP_KNOWLEDGE_MANUAL.md` or `APP_LIMITATIONS.md`. This file is gitignored
+(`workspace/`), not read by any tool, and exists purely for human review.
+
+Each run appends a dated section, one per source:
+
+```markdown
+## 2026-06-14 — analyze_coverage — tests/ui/checkout.spec.ts
+
+- **Checkout**: Guest checkout is not offered — login is required before /checkout.
+
+---
+
+## 2026-06-14 — audit_site — https://example.com (structure)
+
+- **Site structure**: Universal elements across all 6 page types: #header, #footer, .navbar.
+  2 partial-overlap group(s). See site-audit-report.md for the full POM hierarchy
+  recommendation...
+
+---
+```
+
+Re-running the same tool against the same scope **replaces** that source's section
+rather than duplicating it. Review periodically:
+- Promote durable app-behaviour notes into `APP_KNOWLEDGE_MANUAL.md` (picked up by the
+  next `generate_app_knowledge` run).
+- Promote missing-feature observations into `APP_LIMITATIONS.md` (hand-edit).
+- Delete entries once promoted or dismissed — nothing else reads this file, so stale
+  entries just accumulate.
+
+---
+
 ## Cost
 
 One Claude Sonnet 4.6 call. Typical input: a few hundred tokens of structured data.

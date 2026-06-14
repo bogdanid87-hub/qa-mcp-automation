@@ -45,6 +45,14 @@ summary line gets a `, N functional-only` suffix.
 Independent of `REQUIREMENTS.md`, `npm run status` always shows "🏷️ Test types: N
 functional · N negative · N boundary" (project-wide, UI/API/E2E only).
 
+## App knowledge candidates
+
+When Claude observes something about app *behaviour* not already covered by
+`APP_KNOWLEDGE.md`/`APP_LIMITATIONS.md`, it's appended to
+`workspace/APP_KNOWLEDGE_CANDIDATES.md` under an `analyze_coverage — <scope>` section
+for human review (replaces on re-run, doesn't duplicate). See
+[generate-app-knowledge](../generate-app-knowledge/SKILL.md). Often empty.
+
 ## Priority vs Risk
 
 **Risk** = intrinsic criticality of the *feature* (critical: checkout/payment/cart
