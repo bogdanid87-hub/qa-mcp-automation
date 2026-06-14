@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "src/index.ts",
+  "exports": {
+    ".": "./src/server.ts"
+  },
   "scripts": {
     "generate": "tsx src/cli.ts",
     "fix": "tsx src/fix-cli.ts",
