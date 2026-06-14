@@ -188,8 +188,9 @@ Test that a guest user can complete a full purchase.
 9. Verify the order placed confirmation
 ```
 
-The `# source:`, `# risk:`, `# priority:`, `# note:`, and `# reason:` lines are
-informational — they are treated as comments by the generate tool and do not affect test generation.
+The `# source:`, `# risk:`, `# priority:`, `# note:`, `# reason:`, `# source_ref:`,
+and `# req_id:` lines are informational — they are treated as comments by the
+generate tool and do not affect test generation.
 
 **`# risk:`** — the intrinsic criticality of the *feature* being tested (critical/high/medium/low).
 
@@ -205,12 +206,39 @@ Omitting this test leaves a documented requirement uncovered.
 **`# source: suggested`** — Claude's addition: a negative case, boundary condition, or
 complementary scenario not explicitly mentioned in the source. Review before generating.
 
+**`# source_ref:`** — for `direct` blocks traced to a numbered PRD item ("API 5",
+"Test Case 3", "US-01", "Req-4"...), the verbatim numbering label. `none` for
+`suggested` blocks or unnumbered sources.
+
+**`# req_id:`** — a stable ID derived from `# source_ref` (e.g. "API 5" →
+`REQ-API-005`), assigned automatically and recorded in `REQUIREMENTS.md`. `none`
+when `# source_ref` is `none`.
+
 **Ordering in the output file:**
 
 1. All `direct` tests come first, then all `suggested` tests.
 2. Within `direct`: if the source has numbered items (API 1, API 2, Test Case 3…),
    that order is preserved exactly. If not, tests are ordered by priority: critical → high → medium → low.
 3. Within `suggested`: always ordered by priority: critical → high → medium → low.
+
+---
+
+## Requirements traceability — REQUIREMENTS.md
+
+When a block traces back to a numbered PRD item, `analyze_prd` assigns it a stable
+`REQ-NNN` / `REQ-<PREFIX>-NNN` ID (written as `# req_id:` in `prd-tests.txt`) and
+appends a one-line description to `REQUIREMENTS.md` — a root-level, git-tracked,
+append-only ledger.
+
+- IDs are permanent once assigned — re-running `analyze_prd` against a revised PRD
+  reuses the same ID for the same numbered item and adds zero new entries if nothing
+  changed.
+- Safe to hand-edit a description for clarity; do not renumber or remove existing
+  entries.
+- `suggested` blocks and `direct` blocks from an unnumbered source get
+  `# req_id: none` — no fake granularity is invented for prose PRDs.
+
+---
 
 ### Custom output file
 

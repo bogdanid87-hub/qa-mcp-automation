@@ -331,6 +331,7 @@ qa-mcp-automation/
 │
 ├── mcp-qa.config.json                ← project config — site URL, folders, registries, risk tiers, POM hierarchy
 ├── learned-rules.md                  ← lessons auto-appended by investigate_and_fix, injected into the system prompt
+├── REQUIREMENTS.md                   ← REQ ID traceability ledger, auto-appended by analyze_prd
 ├── CLAUDE.md                         ← auto-loaded by Claude Code — project context
 ├── TOOLS.md                          ← quick tool index
 ├── TESTS_UI.md                       ← auto-updated registry for UI tests

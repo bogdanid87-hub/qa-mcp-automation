@@ -5,6 +5,8 @@
  * of the baseline scaffold.
  */
 
+export { REQUIREMENTS_TEMPLATE } from './requirements-registry.js';
+
 export const BASE_PAGE_TEMPLATE = `import { Page } from '@playwright/test';
 
 /**

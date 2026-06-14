@@ -1,9 +1,10 @@
 import { WORKSPACE_PATHS, ensureWorkspace } from '../workspace.js';
 import Anthropic from '@anthropic-ai/sdk';
-import { readFile } from 'fs/promises';
+import { readFile, writeFile } from 'fs/promises';
 import { readTestCases, readBrokenTests } from './test-registry.js';
 import { readAppKnowledge, readAppLimitations } from './generate-app-knowledge.js';
 import { safeWrite } from '../lib/safe-write.js';
+import { assignReqIds, REQUIREMENTS_PATH, REQUIREMENTS_TEMPLATE } from './requirements-registry.js';
 const MODEL = 'claude-sonnet-4-6';
 
 const SYSTEM_PROMPT = `\
@@ -61,6 +62,9 @@ Each block must follow this exact structure:
 # priority: critical|high|medium|low
 # note: optional — only include when priority differs from risk
 # reason: One sentence explaining why this risk level applies.
+# source_ref: verbatim numbering label used for test_name above (e.g. "API 5",
+#             "Req-4", "US-01", "Test Case 12") — ONLY for direct blocks from a
+#             numbered source (Ordering rule 2). Otherwise: none
 
 Plain description or numbered steps of what the test does and asserts.
 Be specific enough that a developer can implement it without reading the PRD.
@@ -104,6 +108,9 @@ spec_file rules:
   "API 5: POST To Search Product" → api-5-post-to-search-product
   "Test Case 12 — Login" → test-case-12-login
   This preserves traceability back to the source document.
+- source_ref must reproduce the exact label used to derive test_name above — e.g. if
+  test_name is "api-5-post-to-search-product", source_ref is "API 5". For suggested
+  blocks, or direct blocks from an unnumbered source, source_ref is "none".
 - page_paths should list every page the test navigates to on automationexercise.com
 - Generate the happy path AND the most important negative/edge cases as separate blocks
 - Do NOT suggest tests already in the covered list — only genuinely new scenarios
@@ -269,6 +276,15 @@ export async function analyzePrdTool(args: {
     return { content: [{ type: 'text', text: `Claude API error: ${err.message}` }] };
   }
 
+  // Assign stable REQ IDs to direct blocks from a numbered source, and append
+  // newly-seen requirements to the REQUIREMENTS.md traceability ledger.
+  const requirementsContent = await readFile(REQUIREMENTS_PATH, 'utf-8').catch(() => REQUIREMENTS_TEMPLATE);
+  const { rawText: rewritten, updatedRequirementsContent, newEntries } = assignReqIds(raw, requirementsContent);
+  raw = rewritten;
+  if (newEntries.length > 0) {
+    await writeFile(REQUIREMENTS_PATH, updatedRequirementsContent, 'utf-8');
+  }
+
   const testCount = (raw.match(/^# test_name:/gm) ?? []).length;
   const criticalCount = (raw.match(/^# risk: critical/gm) ?? []).length;
   const highCount = (raw.match(/^# risk: high/gm) ?? []).length;
@@ -331,6 +347,9 @@ export async function analyzePrdTool(args: {
     `✅ ${testCount} test suggestion${testCount === 1 ? '' : 's'} written to prd-tests.txt`,
     `   ${criticalCount} critical  ${highCount} high  ${testCount - criticalCount - highCount} medium/low`,
     `   Backlog entry appended to: GAPS_BACKLOG.md`,
+    ...(newEntries.length > 0
+      ? [`   Added ${newEntries.length} new requirement${newEntries.length === 1 ? '' : 's'} to REQUIREMENTS.md: ${newEntries.map(e => e.id).join(', ')}`]
+      : []),
     '',
     'Review the file, remove what you don\'t want, then run:',
     '  npm run generate -- --file prd-tests.txt',
