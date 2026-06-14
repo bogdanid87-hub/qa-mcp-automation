@@ -82,6 +82,12 @@ What it does in one pass:
    to the Broken section; if the spec file already has an annotation comment
    (`/* ⚠️ APP BUG */` or `/* ⚠️ BROKEN */`), the correct classification and root
    cause are read from that comment
+5. **Reports requirements-ledger drift** (when `REQUIREMENTS.md` has entries) — tests
+   tagged `@req:REQ-...` with no matching `REQUIREMENTS.md` entry (a typo or a
+   hand-edited ledger), and `REQUIREMENTS.md` entries with no covering test (the same
+   "uncovered" list `analyze_coverage`/`npm run status` show). Informational only —
+   `sync_registry` doesn't edit `REQUIREMENTS.md` or spec files; silently omitted when
+   there's nothing to report
 
 ---
 

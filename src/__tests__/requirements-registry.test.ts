@@ -12,8 +12,10 @@ import {
   findUncoveredRequirements,
   findFunctionalOnlyRequirements,
   computeRequirementsCoverage,
+  findStaleReqTags,
+  computeRequirementsDrift,
 } from '../tools/requirements-registry';
-import type { TestType } from '../tools/test-registry';
+import type { TestType, TestEntry } from '../tools/test-registry';
 
 describe('normalizeReqId', () => {
   const cases: [string, string | null][] = [
@@ -250,5 +252,45 @@ describe('findFunctionalOnlyRequirements', () => {
 describe('computeRequirementsCoverage', () => {
   it('returns null when REQUIREMENTS.md does not exist (this project has not run analyze_prd against a numbered PRD yet)', async () => {
     expect(await computeRequirementsCoverage()).toBeNull();
+  });
+});
+
+describe('findStaleReqTags', () => {
+  const requirements = [
+    { id: 'REQ-API-005', text: 'POST to search_product returns matching results' },
+  ];
+
+  const entry = (name: string): TestEntry => ({ num: 1, spec: 'tests/api/products.spec.ts', describe: 'Products API', name });
+
+  it('returns an empty array when the @req: tag matches a known requirement', () => {
+    expect(findStaleReqTags(requirements, [entry('should return matching products @req:REQ-API-005')])).toEqual([]);
+  });
+
+  it('flags a @req: tag with no matching REQUIREMENTS.md entry', () => {
+    const entries = [entry('should return matching products @req:REQ-API-999')];
+    expect(findStaleReqTags(requirements, entries)).toEqual([
+      { reqId: 'REQ-API-999', spec: 'tests/api/products.spec.ts', name: 'should return matching products @req:REQ-API-999' },
+    ]);
+  });
+
+  it('ignores entries with no @req: tag', () => {
+    expect(findStaleReqTags(requirements, [entry('should return matching products')])).toEqual([]);
+  });
+
+  it('reports only the unknown ids among multiple entries', () => {
+    const entries = [
+      entry('should return matching products @req:REQ-API-005'),
+      entry('should return 400 for missing parameter @req:REQ-API-999'),
+      entry('should return at least 20 products'),
+    ];
+    expect(findStaleReqTags(requirements, entries)).toEqual([
+      { reqId: 'REQ-API-999', spec: 'tests/api/products.spec.ts', name: 'should return 400 for missing parameter @req:REQ-API-999' },
+    ]);
+  });
+});
+
+describe('computeRequirementsDrift', () => {
+  it('returns null when REQUIREMENTS.md does not exist (this project has not run analyze_prd against a numbered PRD yet)', async () => {
+    expect(await computeRequirementsDrift()).toBeNull();
   });
 });
