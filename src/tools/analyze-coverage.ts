@@ -6,6 +6,7 @@ import { safeWrite } from '../lib/safe-write.js';
 import { TESTS_UI_PATH, TESTS_API_PATH, TESTS_E2E_PATH, registryForSpec } from './test-registry.js';
 import { computeRequirementsCoverage, RequirementsCoverage } from './requirements-registry.js';
 import { readAppKnowledge, readAppLimitations, appendKnowledgeCandidates, KnowledgeCandidate } from './generate-app-knowledge.js';
+import { errorContent } from '../lib/format-error.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { chromium } from '@playwright/test';
 
@@ -433,7 +434,7 @@ export async function analyzeCoverageTool(args: {
   const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
   await ensureWorkspace();
   if (!apiKey) {
-    return { content: [{ type: 'text', text: 'Error: ANTHROPIC_API_KEY is not set.' }] };
+    return errorContent('Error: ANTHROPIC_API_KEY is not set.', { category: 'config', tool: 'analyze_coverage' });
   }
 
   // ── Gather context ───────────────────────────────────────────────────────────
@@ -530,7 +531,7 @@ export async function analyzeCoverageTool(args: {
     });
     raw = msg.content.filter(b => b.type === 'text').map(b => (b as any).text).join('');
   } catch (err: any) {
-    return { content: [{ type: 'text', text: `Claude API error: ${err.message}` }] };
+    return errorContent(err, { tool: 'analyze_coverage', summary: `Claude API error: ${err.message}` });
   }
 
   // ── Parse ────────────────────────────────────────────────────────────────────
@@ -547,7 +548,7 @@ export async function analyzeCoverageTool(args: {
     })();
     result = JSON.parse(jsonStr);
   } catch {
-    return { content: [{ type: 'text', text: `Claude returned invalid JSON.\n\n${raw}` }] };
+    return errorContent('Claude returned invalid JSON.', { tool: 'analyze_coverage', detail: raw });
   }
 
   // ── Write outputs ────────────────────────────────────────────────────────────

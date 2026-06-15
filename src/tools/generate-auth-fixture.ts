@@ -4,6 +4,7 @@ import { join, dirname } from 'path';
 import { getSystemBlocks } from '../prompts/system.js';
 import { cleanLlmCode, extractJson } from './llm-utils.js';
 import { safeWrite } from '../lib/safe-write.js';
+import { errorContent } from '../lib/format-error.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -96,7 +97,7 @@ export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
   content: { type: 'text'; text: string }[];
 }> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { content: [{ type: 'text', text: 'Error: ANTHROPIC_API_KEY not set.' }] };
+  if (!apiKey) return errorContent('Error: ANTHROPIC_API_KEY not set.', { category: 'config', tool: 'generate_auth_fixture' });
 
   const client = new Anthropic({ apiKey });
   const systemBlocks = await getSystemBlocks();
@@ -140,7 +141,7 @@ export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
   try {
     parsed = JSON.parse(extractJson(raw));
   } catch {
-    return { content: [{ type: 'text', text: `Failed to parse response:\n\n${raw}` }] };
+    return errorContent('Failed to parse the generated auth fixture response.', { tool: 'generate_auth_fixture', detail: raw });
   }
 
   // ── Write global.setup.ts ────────────────────────────────────────────────

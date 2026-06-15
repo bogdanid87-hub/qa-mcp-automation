@@ -5,6 +5,7 @@ import { readTestCases, readBrokenTests } from './test-registry.js';
 import { readAppKnowledge, readAppLimitations } from './generate-app-knowledge.js';
 import { safeWrite } from '../lib/safe-write.js';
 import { assignReqIds, REQUIREMENTS_PATH, REQUIREMENTS_TEMPLATE } from './requirements-registry.js';
+import { errorContent } from '../lib/format-error.js';
 const MODEL = 'claude-sonnet-4-6';
 
 const SYSTEM_PROMPT = `\
@@ -178,7 +179,7 @@ export async function analyzePrdTool(args: {
   await ensureWorkspace();
   const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
   if (!apiKey) {
-    return { content: [{ type: 'text', text: 'Error: ANTHROPIC_API_KEY is not set.' }] };
+    return errorContent('Error: ANTHROPIC_API_KEY is not set.', { category: 'config', tool: 'analyze_prd' });
   }
   if (!args.prdContent && !args.prdFile) {
     return { content: [{ type: 'text', text: 'Error: provide either prdContent (text) or prdFile (PDF/image).' }] };
@@ -273,7 +274,7 @@ export async function analyzePrdTool(args: {
       .map(b => (b as { type: 'text'; text: string }).text)
       .join('');
   } catch (err: any) {
-    return { content: [{ type: 'text', text: `Claude API error: ${err.message}` }] };
+    return errorContent(err, { tool: 'analyze_prd', summary: `Claude API error: ${err.message}` });
   }
 
   // Assign stable REQ IDs to direct blocks from a numbered source, and append

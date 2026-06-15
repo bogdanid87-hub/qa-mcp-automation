@@ -12,6 +12,7 @@ import { autoFixFailure } from './investigate-fix.js';
 import { writeTestAnnotation } from './annotations.js';
 import { extractJson } from './llm-utils.js';
 import { formatReqHint } from './requirements-registry.js';
+import { errorContent } from '../lib/format-error.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -264,7 +265,7 @@ export async function generateApiTestTool(args: {
 }> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return { content: [{ type: 'text', text: 'Error: ANTHROPIC_API_KEY environment variable is not set.' }] };
+    return errorContent('Error: ANTHROPIC_API_KEY environment variable is not set.', { category: 'config', tool: 'generate_api_test' });
   }
 
   const localAvailable = await isLocalLlmAvailable();
@@ -315,7 +316,7 @@ export async function generateApiTestTool(args: {
   try {
     parsed = JSON.parse(extractJson(raw));
   } catch {
-    return { content: [{ type: 'text', text: `${generatedBy} returned invalid JSON.\n\n${raw}` }] };
+    return errorContent(`${generatedBy} returned invalid JSON.`, { tool: 'generate_api_test', detail: raw });
   }
 
   // ── Write files ───────────────────────────────────────────────────────────

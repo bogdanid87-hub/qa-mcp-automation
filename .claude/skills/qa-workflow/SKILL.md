@@ -96,6 +96,11 @@ principle applies when *you* edit this repo's `pages/`, `fixtures/`, `tests/`, o
   use the fixture from `fixtures/index.ts`.
 - **Currency/price parsing or other shared logic** — check `utils/` (e.g.
   `utils/price.ts`) before writing inline parsing in a spec or POM.
+- **New `{content:[...]}` error returns** — use `errorContent()` from
+  `src/lib/format-error.ts` instead of hand-rolling the shape, so failures get a
+  category, label, and plain-English next step. Extend `detectCategory` if a failure
+  doesn't fit the existing `config`/`transient`/`code_bug`/`app_bug`/`unknown`
+  categories.
 
 Three similar lines is better than a premature abstraction — but a *duplicate* of
 something that already exists elsewhere is a bug waiting to diverge, not a
