@@ -117,7 +117,8 @@ finishes, pass or fail, each wrapped in try/catch.
 | `TESTS_UI.md` | `generate_test`, `npm run sync_registry`, `npm run update_registry` |
 | `TESTS_E2E.md` | same — `tests/e2e/` only |
 | `TESTS_API.md` | same — `tests/api/` only |
-| `learned-rules.md` | `investigate_and_fix` (auto-appends after every fix) |
+| `learned-rules.md` | `investigate_and_fix` (auto-appends after every fix), `review_rules --promote` (removes/renumbers an entry when promoting it to `framework-rules.md`) |
+| `src/prompts/framework-rules.md` | `review_rules --promote` (appends a `## FW-Rule` entry moved from `learned-rules.md`); otherwise static, ships with the engine |
 | `REQUIREMENTS.md` | `analyze_prd` (auto-appends new `REQ-...` IDs; append-only — descriptions may be hand-edited, IDs may not) |
 | `workspace/APP_KNOWLEDGE_CANDIDATES.md` | `analyze_coverage`, `audit_site` (appends/replaces a dated section per source; staging area for human review — promote into `APP_KNOWLEDGE_MANUAL.md`/`APP_LIMITATIONS.md`, then delete; not read by any tool) |
 | `test-data/.auth/guest.json` | `global.setup.ts` (Playwright setup) |

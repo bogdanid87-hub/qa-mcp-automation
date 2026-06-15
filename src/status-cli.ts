@@ -11,6 +11,7 @@ import {
   TESTS_VISUAL_PATH,
 } from './tools/test-registry.js';
 import { computeRequirementsCoverage } from './tools/requirements-registry.js';
+import { reviewRules } from './tools/review-rules.js';
 
 const ROOT = process.cwd();
 
@@ -198,6 +199,16 @@ async function main(): Promise<void> {
         console.log(`        ${connector} ${r.id}: ${r.text}`);
       }
     }
+  }
+
+  // ── Rule hygiene ─────────────────────────────────────────────────────────────
+  const { staleRules, duplicates } = await reviewRules();
+  const ruleIssues = staleRules.length + duplicates.length;
+  if (ruleIssues === 0) {
+    console.log(`\n  ✅ Rule hygiene: learned-rules.md clean (no stale rules, no near-duplicates)`);
+  } else {
+    console.log(`\n  ⚠️  Rule hygiene: ${staleRules.length} stale, ${duplicates.length} near-duplicate pair(s)`);
+    console.log('     Run: npm run review_rules');
   }
 
   // ── Spec files on disk ───────────────────────────────────────────────────────

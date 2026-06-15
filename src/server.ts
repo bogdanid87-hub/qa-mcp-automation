@@ -14,8 +14,9 @@ import { generateMockTool } from './tools/generate-mock.js';
 import { generateAppKnowledgeTool } from './tools/generate-app-knowledge.js';
 import { planE2eTool } from './tools/plan-e2e.js';
 import { initProjectTool } from './tools/init-project.js';
+import { reviewRulesTool } from './tools/review-rules.js';
 
-/** Builds the MCP server with all 13 tools registered. Caller connects it to a transport. */
+/** Builds the MCP server with all 14 tools registered. Caller connects it to a transport. */
 export function createServer(): McpServer {
   const server = new McpServer({ name: 'qa-mcp-automation', version: '1.0.0' });
 
@@ -271,6 +272,27 @@ export function createServer(): McpServer {
       force: args.force,
       riskTiers: args.risk_tiers,
     }),
+  );
+
+  server.registerTool(
+    'review_rules',
+    {
+      description:
+        'List stale rules (referencing POM classes/methods that no longer exist) and ' +
+        'near-duplicate rule pairs across learned-rules.md and framework-rules.md — a ' +
+        'read-only hygiene report. Pass promote to move a rule from learned-rules.md ' +
+        'into framework-rules.md (renumbering the remaining learned rules), making it ' +
+        "part of every project's system prompt via this engine. Which rules are " +
+        'framework-worthy is a human judgment call — this tool never suggests promotion ' +
+        'candidates, only flags hygiene issues.',
+      inputSchema: {
+        promote: z.string().optional().describe(
+          'Rule number in learned-rules.md to promote to framework-rules.md, e.g. "015". ' +
+          'When set, performs the promotion and returns a confirmation instead of the hygiene report.',
+        ),
+      },
+    },
+    (args) => reviewRulesTool({ promote: args.promote }),
   );
 
   return server;

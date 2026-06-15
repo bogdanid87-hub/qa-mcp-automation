@@ -4,7 +4,21 @@ import { buildPomHierarchyDescription } from '../config.js';
 
 // Resolved against the consuming project's root (not __dirname/engine-relative) so
 // each project's accumulated lessons live in its own repo, not inside this package.
-const LEARNED_RULES_PATH = join(process.cwd(), 'learned-rules.md');
+export const LEARNED_RULES_PATH = join(process.cwd(), 'learned-rules.md');
+
+// Framework rules ship with the engine — resolved relative to this file (the
+// opposite of LEARNED_RULES_PATH), since their correct home is "next to
+// system.ts", not the consuming project's root.
+export const FRAMEWORK_RULES_PATH = join(__dirname, 'framework-rules.md');
+
+export const FRAMEWORK_RULES_TEMPLATE = `# Framework Rules
+
+General-purpose Playwright/QA lessons promoted from a project's learned-rules.md via
+\`review_rules --promote\`. Shipped with the engine — apply to every project.
+
+<!-- rules-start -->
+<!-- rules-end -->
+`;
 
 /**
  * Core rules — static, version-controlled, hand-maintained.
@@ -476,13 +490,40 @@ async function loadLearnedRules(): Promise<string> {
 }
 
 /**
- * Returns the full system prompt: core rules + any accumulated learned rules.
+ * Read the engine-shipped framework rules file and return its content.
+ * Returns an empty string if the file doesn't exist or has no entries yet.
+ */
+async function loadFrameworkRules(): Promise<string> {
+  try {
+    const content = await readFile(FRAMEWORK_RULES_PATH, 'utf-8');
+    return extractRulesSection(content);
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Returns the full system prompt: core rules + any promoted framework rules +
+ * any accumulated project-specific learned rules.
  */
 export async function getSystemPrompt(): Promise<string> {
-  const learned = await loadLearnedRules();
-  if (!learned) return CORE_RULES;
+  const [framework, learned] = await Promise.all([loadFrameworkRules(), loadLearnedRules()]);
 
-  return `${CORE_RULES}
+  let prompt = CORE_RULES;
+
+  if (framework) {
+    prompt += `
+
+---
+
+## Framework rules (general lessons — apply to every project using this engine)
+
+${framework}
+`;
+  }
+
+  if (learned) {
+    prompt += `
 
 ---
 
@@ -490,6 +531,9 @@ export async function getSystemPrompt(): Promise<string> {
 
 ${learned}
 `;
+  }
+
+  return prompt;
 }
 
 type CacheableBlock = { type: 'text'; text: string; cache_control: { type: 'ephemeral' } };
@@ -531,26 +575,123 @@ export function buildUserBlocks(opts: {
   ];
 }
 
+export interface RuleEntry {
+  num: string; // zero-padded, e.g. "001"
+  title: string;
+  problemClass: string;
+  rule: string;
+  raw: string; // full "## <prefix> NNN — Title\n**Problem class**: ...\n**Rule**: ..." block
+}
+
 /**
- * Compute the updated learned-rules.md content with a new rule appended inside the
- * <!-- rules-start/end --> markers. Pure — the rule number is derived from the count
- * of existing `## Rule NNN` headings in `content`.
+ * Parse all "## <headingPrefix> NNN — Title" entries from a rules file's content.
+ * Pure — operates on the <!-- rules-start/end --> section via extractRulesSection.
  */
-export function appendRuleToContent(content: string, rule: { problemClass: string; rule: string }): string {
-  // Count existing rules to assign a number
-  const existingCount = (content.match(/^## Rule \d+/gm) ?? []).length;
+export function parseRuleEntries(content: string, headingPrefix = 'Rule'): RuleEntry[] {
+  const section = extractRulesSection(content);
+  if (!section) return [];
+
+  const headingRe = new RegExp(`^## ${headingPrefix} (\\d+) — (.+)$`, 'gm');
+  const matches = [...section.matchAll(headingRe)];
+
+  return matches.map((m, i) => {
+    const start = m.index!;
+    const end = i + 1 < matches.length ? matches[i + 1].index! : section.length;
+    const raw = section.slice(start, end).trim();
+    const problemClassMatch = raw.match(/\*\*Problem class\*\*:\s*([\s\S]*?)\n\*\*Rule\*\*:/);
+    const ruleMatch = raw.match(/\*\*Rule\*\*:\s*([\s\S]*)$/);
+    return {
+      num: m[1],
+      title: m[2].trim(),
+      problemClass: (problemClassMatch?.[1] ?? '').trim(),
+      rule: (ruleMatch?.[1] ?? '').trim(),
+      raw,
+    };
+  });
+}
+
+/**
+ * Remove the "## <headingPrefix> <num>" entry from content and renumber the
+ * remaining entries sequentially from 001. Returns the original content
+ * unchanged (and `removed: null`) if `num` isn't found.
+ */
+export function removeRuleFromContent(
+  content: string,
+  num: string,
+  headingPrefix = 'Rule',
+): { content: string; removed: RuleEntry | null } {
+  const padded = num.padStart(3, '0');
+  const entries = parseRuleEntries(content, headingPrefix);
+  const idx = entries.findIndex((e) => e.num === padded);
+  if (idx === -1) return { content, removed: null };
+
+  const removed = entries[idx];
+  const renumbered = entries
+    .filter((_, i) => i !== idx)
+    .map((e, i) => {
+      const newNum = String(i + 1).padStart(3, '0');
+      return e.raw.replace(
+        new RegExp(`^## ${headingPrefix} ${e.num} — `),
+        `## ${headingPrefix} ${newNum} — `,
+      );
+    });
+
+  const newSection = renumbered.join('\n\n');
+  const newContent = content.replace(
+    /<!-- rules-start -->[\s\S]*?<!-- rules-end -->/,
+    `<!-- rules-start -->\n${newSection ? newSection + '\n' : ''}<!-- rules-end -->`,
+  );
+
+  return { content: newContent, removed };
+}
+
+/**
+ * Compute the updated rules-file content with a new rule appended inside the
+ * <!-- rules-start/end --> markers. Pure — the rule number is derived from the count
+ * of existing `## <headingPrefix> NNN` headings in `content`. `title`, if provided,
+ * overrides the title derived from `problemClass` (used when promoting a rule whose
+ * title was already chosen).
+ */
+export function appendRuleToContent(
+  content: string,
+  rule: { problemClass: string; rule: string; title?: string },
+  headingPrefix = 'Rule',
+): string {
+  const existingCount = parseRuleEntries(content, headingPrefix).length;
   const num = String(existingCount + 1).padStart(3, '0');
 
-  // Extract a short title from the first sentence of problemClass
-  const title = rule.problemClass.split('.')[0].replace(/^Problem class:\s*/i, '').trim();
+  const title = rule.title ?? rule.problemClass.split('.')[0].replace(/^Problem class:\s*/i, '').trim();
 
   const entry = `
-## Rule ${num} — ${title}
+## ${headingPrefix} ${num} — ${title}
 **Problem class**: ${rule.problemClass}
 **Rule**: ${rule.rule}
 `;
 
   return content.replace('<!-- rules-end -->', `${entry}<!-- rules-end -->`);
+}
+
+/**
+ * Move a rule from a project's learned-rules.md content to the engine's
+ * framework-rules.md content, renumbering the remaining learned rules. Pure —
+ * no file I/O. Returns the inputs unchanged (and `promoted: null`) if `num`
+ * isn't found in `learnedContent`.
+ */
+export function promoteRule(
+  learnedContent: string,
+  frameworkContent: string,
+  num: string,
+): { learnedContent: string; frameworkContent: string; promoted: RuleEntry | null } {
+  const { content: newLearned, removed } = removeRuleFromContent(learnedContent, num, 'Rule');
+  if (!removed) return { learnedContent, frameworkContent, promoted: null };
+
+  const newFramework = appendRuleToContent(
+    frameworkContent,
+    { problemClass: removed.problemClass, rule: removed.rule, title: removed.title },
+    'FW-Rule',
+  );
+
+  return { learnedContent: newLearned, frameworkContent: newFramework, promoted: removed };
 }
 
 /**
