@@ -169,6 +169,9 @@ npm test                # run the full suite (Chromium)
 npm run status          # suite health at a glance
 ```
 
+`npm run status` ends with a "Bottom line" — a plain-English summary of whether
+anything needs attention, and which command to run if so.
+
 Review `TESTS_UI.md` — every passing test is recorded with its risk level and spec location.
 Review `workspace/APP_KNOWLEDGE.md` if `investigate_and_fix` ran — it records what it learned
 about app-specific bugs and quirks.

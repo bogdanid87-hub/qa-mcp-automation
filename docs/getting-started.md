@@ -13,6 +13,10 @@ cp .claude/settings.local.json.example .claude/settings.local.json
 # edit .claude/settings.local.json — add your API key and absolute path
 ```
 
+> **New here?** [workspace/START_HERE.md](../workspace/START_HERE.md) is a shorter,
+> plain-English walkthrough of describing a test, generating it, and reading the
+> result — useful if you're not writing code yourself.
+
 ---
 
 ## Your first test from Claude Code chat

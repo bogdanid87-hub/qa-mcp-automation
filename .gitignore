@@ -17,6 +17,7 @@ test-data/.auth/
 workspace/*
 !workspace/.gitkeep
 !workspace/my-test.txt
+!workspace/START_HERE.md
 
 # Backward compat — also ignore if someone creates these in the root (old habit)
 my-test.txt

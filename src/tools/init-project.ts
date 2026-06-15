@@ -3,7 +3,7 @@ import { dirname, join } from 'path';
 
 import { safeWrite } from '../lib/safe-write.js';
 import { validate, type MqaConfig } from '../config.js';
-import { BASE_PAGE_TEMPLATE, FIXTURES_INDEX_TEMPLATE, LEARNED_RULES_TEMPLATE, REQUIREMENTS_TEMPLATE, SITE_PAGE_TEMPLATE } from './init-project-templates.js';
+import { BASE_PAGE_TEMPLATE, FIXTURES_INDEX_TEMPLATE, LEARNED_RULES_TEMPLATE, MY_TEST_TEMPLATE, PRD_TEMPLATE, REQUIREMENTS_TEMPLATE, SITE_PAGE_TEMPLATE, START_HERE_TEMPLATE } from './init-project-templates.js';
 
 export type RiskTiers = MqaConfig['riskTiers'];
 
@@ -105,6 +105,9 @@ async function scaffoldProject(root: string, config: MqaConfig): Promise<Scaffol
     { relPath: 'fixtures/index.ts', content: FIXTURES_INDEX_TEMPLATE },
     { relPath: 'learned-rules.md', content: LEARNED_RULES_TEMPLATE },
     { relPath: 'REQUIREMENTS.md', content: REQUIREMENTS_TEMPLATE },
+    { relPath: 'workspace/START_HERE.md', content: START_HERE_TEMPLATE },
+    { relPath: 'workspace/my-test.txt', content: MY_TEST_TEMPLATE },
+    { relPath: 'workspace/prd.md', content: PRD_TEMPLATE },
   ];
 
   const entries: ScaffoldEntry[] = [];
@@ -180,6 +183,7 @@ export async function initProjectTool(args: InitProjectArgs): Promise<{ content:
     '  2. Use the audit report to fill in pom.intermediateClasses, pom.siteClassProvides, and riskTiers in mcp-qa.config.json.',
     '  3. Run generate_pom against your homepage/login page to populate pages/SitePage.ts with real locators.',
     '  4. Run generate_test for your first test.',
+    '  5. Open workspace/START_HERE.md for a plain-English guide to describing, generating, and checking your first test.',
   ];
 
   return { content: [{ type: 'text', text: lines.join('\n') }] };

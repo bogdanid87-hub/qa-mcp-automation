@@ -11,6 +11,21 @@ export async function ensureWorkspace(): Promise<void> {
   await mkdir(WORKSPACE, { recursive: true });
 }
 
+export const MY_TEST_TEMPLATE =
+  '# Describe the test you want to generate below.\n' +
+  '# New here? See workspace/START_HERE.md for a walkthrough.\n' +
+  '#\n' +
+  '# Directives (optional):\n' +
+  '#   test_name: my-test-name\n' +
+  '#   spec_file: tests/ui/my-feature.spec.ts\n' +
+  '#   page_paths: /login, /checkout\n\n' +
+  'Describe your test scenario here...\n';
+
+export const PRD_TEMPLATE =
+  '# PRD — paste your product requirements document here.\n' +
+  '# New here? See workspace/START_HERE.md for a walkthrough.\n\n' +
+  'Replace this with your PRD content...\n';
+
 export const WORKSPACE_PATHS = {
   myTest:          join(WORKSPACE, 'my-test.txt'),
   prd:             join(WORKSPACE, 'prd.md'),

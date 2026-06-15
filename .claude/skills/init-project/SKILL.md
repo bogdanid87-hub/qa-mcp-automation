@@ -35,11 +35,13 @@ npm run init_project -- --name my-shop --url https://example.com --profile ecomm
 - **Config write** refuses to overwrite an existing `mcp-qa.config.json` unless
   `force: true`.
 - **Scaffold** (`tests/{ui,api,e2e,visual}/.gitkeep`, `test-data/.gitkeep`,
-  `pages/BasePage.ts`, `pages/SitePage.ts`, `fixtures/index.ts`) is always
+  `pages/BasePage.ts`, `pages/SitePage.ts`, `fixtures/index.ts`,
+  `workspace/START_HERE.md`, `workspace/my-test.txt`, `workspace/prd.md`) is always
   create-if-missing, **never overwritten** — even with `force: true`. This protects
   any hand-customized `SitePage.ts` etc.
 - Prints next steps: `audit_site` → fill in `pom`/`riskTiers` from its report →
-  `generate_pom` → `generate_test`.
+  `generate_pom` → `generate_test` → open `workspace/START_HERE.md` for a
+  plain-English walkthrough of describing/generating/checking a test.
 
 Full guide: [docs/init-project.md](../../../docs/init-project.md). Config schema and
 POM hierarchy conventions: [qa-conventions](../qa-conventions/SKILL.md).
