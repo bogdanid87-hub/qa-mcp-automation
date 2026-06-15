@@ -97,6 +97,15 @@ describe('initProjectTool', () => {
     const requirements = await readFile(join(dir, 'REQUIREMENTS.md'), 'utf-8');
     expect(requirements).toContain('<!-- requirements-start -->');
     expect(requirements).toContain('<!-- requirements-end -->');
+
+    const startHere = await readFile(join(dir, 'workspace/START_HERE.md'), 'utf-8');
+    expect(startHere).toContain('# Start Here');
+
+    const myTest = await readFile(join(dir, 'workspace/my-test.txt'), 'utf-8');
+    expect(myTest).toContain('Describe your test scenario here...');
+
+    const prd = await readFile(join(dir, 'workspace/prd.md'), 'utf-8');
+    expect(prd).toContain('Replace this with your PRD content...');
   });
 
   it('reports created vs skipped scaffold entries', async () => {
@@ -106,6 +115,9 @@ describe('initProjectTool', () => {
     expect(text).toContain('✅ created  pages/SitePage.ts');
     expect(text).toContain('✅ created  fixtures/index.ts');
     expect(text).toContain('✅ created  learned-rules.md');
+    expect(text).toContain('✅ created  workspace/START_HERE.md');
+    expect(text).toContain('✅ created  workspace/my-test.txt');
+    expect(text).toContain('✅ created  workspace/prd.md');
   });
 
   it('refuses to overwrite an existing config without force, and skips scaffolding', async () => {
@@ -131,15 +143,19 @@ describe('initProjectTool', () => {
 
   it('never overwrites an existing scaffold file, even with force: true', async () => {
     await mkdir(join(dir, 'pages'), { recursive: true });
+    await mkdir(join(dir, 'workspace'), { recursive: true });
     await writeFile(join(dir, 'pages/SitePage.ts'), '// my custom SitePage\n', 'utf-8');
     await writeFile(join(dir, 'learned-rules.md'), '# My existing rules\n', 'utf-8');
+    await writeFile(join(dir, 'workspace/my-test.txt'), '# my custom test description\n', 'utf-8');
 
     const result = await initProjectTool({ ...BASE_ARGS, outputPath, force: true });
     expect(result.content[0].text).toContain('⏭️  skipped (already exists)  pages/SitePage.ts');
     expect(result.content[0].text).toContain('⏭️  skipped (already exists)  learned-rules.md');
+    expect(result.content[0].text).toContain('⏭️  skipped (already exists)  workspace/my-test.txt');
 
     expect(await readFile(join(dir, 'pages/SitePage.ts'), 'utf-8')).toBe('// my custom SitePage\n');
     expect(await readFile(join(dir, 'learned-rules.md'), 'utf-8')).toBe('# My existing rules\n');
+    expect(await readFile(join(dir, 'workspace/my-test.txt'), 'utf-8')).toBe('# my custom test description\n');
   });
 
   it('rejects an invalid siteUrl without writing anything', async () => {

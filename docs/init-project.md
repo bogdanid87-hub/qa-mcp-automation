@@ -89,6 +89,12 @@ implies — **create-if-missing only, never overwritten**, independent of `force
   universal locators (nav, footer, logged-in indicator)
 - `fixtures/index.ts` — `export const test = base.extend({})` with a TODO showing
   how to add a fixture per Page Object
+- `workspace/START_HERE.md` — plain-English walkthrough: describe a test in
+  `workspace/my-test.txt`, generate it, read the result, check `npm run status`
+- `workspace/my-test.txt` — templated example description, points back to
+  `workspace/START_HERE.md`
+- `workspace/prd.md` — templated PRD placeholder for `analyze_prd`, also points back
+  to `workspace/START_HERE.md`
 
 These are deliberately minimal and dependency-free — no `utils/popupDismisser`,
 `utils/adBlocker`, or `trackCleanup`. Those are project-specific enhancements layered
@@ -109,6 +115,8 @@ After `init_project` writes the config and scaffold, it prints:
 3. Run `generate_pom` against your homepage/login page to populate `pages/SitePage.ts`
    with real locators.
 4. Run `generate_test` for your first test.
+5. Open `workspace/START_HERE.md` for a plain-English guide to describing,
+   generating, and checking your first test.
 
 ---
 

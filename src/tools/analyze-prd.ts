@@ -302,7 +302,7 @@ export async function analyzePrdTool(args: {
     '# ─────────────────────────────────────────────────────────────────────────',
     '#',
     '# Review: keep the tests you want, delete the ones you don\'t.',
-    '# Run:    npm run generate -- --file prd-tests.txt',
+    '# Run:    npm run generate -- --file workspace/prd-tests.txt',
     '#',
     '# risk levels: critical | high | medium | low',
     '# ─────────────────────────────────────────────────────────────────────────',
@@ -345,15 +345,15 @@ export async function analyzePrdTool(args: {
   } catch { /* non-fatal */ }
 
   const lines = [
-    `✅ ${testCount} test suggestion${testCount === 1 ? '' : 's'} written to prd-tests.txt`,
+    `✅ ${testCount} test suggestion${testCount === 1 ? '' : 's'} written to workspace/prd-tests.txt`,
     `   ${criticalCount} critical  ${highCount} high  ${testCount - criticalCount - highCount} medium/low`,
-    `   Backlog entry appended to: GAPS_BACKLOG.md`,
+    `   Backlog entry appended to: workspace/GAPS_BACKLOG.md`,
     ...(newEntries.length > 0
       ? [`   Added ${newEntries.length} new requirement${newEntries.length === 1 ? '' : 's'} to REQUIREMENTS.md: ${newEntries.map(e => e.id).join(', ')}`]
       : []),
     '',
     'Review the file, remove what you don\'t want, then run:',
-    '  npm run generate -- --file prd-tests.txt',
+    '  npm run generate -- --file workspace/prd-tests.txt',
   ];
 
   return { content: [{ type: 'text', text: lines.join('\n') }] };

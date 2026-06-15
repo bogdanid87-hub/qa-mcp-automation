@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { readFile, readdir, stat, writeFile } from 'fs/promises';
-import { WORKSPACE_PATHS, ensureWorkspace } from './workspace.js';
+import { WORKSPACE_PATHS, ensureWorkspace, MY_TEST_TEMPLATE } from './workspace.js';
 import { join } from 'path';
 import * as readline from 'readline';
 import { generateTestTool } from './tools/generate-test.js';
@@ -389,13 +389,7 @@ async function main(): Promise<void> {
     // Auto-create the file with a template if it doesn't exist yet
     await ensureWorkspace();
     try { await stat(resolvedFilePath); } catch {
-      await writeFile(resolvedFilePath,
-        '# Describe the test you want to generate below.\n' +
-        '# Directives (optional):\n' +
-        '#   test_name: my-test-name\n' +
-        '#   spec_file: tests/ui/my-feature.spec.ts\n' +
-        '#   page_paths: /login, /checkout\n\n' +
-        'Describe your test scenario here...\n', 'utf-8');
+      await writeFile(resolvedFilePath, MY_TEST_TEMPLATE, 'utf-8');
       console.log(`\n📝 Created workspace/my-test.txt — fill it in and re-run.\n`);
       process.exit(0);
     }

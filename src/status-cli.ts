@@ -12,6 +12,7 @@ import {
 } from './tools/test-registry.js';
 import { computeRequirementsCoverage } from './tools/requirements-registry.js';
 import { reviewRules } from './tools/review-rules.js';
+import { buildBottomLine } from './status-helpers.js';
 
 const ROOT = process.cwd();
 
@@ -117,6 +118,7 @@ async function main(): Promise<void> {
   let grandPassing = 0, grandBroken = 0, grandBugs = 0;
   const taggedStats: Array<{ prefix: string; tagged: number; total: number }> = [];
   const typeCounts = { functional: 0, negative: 0, boundary: 0 };
+  const issues: string[] = [];
 
   console.log('  Registries:');
   for (const { path, label, prefix } of registries) {
@@ -152,6 +154,13 @@ async function main(): Promise<void> {
   const totBugs    = `${grandBugs} app bug${grandBugs !== 1 ? 's' : ''}`;
   console.log(`    Total         ${totPassing}  ${totBroken}  ${totBugs}`);
 
+  if (grandBroken > 0) {
+    issues.push(`${grandBroken} test${grandBroken === 1 ? '' : 's'} ${grandBroken === 1 ? 'is' : 'are'} broken — run \`npm run fix\` to investigate.`);
+  }
+  if (grandBugs > 0) {
+    issues.push(`${grandBugs} test${grandBugs === 1 ? '' : 's'} found an app bug, not a test bug — review and report ${grandBugs === 1 ? 'it' : 'them'} (no test changes needed).`);
+  }
+
   // ── Tagging ──────────────────────────────────────────────────────────────────
   const totTagged = taggedStats.reduce((n, s) => n + s.tagged, 0);
   const totTaggable = taggedStats.reduce((n, s) => n + s.total, 0);
@@ -159,6 +168,8 @@ async function main(): Promise<void> {
   console.log(`\n  ${tagIcon} Spec tagging: ${totTagged}/${totTaggable} tests tagged`);
   if (totTagged < totTaggable) {
     console.log('     Run: npm run tag_tests');
+    const untagged = totTaggable - totTagged;
+    issues.push(`${untagged} test${untagged === 1 ? '' : 's'} aren't tagged yet — run \`npm run tag_tests\`.`);
   }
 
   // ── Test types ───────────────────────────────────────────────────────────────
@@ -181,6 +192,7 @@ async function main(): Promise<void> {
       console.log(`     ${connector} ${s.scope}  —  ${tiers}`);
     }
     console.log('     Run: npm run analyze_coverage -- --gaps  (to refresh)');
+    issues.push(`${totalOpen} test gap${totalOpen === 1 ? '' : 's'} found — run \`npm run analyze_coverage -- --gaps\` to review.`);
   }
 
   // ── Requirements coverage ────────────────────────────────────────────────────
@@ -199,6 +211,12 @@ async function main(): Promise<void> {
         console.log(`        ${connector} ${r.id}: ${r.text}`);
       }
     }
+    if (reqCoverage.uncovered.length > 0) {
+      issues.push(`${reqCoverage.uncovered.length} requirement${reqCoverage.uncovered.length === 1 ? '' : 's'} ${reqCoverage.uncovered.length === 1 ? 'has' : 'have'} no covering test yet — see "Requirements" above.`);
+    }
+    if (reqCoverage.functionalOnly.length > 0) {
+      issues.push(`${reqCoverage.functionalOnly.length} requirement${reqCoverage.functionalOnly.length === 1 ? '' : 's'} ${reqCoverage.functionalOnly.length === 1 ? 'has' : 'have'} only functional tests — consider adding @negative/@boundary coverage.`);
+    }
   }
 
   // ── Rule hygiene ─────────────────────────────────────────────────────────────
@@ -209,6 +227,7 @@ async function main(): Promise<void> {
   } else {
     console.log(`\n  ⚠️  Rule hygiene: ${staleRules.length} stale, ${duplicates.length} near-duplicate pair(s)`);
     console.log('     Run: npm run review_rules');
+    issues.push(`Rule hygiene needs attention (${staleRules.length} stale, ${duplicates.length} near-duplicate) — run \`npm run review_rules\`.`);
   }
 
   // ── Spec files on disk ───────────────────────────────────────────────────────
@@ -220,7 +239,11 @@ async function main(): Promise<void> {
   ]);
   console.log(`\n  📁 Spec files:  ui/ ${uiCount}  ·  e2e/ ${e2eCount}  ·  api/ ${apiCount}  ·  visual/ ${visualCount}\n`);
 
-  console.log(bar + '\n');
+  // ── Bottom line ──────────────────────────────────────────────────────────────
+  console.log('');
+  for (const line of buildBottomLine(issues)) console.log(`  ${line}`);
+
+  console.log('\n' + bar + '\n');
 }
 
 main().catch(err => {
