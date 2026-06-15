@@ -9,6 +9,7 @@ import { runTests, runTestsTool } from './run-tests.js';
 import { parsePassingTests, recordPassingTests, parseFailingTestsFromOutput } from './test-registry.js';
 import { markBacklogEntriesCovered } from './analyze-coverage.js';
 import { TokenBudget } from './budget.js';
+import { errorContent } from '../lib/format-error.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -558,9 +559,7 @@ export async function investigateFixTool(args: {
 }): Promise<{ content: { type: 'text'; text: string }[] }> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return {
-      content: [{ type: 'text', text: 'Error: ANTHROPIC_API_KEY is not set.' }],
-    };
+    return errorContent('Error: ANTHROPIC_API_KEY is not set.', { category: 'config', tool: 'investigate_and_fix' });
   }
 
   // Get the failure output (run tests if not provided)

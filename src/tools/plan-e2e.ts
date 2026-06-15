@@ -5,6 +5,7 @@ import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { extractJson } from './llm-utils.js';
 import { MODEL, PLAN_ONLY_HINT, type PomPlan } from './generate-test.js';
 import type { PomIndexEntry } from './pom-index.js';
+import { errorContent } from '../lib/format-error.js';
 
 export interface E2EChecklistItem {
   file: string;
@@ -99,7 +100,7 @@ export async function planE2eTool(args: {
 }): Promise<{ content: { type: 'text'; text: string }[] }> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return { content: [{ type: 'text', text: 'Error: ANTHROPIC_API_KEY environment variable is not set.' }] };
+    return errorContent('Error: ANTHROPIC_API_KEY environment variable is not set.', { category: 'config', tool: 'plan_e2e' });
   }
 
   const featureKeywords = args.description.toLowerCase().split(/\s+/).filter((w) => w.length > 3).slice(0, 10);
@@ -136,14 +137,14 @@ export async function planE2eTool(args: {
       .map((b) => (b as { type: 'text'; text: string }).text)
       .join('');
   } catch (err: any) {
-    return { content: [{ type: 'text', text: `Claude API error: ${err.message}` }] };
+    return errorContent(err, { tool: 'plan_e2e', summary: `Claude API error: ${err.message}` });
   }
 
   let plan: { poms: PomPlan[] };
   try {
     plan = JSON.parse(extractJson(raw));
   } catch {
-    return { content: [{ type: 'text', text: `Claude returned invalid JSON.\n\n${raw}` }] };
+    return errorContent('Claude returned invalid JSON.', { tool: 'plan_e2e', detail: raw });
   }
 
   const index = await getPomIndex();

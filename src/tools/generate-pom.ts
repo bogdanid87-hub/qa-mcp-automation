@@ -11,6 +11,7 @@ import { TokenBudget } from './budget.js';
 import { compilePom, type PomSpec } from '../templates/pom.js';
 import { config, SITE_URL, SITE_HOST, buildPomHierarchyDescription } from '../config.js';
 import { formatOwnedElements, type OwnedElementsEntry } from './pom-index.js';
+import { errorContent } from '../lib/format-error.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -348,7 +349,7 @@ export async function generatePomTool(args: {
 }): Promise<{ content: { type: 'text'; text: string }[] }> {
   const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
   if (!apiKey) {
-    return { content: [{ type: 'text', text: 'Error: ANTHROPIC_API_KEY is not set.' }] };
+    return errorContent('Error: ANTHROPIC_API_KEY is not set.', { category: 'config', tool: 'generate_pom' });
   }
 
   const localAvailable = await isLocalLlmAvailable();

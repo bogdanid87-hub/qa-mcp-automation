@@ -10,6 +10,7 @@ import {
   TESTS_E2E_PATH,
   TESTS_VISUAL_PATH,
 } from './test-registry.js';
+import { errorContent } from '../lib/format-error.js';
 
 const ROOT = process.cwd();
 const MODEL = 'claude-sonnet-4-6';
@@ -121,7 +122,7 @@ export async function generateAppKnowledgeTool(args: {
 }): Promise<{ content: { type: 'text'; text: string }[] }> {
   await ensureWorkspace();
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { content: [{ type: 'text', text: 'Error: ANTHROPIC_API_KEY not set.' }] };
+  if (!apiKey) return errorContent('Error: ANTHROPIC_API_KEY not set.', { category: 'config', tool: 'generate_app_knowledge' });
 
   const outputPath = args.output ?? APP_KNOWLEDGE_PATH;
 

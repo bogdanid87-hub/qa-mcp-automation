@@ -18,6 +18,7 @@ import { extractJson } from './llm-utils.js';
 import { extractExportedFunctionNames, extractPomMethods } from './pom-index.js';
 import { reviewGeneratedFiles } from './review-generation.js';
 import { TokenBudget } from './budget.js';
+import { errorContent } from '../lib/format-error.js';
 import { formatReqHint } from './requirements-registry.js';
 
 const ROOT = process.cwd();
@@ -219,9 +220,7 @@ export async function generateTestTool(args: {
 }): Promise<{ content: { type: 'text'; text: string }[]; _meta?: { specFile?: string; lastFailureOutput?: string; passing: boolean } }> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return {
-      content: [{ type: 'text', text: 'Error: ANTHROPIC_API_KEY environment variable is not set.' }],
-    };
+    return errorContent('Error: ANTHROPIC_API_KEY environment variable is not set.', { category: 'config', tool: 'generate_test' });
   }
 
   // Route to visual regression when explicitly requested or keyword-detected.
@@ -486,14 +485,14 @@ Respond with the standard JSON:
           try {
             pomRaw = await callClaude(buildUserBlocks({ description: description + POM_ONLY_HINT, existingContext, domContext }));
           } catch (apiErr: any) {
-            return { content: [{ type: 'text', text: `POM step failed (local: ${err.message}, API: ${apiErr.message})` }] };
+            return errorContent(apiErr, { tool: 'generate_test', summary: `POM step failed — local model error: ${err.message}; Claude fallback error: ${apiErr.message}` });
           }
         }
       } else {
         try {
           pomRaw = await callClaude(buildUserBlocks({ description: description + POM_ONLY_HINT, existingContext, domContext }));
         } catch (err: any) {
-          return { content: [{ type: 'text', text: `Claude API error (POM step): ${err.message}` }] };
+          return errorContent(err, { tool: 'generate_test', summary: `Claude API error (POM step): ${err.message}` });
         }
       }
 
@@ -510,10 +509,10 @@ Respond with the standard JSON:
             pomParsed = parseJson(pomRaw);
             pomGeneratedByLocal = false;
           } catch {
-            return { content: [{ type: 'text', text: `POM step failed: local LLM returned invalid JSON and Claude fallback also failed.` }] };
+            return errorContent('POM step failed: the local LLM returned invalid JSON and the Claude fallback also failed.', { tool: 'generate_test' });
           }
         } else {
-          return { content: [{ type: 'text', text: `Claude returned invalid JSON in POM step.\n\n${pomRaw}` }] };
+          return errorContent('Claude returned invalid JSON in POM step.', { tool: 'generate_test', detail: pomRaw });
         }
       }
 
@@ -554,14 +553,14 @@ Never remove existing methods — only append new ones.` : '';
   try {
     raw = await callClaude(userBlocks);
   } catch (err: any) {
-    return { content: [{ type: 'text', text: `Claude API error (spec step): ${err.message}` }] };
+    return errorContent(err, { tool: 'generate_test', summary: `Claude API error (spec step): ${err.message}` });
   }
 
   let parsed: GenerateResponse;
   try {
     parsed = parseJson(raw);
   } catch {
-    return { content: [{ type: 'text', text: `Claude returned invalid JSON.\n\n${raw}` }] };
+    return errorContent('Claude returned invalid JSON in spec step.', { tool: 'generate_test', detail: raw });
   }
 
   // proposals-only: skip all file I/O and test runs
