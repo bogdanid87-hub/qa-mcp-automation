@@ -1,6 +1,6 @@
 # generate_app_knowledge
 
-Synthesises accumulated knowledge about the application into `APP_KNOWLEDGE.md` — a
+Synthesises accumulated knowledge about the application into `workspace/APP_KNOWLEDGE.md` — a
 per-feature risk document covering known app bugs, recurring coverage gaps, and risk
 patterns. Once generated, `analyze_prd` and `analyze_coverage` read it automatically
 to enrich their analysis with institutional knowledge about this specific app.
@@ -11,7 +11,7 @@ to enrich their analysis with institutional knowledge about this specific app.
 
 Run after any of these events:
 - A new app bug is recorded (after `investigate_and_fix` classifies a failure as an app bug)
-- `analyze_coverage` or `analyze_prd` identifies new gaps (new rows in `GAPS_BACKLOG.md`)
+- `analyze_coverage` or `analyze_prd` identifies new gaps (new rows in `workspace/GAPS_BACKLOG.md`)
 - The coverage report is regenerated (`npm run analyze_coverage`)
 - At the start of a new QA session to bring context current
 
@@ -22,12 +22,12 @@ Run after any of these events:
 | Source | What it contributes |
 |--------|---------------------|
 | `TESTS_UI.md`, `TESTS_API.md`, `TESTS_E2E.md`, `TESTS_VISUAL.md` | App bug entries (kind: app_bug) — feature, root cause, actual behaviour |
-| `GAPS_BACKLOG.md` | Open gap entries not yet resolved (no ✅, no ~~strikethrough~~) |
-| `coverage-report.md` | First 2000 chars of the last coverage report — key risk findings |
+| `workspace/GAPS_BACKLOG.md` | Open gap entries not yet resolved (no ✅, no ~~strikethrough~~) |
+| `workspace/coverage-report.md` | First 2000 chars of the last coverage report — key risk findings |
 
 ---
 
-## Output: `APP_KNOWLEDGE.md`
+## Output: `workspace/APP_KNOWLEDGE.md`
 
 Grouped by feature area. Each section includes:
 
@@ -44,11 +44,11 @@ directly — use the sidecar file instead (see below).
 
 ---
 
-## Persistent manual notes: `APP_KNOWLEDGE_MANUAL.md`
+## Persistent manual notes: `workspace/APP_KNOWLEDGE_MANUAL.md`
 
-Create this file in the project root to add notes that survive every regeneration.
+Create `workspace/APP_KNOWLEDGE_MANUAL.md` to add notes that survive every regeneration.
 The tool reads it after synthesis and appends it verbatim at the end of
-`APP_KNOWLEDGE.md`, separated by a `---` rule. The sidecar is **never touched** by
+`workspace/APP_KNOWLEDGE.md`, separated by a `---` rule. The sidecar is **never touched** by
 the tool — only read.
 
 Use it for context that doesn't fit in a registry or backlog entry:
@@ -64,7 +64,7 @@ Use it for context that doesn't fit in a registry or backlog entry:
 - Order confirmation email is async; allow up to 5s before asserting it was sent.
 ```
 
-When the tool runs and finds `APP_KNOWLEDGE_MANUAL.md`, the output summary will show:
+When the tool runs and finds `workspace/APP_KNOWLEDGE_MANUAL.md`, the output summary will show:
 ```
 Manual notes: APP_KNOWLEDGE_MANUAL.md appended
 ```
@@ -98,7 +98,7 @@ the start of every run — no flags needed.
 
 | File | Read by | Effect |
 |------|---------|--------|
-| `APP_KNOWLEDGE.md` | `analyze_prd`, `analyze_coverage` | Weights suggestions toward features with known defects or gaps |
+| `workspace/APP_KNOWLEDGE.md` | `analyze_prd`, `analyze_coverage` | Weights suggestions toward features with known defects or gaps |
 | `APP_LIMITATIONS.md` | `analyze_prd`, `analyze_coverage`, `generate_test` | Tells Claude not to suggest or generate tests for listed features |
 
 ---
@@ -106,7 +106,7 @@ the start of every run — no flags needed.
 ## `APP_LIMITATIONS.md` — missing features
 
 A separate human-maintained file for features that **don't exist** on the app under
-test. Unlike `APP_KNOWLEDGE.md` (which is synthesised and overwritten), this file is
+test. Unlike `workspace/APP_KNOWLEDGE.md` (which is synthesised and overwritten), this file is
 never touched by any tool — only read.
 
 When to add an entry:
@@ -130,7 +130,7 @@ features" block in Claude's prompt.
 
 `analyze_coverage` and `audit_site` write **candidate** knowledge entries here —
 observations about app behaviour or site structure that aren't yet captured in
-`APP_KNOWLEDGE_MANUAL.md` or `APP_LIMITATIONS.md`. This file is gitignored
+`workspace/APP_KNOWLEDGE_MANUAL.md` or `APP_LIMITATIONS.md`. This file is gitignored
 (`workspace/`), not read by any tool, and exists purely for human review.
 
 Each run appends a dated section, one per source:
@@ -153,7 +153,7 @@ Each run appends a dated section, one per source:
 
 Re-running the same tool against the same scope **replaces** that source's section
 rather than duplicating it. Review periodically:
-- Promote durable app-behaviour notes into `APP_KNOWLEDGE_MANUAL.md` (picked up by the
+- Promote durable app-behaviour notes into `workspace/APP_KNOWLEDGE_MANUAL.md` (picked up by the
   next `generate_app_knowledge` run).
 - Promote missing-feature observations into `APP_LIMITATIONS.md` (hand-edit).
 - Delete entries once promoted or dismissed — nothing else reads this file, so stale

@@ -1,13 +1,13 @@
 ---
 name: analyze-coverage
-description: Analyses the test suite for coverage gaps and risk, scoped to a spec/folder/registry or the full suite — writes coverage-report.md and optional coverage-gaps.txt (analyze_coverage MCP tool / npm run analyze_coverage). Load when assessing what's missing or planning the next tests.
+description: Analyses the test suite for coverage gaps and risk, scoped to a spec/folder/registry or the full suite — writes workspace/coverage-report.md and optional workspace/coverage-gaps.txt (analyze_coverage MCP tool / npm run analyze_coverage). Load when assessing what's missing or planning the next tests.
 ---
 
 # analyze_coverage
 
 Analyses the existing test suite and identifies coverage gaps and risk areas.
 Scopes to a spec file, folder, registry, or the full suite. Always writes
-`coverage-report.md`; optionally writes `coverage-gaps.txt` in `prd-tests.txt`
+`workspace/coverage-report.md`; optionally writes `workspace/coverage-gaps.txt` in `workspace/prd-tests.txt`
 batch format for direct generation.
 
 ## When to use it
@@ -30,7 +30,7 @@ what drifted or was never written. See [analyze-prd](../analyze-prd/SKILL.md).
 
 ## Requirements coverage (deterministic)
 
-When `REQUIREMENTS.md` has entries (assigned by `analyze_prd`), `coverage-report.md`
+When `REQUIREMENTS.md` has entries (assigned by `analyze_prd`), `workspace/coverage-report.md`
 ends with a free "## Requirements coverage (deterministic)" section: `requirementIds
 − reqIdsCoveredByTests` (parsed from `@req:REQ-NNN` tags across all three
 registries) — requirements with zero covering tests. Zero token cost, always
@@ -48,7 +48,7 @@ functional · N negative · N boundary" (project-wide, UI/API/E2E only).
 ## App knowledge candidates
 
 When Claude observes something about app *behaviour* not already covered by
-`APP_KNOWLEDGE.md`/`APP_LIMITATIONS.md`, it's appended to
+`workspace/APP_KNOWLEDGE.md`/`APP_LIMITATIONS.md`, it's appended to
 `workspace/APP_KNOWLEDGE_CANDIDATES.md` under an `analyze_coverage — <scope>` section
 for human review (replaces on re-run, doesn't duplicate). See
 [generate-app-knowledge](../generate-app-knowledge/SKILL.md). Often empty.
@@ -74,7 +74,7 @@ npm run analyze_coverage -- --registry TESTS_UI.md                  # a registry
 npm run analyze_coverage -- --spec tests/api/ --url <api-docs-url>  # + feature context
 npm run analyze_coverage -- --url <page-url>                        # page not yet tested
 npm run analyze_coverage                                             # full suite
-npm run analyze_coverage -- --spec tests/ui/contact.spec.ts --gaps  # + coverage-gaps.txt
+npm run analyze_coverage -- --spec tests/ui/contact.spec.ts --gaps  # + workspace/coverage-gaps.txt
 npm run analyze_coverage -- --spec tests/ui/contact.spec.ts --deep  # extra pre-pass, ~2x cost
 ```
 
@@ -88,7 +88,7 @@ Analyse API test coverage — url: https://automationexercise.com/api_list
 | Spec path | `--spec` | `spec_path` | Spec file or folder to focus on |
 | Registry | `--registry` | `registry_path` | `TESTS_UI.md` / `TESTS_API.md` / `TESTS_E2E.md` |
 | URL | `--url` | `url` | Page or docs URL for feature context |
-| Gaps file | `--gaps` | `generate_gaps` | Also write `coverage-gaps.txt` |
+| Gaps file | `--gaps` | `generate_gaps` | Also write `workspace/coverage-gaps.txt` |
 | Deep mode | `--deep` | `deep` | Pre-analysis pass for untested paths (extra Claude call) |
 
 ## URL handling
@@ -107,8 +107,8 @@ Use for complex specs where gap-detection accuracy matters more than ~2x cost.
 
 ```bash
 npm run analyze_coverage -- --spec tests/ui/contact.spec.ts --gaps
-# review coverage-report.md, then:
-npm run generate -- --file coverage-gaps.txt
+# review workspace/coverage-report.md, then:
+npm run generate -- --file workspace/coverage-gaps.txt
 ```
 
 Full guide: [docs/analyze-coverage.md](../../../docs/analyze-coverage.md)

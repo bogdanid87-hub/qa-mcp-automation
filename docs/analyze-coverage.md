@@ -2,8 +2,8 @@
 
 Analyses the existing test suite and identifies coverage gaps and risk areas.
 Scopes to a specific spec file, folder, or registry — or runs across the full suite.
-Writes `coverage-report.md` (always) and optionally `coverage-gaps.txt` in the
-`prd-tests.txt` batch format for direct generation.
+Writes `workspace/coverage-report.md` (always) and optionally `workspace/coverage-gaps.txt` in the
+`workspace/prd-tests.txt` batch format for direct generation.
 
 ---
 
@@ -94,7 +94,7 @@ Check what's missing in the cart spec
 | Spec path | `--spec` | `spec_path` | Spec file or folder to focus on |
 | Registry | `--registry` | `registry_path` | Registry file (TESTS_UI.md / TESTS_API.md / TESTS_E2E.md) |
 | URL | `--url` | `url` | Page or docs URL for feature context |
-| Gaps file | `--gaps` | `generate_gaps` | Also write `coverage-gaps.txt` |
+| Gaps file | `--gaps` | `generate_gaps` | Also write `workspace/coverage-gaps.txt` |
 | Deep mode | `--deep` | `deep` | Pre-analysis pass for untested paths (extra Claude call) |
 
 ---
@@ -114,23 +114,23 @@ the page documents.
 
 ## Output files
 
-**`coverage-report.md`** — always written to the project root. Human-readable,
+**`workspace/coverage-report.md`** — always written. Human-readable,
 sorted by priority, with risk shown when it differs. The `note` field appears
 inline when priority diverges from risk.
 
-**`coverage-gaps.txt`** — written only with `--gaps`. Same format as `prd-tests.txt`,
+**`workspace/coverage-gaps.txt`** — written only with `--gaps`. Same format as `workspace/prd-tests.txt`,
 sorted by priority, with `# priority:` and optional `# note:` fields. Directly
 runnable:
 
 ```bash
-npm run generate -- --file coverage-gaps.txt
+npm run generate -- --file workspace/coverage-gaps.txt
 ```
 
 ### App knowledge candidates
 
 Separately from test gaps, Claude may note observations about how the app
 *behaves* — quirks, missing features, unusual validation — that aren't already
-captured in `APP_KNOWLEDGE.md`/`APP_LIMITATIONS.md`. When present, these are
+captured in `workspace/APP_KNOWLEDGE.md`/`APP_LIMITATIONS.md`. When present, these are
 appended to `workspace/APP_KNOWLEDGE_CANDIDATES.md` under an
 `analyze_coverage — <scope>` section for human review (see
 [generate-app-knowledge](generate-app-knowledge.md#staging-area-workspaceapp_knowledge_candidatesmd)).
@@ -140,7 +140,7 @@ Often empty — only populated when there's something genuinely new to report.
 ### Requirements coverage (deterministic)
 
 When `REQUIREMENTS.md` exists and has at least one entry (see
-[analyze-prd](analyze-prd.md)'s traceability ledger), `coverage-report.md` ends with
+[analyze-prd](analyze-prd.md)'s traceability ledger), `workspace/coverage-report.md` ends with
 a "## Requirements coverage (deterministic)" section — a free, zero-token cross-check
 computed as `requirementIds (from REQUIREMENTS.md) − reqIdsCoveredByTests (parsed
 from `@req:REQ-NNN` tags across TESTS_UI.md/TESTS_API.md/TESTS_E2E.md)`. It lists any
@@ -186,11 +186,11 @@ important specs where quality matters more than cost.
 # 1. Check what's missing after writing your first test
 npm run analyze_coverage -- --spec tests/ui/contact.spec.ts
 
-# 2. Review coverage-report.md — decide which gaps to address
+# 2. Review workspace/coverage-report.md — decide which gaps to address
 
 # 3. Generate a runnable gaps file for the ones you want
 npm run analyze_coverage -- --spec tests/ui/contact.spec.ts --gaps
 
 # 4. Generate the tests
-npm run generate -- --file coverage-gaps.txt
+npm run generate -- --file workspace/coverage-gaps.txt
 ```

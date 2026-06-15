@@ -165,7 +165,7 @@ Fourteen tools are available in Claude Code chat and (most) from the terminal. S
 | Tool | One-liner | Guide |
 |------|-----------|-------|
 | `analyze_coverage` | Analyse the existing test suite for coverage gaps and risk areas — scoped or full-suite, with optional URL context | [docs/analyze-coverage.md](docs/analyze-coverage.md) |
-| `analyze_prd` | Turn a PRD into a risk-prioritised test backlog (`prd-tests.txt`) | [docs/analyze-prd.md](docs/analyze-prd.md) |
+| `analyze_prd` | Turn a PRD into a risk-prioritised test backlog (`workspace/prd-tests.txt`) | [docs/analyze-prd.md](docs/analyze-prd.md) |
 | `generate_pom` | Inspect a live page, write a locator-only POM — run before `generate_test` for new pages | [docs/generate-pom.md](docs/generate-pom.md) |
 | `generate_test` | Generate a UI, API, E2E, or mixed Playwright test — type auto-detected; POM + spec + auto-run + auto-fix + registry | [docs/generate-test.md](docs/generate-test.md) |
 | `inspect_page` | See real DOM elements and locators on a page | [docs/inspect-page.md](docs/inspect-page.md) |
@@ -174,7 +174,7 @@ Fourteen tools are available in Claude Code chat and (most) from the terminal. S
 | `list_resources` | List all existing POMs, fixtures, and spec files | [docs/list-resources.md](docs/list-resources.md) |
 | `generate_auth_fixture` | Generate a Playwright auth fixture — saves browser storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
 | `generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
-| `generate_app_knowledge` | Synthesise app bugs, gaps, and coverage report into `APP_KNOWLEDGE.md` — enriches `analyze_prd` and `analyze_coverage` | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
+| `generate_app_knowledge` | Synthesise app bugs, gaps, and coverage report into `workspace/APP_KNOWLEDGE.md` — enriches `analyze_prd` and `analyze_coverage` | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
 | `plan_e2e` | Plan a multi-page E2E journey — decompose into POMs/methods, cross-reference the POM Method Index for a step → view → POM → exists? → action checklist | [docs/plan-e2e.md](docs/plan-e2e.md) |
 | `init_project` | Bootstrap `mcp-qa.config.json` plus a minimal pages/fixtures/tests scaffold for a new project | [docs/init-project.md](docs/init-project.md) |
 | `review_rules` | List stale and near-duplicate rules across `learned-rules.md`/`framework-rules.md`; `promote` moves a rule into `framework-rules.md` so it applies to every project | [docs/review-rules.md](docs/review-rules.md) |
@@ -189,8 +189,8 @@ Starting a new project:
   npm run audit_site -- --url <site>  →  fill in pom/riskTiers from the report  →  generate_pom
 
 From a PRD:
-  npm run analyze_prd -- --file prd.md   →  review prd-tests.txt
-  npm run generate -- --file prd-tests.txt
+  npm run analyze_prd -- --file prd.md   →  review workspace/prd-tests.txt
+  npm run generate -- --file workspace/prd-tests.txt
 
 New page, no POM yet:
   generate_pom /the-page   →   generate_test
@@ -222,7 +222,7 @@ npm run analyze_coverage                  # find coverage gaps
 npm run audit_site -- --url https://...  # crawl site and recommend POM hierarchy
 npm run init_project -- --name my-shop --url https://example.com  # bootstrap config + scaffold for a new project
 npm run review_rules                      # rule hygiene report; -- --promote <NNN> moves a rule to framework-rules.md
-npm run generate_knowledge               # synthesise APP_KNOWLEDGE.md from accumulated data
+npm run generate_knowledge               # synthesise workspace/APP_KNOWLEDGE.md from accumulated data
 npm run fix                               # investigate and fix failing tests
 npm run status                            # suite health at a glance
 npm run tag_tests                         # tag spec files with registry IDs
@@ -297,7 +297,7 @@ qa-mcp-automation/
 │       ├── investigate-fix.ts        ← failure diagnosis + fix + test.fail() for app bugs
 │       ├── annotations.ts            ← APP BUG / BROKEN comments + auto test.fail()
 │       ├── site-audit.ts             ← site crawl + POM hierarchy recommendation
-│       ├── generate-app-knowledge.ts ← app bug/gap synthesis → APP_KNOWLEDGE.md
+│       ├── generate-app-knowledge.ts ← app bug/gap synthesis → workspace/APP_KNOWLEDGE.md
 │       ├── plan-e2e.ts               ← look-ahead E2E journey planner (POM checklist)
 │       ├── pom-index.ts              ← POM Method Index builder (shared by generate-test, plan-e2e)
 │       ├── init-project.ts           ← bootstrap mcp-qa.config.json + pages/fixtures/tests scaffold

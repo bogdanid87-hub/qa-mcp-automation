@@ -237,7 +237,7 @@ npm run analyze_prd -- --file prd.md --images wireframe.png
 
 ### 2. Review the output
 
-`prd-tests.txt` is written with one test block per suggestion, in risk order
+`workspace/prd-tests.txt` is written with one test block per suggestion, in risk order
 (critical first). Each block looks like:
 
 ```
@@ -255,7 +255,7 @@ Test that a guest user can complete a full purchase.
 Delete the blocks you don't want, then generate:
 
 ```bash
-npm run generate -- --file prd-tests.txt
+npm run generate -- --file workspace/prd-tests.txt
 ```
 
 Use `--tier` or `--focus` to scope the analysis before writing the file:
@@ -283,7 +283,7 @@ Or generate a whole backlog from an API docs page:
 
 ```bash
 npm run analyze_prd -- --url https://automationexercise.com/api_list
-# review prd-tests.txt, then for each test use generate_api_test from Claude Code
+# review workspace/prd-tests.txt, then for each test use generate_api_test from Claude Code
 ```
 
 API tests go to `tests/api/` and are recorded in `TESTS_API.md` (separate from

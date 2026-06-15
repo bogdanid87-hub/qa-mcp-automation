@@ -1,11 +1,11 @@
 ---
 name: generate-app-knowledge
-description: Synthesises APP_KNOWLEDGE.md from bug/gap/coverage data (generate_app_knowledge MCP tool / npm run generate_knowledge) — enriches analyze_prd and analyze_coverage. Load when running it, or discussing APP_KNOWLEDGE.md / APP_LIMITATIONS.md.
+description: Synthesises workspace/APP_KNOWLEDGE.md from bug/gap/coverage data (generate_app_knowledge MCP tool / npm run generate_knowledge) — enriches analyze_prd and analyze_coverage. Load when running it, or discussing workspace/APP_KNOWLEDGE.md / APP_LIMITATIONS.md.
 ---
 
 # generate_app_knowledge
 
-Synthesises accumulated knowledge into `APP_KNOWLEDGE.md` — a per-feature risk
+Synthesises accumulated knowledge into `workspace/APP_KNOWLEDGE.md` — a per-feature risk
 document covering known app bugs, recurring coverage gaps, and risk patterns.
 `analyze_prd` and `analyze_coverage` read it automatically to weight their analysis
 toward features with known defects/gaps.
@@ -14,7 +14,7 @@ toward features with known defects/gaps.
 
 - After a new app bug is recorded (`investigate_and_fix` classified a failure as
   an app bug)
-- After `analyze_coverage`/`analyze_prd` adds new rows to `GAPS_BACKLOG.md`
+- After `analyze_coverage`/`analyze_prd` adds new rows to `workspace/GAPS_BACKLOG.md`
 - After the coverage report is regenerated
 - At the start of a new QA session, to bring context current
 
@@ -23,10 +23,10 @@ toward features with known defects/gaps.
 | Source | Contributes |
 |--------|-------------|
 | `TESTS_UI.md`, `TESTS_API.md`, `TESTS_E2E.md`, `TESTS_VISUAL.md` | App bug entries — feature, root cause, actual behaviour |
-| `GAPS_BACKLOG.md` | Open gap entries (no ✅, no ~~strikethrough~~) |
-| `coverage-report.md` | First 2000 chars — key risk findings |
+| `workspace/GAPS_BACKLOG.md` | Open gap entries (no ✅, no ~~strikethrough~~) |
+| `workspace/coverage-report.md` | First 2000 chars — key risk findings |
 
-## Output: APP_KNOWLEDGE.md
+## Output: workspace/APP_KNOWLEDGE.md
 
 Grouped by feature area, fully overwritten on every run — don't edit directly:
 
@@ -38,9 +38,9 @@ Grouped by feature area, fully overwritten on every run — don't edit directly:
 **Notes:** [one-line pattern or warning for future analysis]
 ```
 
-## Persistent manual notes: APP_KNOWLEDGE_MANUAL.md
+## Persistent manual notes: workspace/APP_KNOWLEDGE_MANUAL.md
 
-Create this in the project root for notes that survive every regeneration — the
+Create `workspace/APP_KNOWLEDGE_MANUAL.md` for notes that survive every regeneration — the
 tool appends it verbatim after a `---` rule, and never writes to it. Use for
 architectural quirks, cross-feature risk patterns, or testing constraints (e.g.
 "payment sandbox rejects amounts > £999 in headless").
@@ -61,7 +61,7 @@ npm run generate_knowledge -- --output path/to/custom.md
 
 | File | Read by | Effect |
 |------|---------|--------|
-| `APP_KNOWLEDGE.md` | `analyze_prd`, `analyze_coverage` | Weights suggestions toward known-defect/gap features |
+| `workspace/APP_KNOWLEDGE.md` | `analyze_prd`, `analyze_coverage` | Weights suggestions toward known-defect/gap features |
 | `APP_LIMITATIONS.md` | `analyze_prd`, `analyze_coverage`, `generate_test` | Tells Claude not to suggest/generate tests for listed features |
 
 ## APP_LIMITATIONS.md — missing features
@@ -77,12 +77,12 @@ for a feature that exists but is broken — use the test registry instead
 - No cart item counter in nav bar — Cart link is plain text, no badge element.
 ```
 
-## Staging area: APP_KNOWLEDGE_CANDIDATES.md
+## Staging area: workspace/APP_KNOWLEDGE_CANDIDATES.md
 
 `analyze_coverage` and `audit_site` append candidate observations here
 (`workspace/APP_KNOWLEDGE_CANDIDATES.md`, gitignored, not read by any tool). Each run
 writes/replaces a dated section per source. Review periodically — promote durable
-notes into `APP_KNOWLEDGE_MANUAL.md` or missing-feature notes into
+notes into `workspace/APP_KNOWLEDGE_MANUAL.md` or missing-feature notes into
 `APP_LIMITATIONS.md`, then delete the entry.
 
 ## Cost

@@ -58,7 +58,7 @@ Test the login flow with valid credentials.
 4. Verify "Logged in as <username>" appears in the nav
 ```
 
-`req_id` is typically pre-filled by `analyze_prd` in `prd-tests.txt` blocks (see
+`req_id` is typically pre-filled by `analyze_prd` in `workspace/prd-tests.txt` blocks (see
 [analyze-prd.md](analyze-prd.md)) — when present, the generated test's name gets an
 `@req:REQ-...` tag alongside `@smoke`/`@regression`/`@critical`, linking it back to
 the matching entry in `REQUIREMENTS.md`.
@@ -132,7 +132,7 @@ Generate a test for the login flow — page_paths: /login
 | `test_name` | no | Names the `test()` and `describe()` blocks — does not control the filename |
 | `spec_file` | no | Target spec file, e.g. `"tests/ui/auth.spec.ts"` or `"tests/e2e/place-order.spec.ts"` |
 | `page_paths` | no (recommended) | Pages to inspect live for accurate locators |
-| `req_id` | no | REQ ID from `REQUIREMENTS.md` / a `prd-tests.txt` block's `# req_id` field — when set, the generated test is tagged `@req:REQ-NNN` |
+| `req_id` | no | REQ ID from `REQUIREMENTS.md` / a `workspace/prd-tests.txt` block's `# req_id` field — when set, the generated test is tagged `@req:REQ-NNN` |
 | `dry_run` | no | When `true`: generate code but do NOT write files or run the test. Returns a preview showing the target spec path and proposed code — call again without it to proceed. |
 
 > **Always provide `page_paths`** when you know which pages the test touches.

@@ -9,8 +9,8 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 
 | Tool | What it does | Doc |
 |------|-------------|-----|
-| `analyze_coverage` | Analyse the existing test suite for gaps and risk areas; writes `coverage-report.md` and optionally `coverage-gaps.txt` | [docs/analyze-coverage.md](docs/analyze-coverage.md) |
-| `analyze_prd` | Read a PRD or feature description and generate a risk-prioritised test backlog in `prd-tests.txt` | [docs/analyze-prd.md](docs/analyze-prd.md) |
+| `analyze_coverage` | Analyse the existing test suite for gaps and risk areas; writes `workspace/coverage-report.md` and optionally `workspace/coverage-gaps.txt` | [docs/analyze-coverage.md](docs/analyze-coverage.md) |
+| `analyze_prd` | Read a PRD or feature description and generate a risk-prioritised test backlog in `workspace/prd-tests.txt` | [docs/analyze-prd.md](docs/analyze-prd.md) |
 | `generate_pom` | Inspect a live page and generate a locator-only POM file — run this before `generate_test` when starting on a new page | [docs/generate-pom.md](docs/generate-pom.md) |
 | `generate_test` | Generate a UI, API, E2E, or mixed Playwright test — type auto-detected from description and spec_file path. POM + spec + auto-run + auto-fix + registry update | [docs/generate-test.md](docs/generate-test.md) |
 | `inspect_page` | Navigate to a page headlessly and return all DOM elements with their best locator | [docs/inspect-page.md](docs/inspect-page.md) |
@@ -19,7 +19,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 | `list_resources` | List all existing page objects, fixtures, and spec files | [docs/list-resources.md](docs/list-resources.md) |
 | `generate_auth_fixture` | Generate a Playwright auth fixture for form or OAuth login — saves browser storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
 | `generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
-| `generate_app_knowledge` | Synthesise app bugs, coverage gaps, and coverage report into `APP_KNOWLEDGE.md` — enriches subsequent `analyze_prd` and `analyze_coverage` calls | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
+| `generate_app_knowledge` | Synthesise app bugs, coverage gaps, and coverage report into `workspace/APP_KNOWLEDGE.md` — enriches subsequent `analyze_prd` and `analyze_coverage` calls | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
 | `plan_e2e` | Plan a multi-page E2E journey before generating it — decomposes the flow into POMs/methods and cross-references the POM Method Index for a step → view → POM → exists? → action checklist | [docs/plan-e2e.md](docs/plan-e2e.md) |
 | `init_project` | Bootstrap `mcp-qa.config.json` plus a minimal pages/fixtures/tests scaffold for a new project — picks a riskTiers profile, prints next steps (audit_site → generate_pom → generate_test) | [docs/init-project.md](docs/init-project.md) |
 | `review_rules` | List stale rules and near-duplicate rule pairs across `learned-rules.md`/`framework-rules.md`; `promote` moves a rule into `framework-rules.md` so it applies to every project | [docs/review-rules.md](docs/review-rules.md) |
@@ -38,7 +38,7 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 | `npm run audit_site` | Crawl a site, build a page-type × UI-component matrix, and recommend a POM hierarchy | [docs/audit-site.md](docs/audit-site.md) |
 | `npm run init_project` | Bootstrap `mcp-qa.config.json` plus a minimal pages/fixtures/tests scaffold for a new project | [docs/init-project.md](docs/init-project.md) |
 | `npm run review_rules` | Rule hygiene report (stale + near-duplicate rules); `-- --promote <NNN>` moves a rule from `learned-rules.md` to `framework-rules.md` | [docs/review-rules.md](docs/review-rules.md) |
-| `npm run generate_knowledge` | CLI version of `generate_app_knowledge` — synthesises `APP_KNOWLEDGE.md` from registries, backlog, and coverage report | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
+| `npm run generate_knowledge` | CLI version of `generate_app_knowledge` — synthesises `workspace/APP_KNOWLEDGE.md` from registries, backlog, and coverage report | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
 | `npm run generate` | Generate a test from `my-test.txt` (or any batch `.txt` file) | [docs/generate-test.md](docs/generate-test.md) |
 | `npm run fix` | Interactive fix loop for failing tests | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
 | `npm run status` | Suite health at a glance: registry counts, tagging ratio, open backlog gaps, spec file counts | — |
@@ -59,11 +59,11 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 ```
 Starting a new project:
   init_project / npm run init_project -- --name <name> --url <site>  → mcp-qa.config.json + scaffold
-  → npm run audit_site -- --url <site>  → read site-audit-report.md
+  → npm run audit_site -- --url <site>  → read workspace/site-audit-report.md
   → fill in pom/riskTiers from the report → generate_pom → generate_test
 
 From a PRD:
-  analyze_prd / npm run analyze_prd → review prd-tests.txt → npm run generate --file prd-tests.txt
+  analyze_prd / npm run analyze_prd → review workspace/prd-tests.txt → npm run generate --file workspace/prd-tests.txt
 
 New page, no POM yet:
   generate_pom → generate_test

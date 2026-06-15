@@ -22,8 +22,8 @@ npm run audit_site -- --url https://example.com --max 30          # page-type li
 
 ## Structure output (`--mode structure`)
 
-Writes `site-audit-report.md` (human-readable matrix + hierarchy recommendation)
-and `site-audit-report.json` (read automatically by
+Writes `workspace/site-audit-report.md` (human-readable matrix + hierarchy recommendation)
+and `workspace/site-audit-report.json` (read automatically by
 [generate-pom](../generate-pom/SKILL.md#site-audit-enrichment) to inject hints).
 
 Contains: discovered page types with URLs, **universal elements** (present on
@@ -64,7 +64,7 @@ replaces that source's section.
 ## Recommended workflow for new projects
 
 ```
-1. audit_site --url <target>     → site-audit-report.{md,json}, test-data/constants.ts
+1. audit_site --url <target>     → workspace/site-audit-report.{md,json}, test-data/constants.ts
 2. Write BasePage/SitePage/intermediate classes by hand, informed by the report
 3. generate_pom /page-a /page-b   → audit hints injected, validated locators
 4. generate_test                  → imports from test-data/constants.ts

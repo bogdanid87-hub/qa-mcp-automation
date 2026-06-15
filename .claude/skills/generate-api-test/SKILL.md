@@ -14,8 +14,8 @@ path.
 
 - Testing an HTTP endpoint directly (status code, response body, error handling)
 - After `npm run analyze_prd -- --url <api-docs-page>` — the generated
-  `prd-tests.txt` already has `# spec_file: tests/api/...` set; run with
-  `npm run generate --file prd-tests.txt`
+  `workspace/prd-tests.txt` already has `# spec_file: tests/api/...` set; run with
+  `npm run generate --file workspace/prd-tests.txt`
 - API coverage without spending Claude API tokens — local LLM is primary here
 
 ## How to trigger it
@@ -79,8 +79,8 @@ Runs the spec automatically, records passing tests in `TESTS_API.md` (not
 
 ```bash
 npm run analyze_prd -- --url https://automationexercise.com/api_list   # build backlog
-# review prd-tests.txt — spec_file: tests/api/... already set
-npm run generate -- --file prd-tests.txt                                # generate
+# review workspace/prd-tests.txt — spec_file: tests/api/... already set
+npm run generate -- --file workspace/prd-tests.txt                      # generate
 npm run sync_registry                                                    # keep TESTS_API.md in sync
 ```
 
