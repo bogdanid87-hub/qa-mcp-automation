@@ -21,6 +21,7 @@
     "audit_site": "tsx src/site-audit-cli.ts",
     "generate_knowledge": "tsx src/generate-app-knowledge-cli.ts",
     "init_project": "tsx src/init-project-cli.ts",
+    "review_rules": "tsx src/review-rules-cli.ts",
     "mcp": "tsx src/index.ts",
     "test": "playwright test --project=setup --project=chromium",
     "test:all-browsers": "playwright test --project=setup --project=chromium --project=firefox --project=webkit",

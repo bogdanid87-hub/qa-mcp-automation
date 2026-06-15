@@ -1,10 +1,10 @@
 # qa-mcp-automation
 
 MCP server that generates Playwright tests for any web project — config-driven via
-`mcp-qa.config.json`, with `init_project` bootstrapping new sites. Thirteen tools
+`mcp-qa.config.json`, with `init_project` bootstrapping new sites. Fourteen tools
 cover the full QA workflow from PRD analysis through test generation, auth fixture
 setup, network mocking, failure investigation, registry maintenance, app knowledge
-synthesis, and E2E journey planning.
+synthesis, E2E journey planning, and rule hygiene.
 
 This repo doubles as the reference implementation, validated end-to-end against
 automationexercise.com — its `pages/`, `tests/`, `fixtures/`, and `learned-rules.md`
@@ -56,6 +56,7 @@ npm run status                            # suite health at a glance
 npm run tag_tests                         # tag spec files with registry IDs
 npm run audit_site -- --url https://...   # crawl site, build component matrix, recommend POM hierarchy
 npm run init_project -- --name <name> --url <site-url>  # bootstrap mcp-qa.config.json + pages/fixtures/tests scaffold for a new project
+npm run review_rules                      # rule hygiene report; -- --promote <NNN> moves a rule to framework-rules.md
 npm run generate_auth -- --name loggedIn --login-url /login  # generate auth fixture + storage state
 npm run generate_mock -- --name stripe --url 'https://api.stripe.com/**' --response "..."  # network mock
 npm run generate_knowledge                # synthesise workspace/APP_KNOWLEDGE.md (enriches analyze_prd + analyze_coverage)
@@ -77,7 +78,7 @@ npm run mcp                               # start MCP server manually
 ```
 src/
   config.ts             — loads mcp-qa.config.json; derives SITE_URL, registry paths, risk tiers, POM hierarchy
-  server.ts             — createServer(): McpServer factory, all 13 tools registered; library entry point (package.json "exports")
+  server.ts             — createServer(): McpServer factory, all 14 tools registered; library entry point (package.json "exports")
   index.ts              — MCP server entry point, connects createServer() to stdio (npm run mcp)
   cli.ts                — npm run generate (interactive, cost-tracked)
   fix-cli.ts            — npm run fix
@@ -104,10 +105,12 @@ src/
     init-project-templates.ts — BasePage/SitePage/fixtures placeholder templates used by init-project.ts
     requirements-registry.ts — REQ ID normalization + REQUIREMENTS.md ledger (used by analyze-prd.ts and init-project-templates.ts)
     review-generation.ts — hybrid pre-write reviewer (deterministic checks + 1 LLM call) for generate-test
+    review-rules.ts     — stale/near-duplicate rule hygiene report + learned-rules.md -> framework-rules.md promotion
     annotations.ts      — writes /* ⚠️ APP BUG */ and /* ⚠️ BROKEN */ into specs
     budget.ts           — token cost tracking per session
   prompts/
     system.ts           — system prompt sent to Claude on every generate call
+    framework-rules.md  — general lessons promoted via review_rules --promote; ships empty
 ```
 
 ---

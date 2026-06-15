@@ -13,7 +13,7 @@ Describe a test scenario in plain English. The server uses **Claude Sonnet 4.6**
 ## What this project demonstrates
 
 ### MCP server architecture
-A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes thirteen AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
+A custom [Model Context Protocol](https://modelcontextprotocol.io) server that exposes fourteen AI-driven tools to Claude Code (or any MCP client). Each tool is a TypeScript function registered with a Zod schema; the client discovers the tools automatically and calls them based on natural-language requests. This is the production pattern for building AI-augmented developer tools — not a one-off script, but a structured, discoverable API surface.
 
 ### Server-side quality engineering
 The MCP server itself is held to the same quality bar as the tests it generates:
@@ -160,7 +160,7 @@ NO_LOCAL_LLM=1 npm run generate -- --file my-test.txt   # same via env var
 
 ## Tools
 
-Thirteen tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
+Fourteen tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
 
 | Tool | One-liner | Guide |
 |------|-----------|-------|
@@ -177,6 +177,7 @@ Thirteen tools are available in Claude Code chat and (most) from the terminal. S
 | `generate_app_knowledge` | Synthesise app bugs, gaps, and coverage report into `APP_KNOWLEDGE.md` — enriches `analyze_prd` and `analyze_coverage` | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
 | `plan_e2e` | Plan a multi-page E2E journey — decompose into POMs/methods, cross-reference the POM Method Index for a step → view → POM → exists? → action checklist | [docs/plan-e2e.md](docs/plan-e2e.md) |
 | `init_project` | Bootstrap `mcp-qa.config.json` plus a minimal pages/fixtures/tests scaffold for a new project | [docs/init-project.md](docs/init-project.md) |
+| `review_rules` | List stale and near-duplicate rules across `learned-rules.md`/`framework-rules.md`; `promote` moves a rule into `framework-rules.md` so it applies to every project | [docs/review-rules.md](docs/review-rules.md) |
 
 ---
 
@@ -220,6 +221,7 @@ npm run analyze_prd -- --file prd.md     # generate test backlog from PRD
 npm run analyze_coverage                  # find coverage gaps
 npm run audit_site -- --url https://...  # crawl site and recommend POM hierarchy
 npm run init_project -- --name my-shop --url https://example.com  # bootstrap config + scaffold for a new project
+npm run review_rules                      # rule hygiene report; -- --promote <NNN> moves a rule to framework-rules.md
 npm run generate_knowledge               # synthesise APP_KNOWLEDGE.md from accumulated data
 npm run fix                               # investigate and fix failing tests
 npm run status                            # suite health at a glance
@@ -265,7 +267,7 @@ qa-mcp-automation/
 │   └── update-visual-baselines.yml   ← manual Linux baseline generation
 │
 ├── src/                              ← MCP server + CLIs
-│   ├── server.ts                     ← createServer(): McpServer factory — all 13 tools registered; library entry point
+│   ├── server.ts                     ← createServer(): McpServer factory — all 14 tools registered; library entry point
 │   ├── index.ts                      ← MCP server entry point — connects createServer() to stdio (npm run mcp)
 │   ├── cli.ts                        ← npm run generate
 │   ├── fix-cli.ts                    ← npm run fix
@@ -281,6 +283,9 @@ qa-mcp-automation/
 │   ├── site-audit-cli.ts             ← npm run audit_site
 │   ├── generate-app-knowledge-cli.ts ← npm run generate_knowledge
 │   ├── init-project-cli.ts           ← npm run init_project
+│   ├── prompts/
+│   │   ├── system.ts                 ← system prompt (CORE_RULES) sent to Claude on every generate call
+│   │   └── framework-rules.md        ← general lessons promoted via review_rules --promote; ships empty
 │   └── tools/
 │       ├── generate-test.ts          ← unified test gen (UI/API/E2E/visual auto-detected)
 │       ├── generate-api-test.ts      ← API test generation (local LLM first)

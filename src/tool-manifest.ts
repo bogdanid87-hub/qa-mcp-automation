@@ -202,4 +202,22 @@ export const TOOL_DEFS: ToolDef[] = [
       }).optional().describe('Per-tier overrides applied on top of the chosen profile.'),
     },
   },
+
+  {
+    name: 'review_rules',
+    description:
+      'List stale rules (referencing POM classes/methods that no longer exist) and ' +
+      'near-duplicate rule pairs across learned-rules.md and framework-rules.md — a ' +
+      'read-only hygiene report. Pass promote to move a rule from learned-rules.md ' +
+      'into framework-rules.md (renumbering the remaining learned rules), making it ' +
+      "part of every project's system prompt via this engine. Which rules are " +
+      'framework-worthy is a human judgment call — this tool never suggests promotion ' +
+      'candidates, only flags hygiene issues.',
+    inputSchema: {
+      promote: z.string().optional().describe(
+        'Rule number in learned-rules.md to promote to framework-rules.md, e.g. "015". ' +
+        'When set, performs the promotion and returns a confirmation instead of the hygiene report.',
+      ),
+    },
+  },
 ];
