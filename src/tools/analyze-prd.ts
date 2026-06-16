@@ -6,11 +6,11 @@ import { readAppKnowledge, readAppLimitations } from './generate-app-knowledge.j
 import { safeWrite } from '../lib/safe-write.js';
 import { assignReqIds, REQUIREMENTS_PATH, REQUIREMENTS_TEMPLATE } from './requirements-registry.js';
 import { errorContent } from '../lib/format-error.js';
-import { config } from '../config.js';
+import { config, SITE_HOST } from '../config.js';
 const MODEL = config.models.primary;
 
 const SYSTEM_PROMPT = `\
-You are a QA analyst for automationexercise.com, a practice e-commerce website.
+You are a QA analyst for ${SITE_HOST}.
 
 Given a PRD (or feature description), identify every feature or user flow, classify
 it by risk, and output test case suggestions in a structured file format.
@@ -113,7 +113,7 @@ spec_file rules:
 - source_ref must reproduce the exact label used to derive test_name above — e.g. if
   test_name is "api-5-post-to-search-product", source_ref is "API 5". For suggested
   blocks, or direct blocks from an unnumbered source, source_ref is "none".
-- page_paths should list every page the test navigates to on automationexercise.com
+- page_paths should list every page the test navigates to on ${SITE_HOST}
 - Generate the happy path AND the most important negative/edge cases as separate blocks
 - Do NOT suggest tests already in the covered list — only genuinely new scenarios
 - For each feature generate 2–4 blocks (happy path + key failure cases), not just one

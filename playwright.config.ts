@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { SITE_URL } from './src/config';
 
 export default defineConfig({
   // Functional tests live under tests/; visual regression tests under tests/visual/
@@ -12,7 +13,7 @@ export default defineConfig({
   reporter: [['html', { open: 'never' }], ['list']],
 
   use: {
-    baseURL: 'https://automationexercise.com',
+    baseURL: SITE_URL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

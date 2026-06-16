@@ -1,8 +1,9 @@
 import { chromium } from '@playwright/test';
 import { join } from 'path';
+import { SITE_URL } from '../config.js';
 
 const ROOT = process.cwd();
-const BASE_URL = 'https://automationexercise.com';
+const BASE_URL = SITE_URL;
 const STORAGE_STATE = join(ROOT, 'test-data/.auth/guest.json');
 
 interface ElementInfo {
