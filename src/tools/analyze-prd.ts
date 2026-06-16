@@ -6,7 +6,8 @@ import { readAppKnowledge, readAppLimitations } from './generate-app-knowledge.j
 import { safeWrite } from '../lib/safe-write.js';
 import { assignReqIds, REQUIREMENTS_PATH, REQUIREMENTS_TEMPLATE } from './requirements-registry.js';
 import { errorContent } from '../lib/format-error.js';
-const MODEL = 'claude-sonnet-4-6';
+import { config } from '../config.js';
+const MODEL = config.models.primary;
 
 const SYSTEM_PROMPT = `\
 You are a QA analyst for automationexercise.com, a practice e-commerce website.

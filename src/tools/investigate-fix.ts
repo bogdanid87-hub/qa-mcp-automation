@@ -10,9 +10,10 @@ import { parsePassingTests, recordPassingTests, parseFailingTestsFromOutput } fr
 import { markBacklogEntriesCovered } from './analyze-coverage.js';
 import { TokenBudget } from './budget.js';
 import { errorContent } from '../lib/format-error.js';
+import { config } from '../config.js';
 
 const ROOT = process.cwd();
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = config.models.primary;
 
 // ── Screenshot helpers ─────────────────────────────────────────────────────────
 

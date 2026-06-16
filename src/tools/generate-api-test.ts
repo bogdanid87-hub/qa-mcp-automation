@@ -13,9 +13,10 @@ import { writeTestAnnotation } from './annotations.js';
 import { extractJson } from './llm-utils.js';
 import { formatReqHint } from './requirements-registry.js';
 import { errorContent } from '../lib/format-error.js';
+import { config } from '../config.js';
 
 const ROOT = process.cwd();
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = config.models.primary;
 
 // Focused prompt — shorter and simpler than the UI test system prompt so the
 // local 14B model handles it accurately. API tests are mechanical and repetitive:

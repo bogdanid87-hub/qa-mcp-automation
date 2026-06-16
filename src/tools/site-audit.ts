@@ -5,6 +5,7 @@ import { readFile, mkdir } from 'fs/promises';
 import { dirname, join } from 'path';
 import { safeWrite } from '../lib/safe-write.js';
 import { appendKnowledgeCandidates } from './generate-app-knowledge.js';
+import { config } from '../config.js';
 
 const ROOT = process.cwd();
 
@@ -536,7 +537,7 @@ ${existingContent}
    - text: a short, realistic but obviously fake review sentence (1-2 sentences)` : '';
 
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: config.models.primary,
     max_tokens: 3000,
     system: 'You are managing a TypeScript test data constants file. Output ONLY valid TypeScript — no markdown, no explanation, no code fences.',
     messages: [{

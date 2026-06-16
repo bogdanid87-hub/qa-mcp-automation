@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { readFile, readdir, stat, writeFile } from 'fs/promises';
 import { WORKSPACE_PATHS, ensureWorkspace, MY_TEST_TEMPLATE } from './workspace.js';
+import { config } from './config.js';
 import { join } from 'path';
 import * as readline from 'readline';
 import { generateTestTool } from './tools/generate-test.js';
@@ -325,7 +326,7 @@ async function claudeSimilarityCheck(
   try {
     const client = new Anthropic({ apiKey });
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: config.models.primary,
       max_tokens: 256,
       system:
         'You are a test coverage checker. Given a list of existing Playwright tests ' +

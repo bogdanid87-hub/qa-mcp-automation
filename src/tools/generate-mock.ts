@@ -6,9 +6,10 @@ import { isLocalLlmAvailable, callLocalLlm, LOCAL_MODEL } from './local-llm.js';
 import { cleanLlmCode, extractJson } from './llm-utils.js';
 import { safeWrite } from '../lib/safe-write.js';
 import { errorContent } from '../lib/format-error.js';
+import { config } from '../config.js';
 
 const ROOT = process.cwd();
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = config.models.primary;
 const MOCKS_DIR = join(ROOT, 'fixtures', 'mocks');
 
 export interface GenerateMockArgs {

@@ -20,9 +20,10 @@ import { reviewGeneratedFiles } from './review-generation.js';
 import { TokenBudget } from './budget.js';
 import { errorContent } from '../lib/format-error.js';
 import { formatReqHint } from './requirements-registry.js';
+import { config } from '../config.js';
 
 const ROOT = process.cwd();
-export const MODEL = 'claude-sonnet-4-6';
+export const MODEL = config.models.primary;
 
 /**
  * Scan generated spec files for TODO comments that flag data missing from constants.ts
