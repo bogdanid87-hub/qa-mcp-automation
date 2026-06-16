@@ -18,18 +18,22 @@ import { config, SITE_URL, SITE_HOST } from '../config.js';
 const ROOT = process.cwd();
 const MODEL = config.models.primary;
 
-// Site-specific API quirks live in mcp-qa.config.json (prompts.apiNotes), not in
-// the engine — kept out of this prompt so the package stays project-agnostic.
-// Injected below only when the project defines them.
+// Site-specific API knowledge lives in mcp-qa.config.json (prompts.*), not in the
+// engine — kept out of this prompt so the package stays project-agnostic. Each
+// section below is injected into API_SYSTEM_PROMPT only when the project defines it.
 const apiNotes = config.prompts?.apiNotes?.trim();
 const API_NOTES_SECTION = apiNotes
   ? `### ${SITE_HOST} data shapes — known tricky fields\n${apiNotes}\n\n`
   : '';
+const apiResponseFormat = config.prompts?.apiResponseFormat?.trim();
+const API_RESPONSE_FORMAT_SECTION = apiResponseFormat ? `${apiResponseFormat}\n\n` : '';
+const apiAuthPattern = config.prompts?.apiAuthPattern?.trim();
+const API_AUTH_SECTION = apiAuthPattern ? `${apiAuthPattern}\n\n` : '';
 
 // Focused prompt — shorter and simpler than the UI test system prompt so the
 // local 14B model handles it accurately. API tests are mechanical and repetitive:
 // the pattern is always "send request → assert status → assert body".
-const API_SYSTEM_PROMPT = `\
+export const API_SYSTEM_PROMPT = `\
 You are a Playwright API test engineer for ${SITE_HOST}.
 
 Generate TypeScript test code that calls HTTP endpoints directly using Playwright's
@@ -74,27 +78,7 @@ helper already asserts it.
 - test.describe() = the API resource area ("Products API", "Auth API")
 - test() = what the test verifies ("should return products list")
 
-### This site's API response format — READ CAREFULLY
-ALL HTTP responses from this API return status 200 at the transport level, even for
-errors. NEVER assert response.status() for anything other than 200.
-The actual result code is always inside the JSON body as "responseCode":
-
-  HTTP 200 + { responseCode: 200, products: [...] }      ← success
-  HTTP 200 + { responseCode: 405, message: "..." }       ← method not allowed
-  HTTP 200 + { responseCode: 400, message: "..." }       ← bad request / missing param
-  HTTP 200 + { responseCode: 404, message: "..." }       ← not found
-  HTTP 200 + { responseCode: 201, message: "User created!" } ← createAccount success
-
-CORRECT assertions (always write this pattern):
-  expect(response.status()).toBe(200);      // HTTP transport is always 200
-  expect(body.responseCode).toBe(405);     // check the actual result in the body
-
-WRONG assertions (never write these):
-  expect(response.status()).toBe(405);     // ✗ HTTP is always 200, never 405
-  expect(response.status()).toBe(400);     // ✗ HTTP is always 200, never 400
-  expect(response.status()).toBe(201);     // ✗ even createAccount returns HTTP 200
-
-### Assertions (strict order)
+${API_RESPONSE_FORMAT_SECTION}### Assertions (strict order)
 1. expect(response.status()).toBe(200);          // always 200 — never anything else
 2. const body = await response.json();
 3. expect(body.responseCode).toBe(<expected code>);
@@ -119,40 +103,7 @@ never toContain() or a paraphrased alternative:
 If the description says "Bad request, email or password parameter is missing in POST request."
 then assert that exact string — do not split it into alternatives.
 
-### Tests that require valid credentials — MANDATORY PATTERN
-Any test that calls /api/verifyLogin or other auth endpoints expecting a SUCCESS response
-(body.responseCode 200) MUST create a real test account in test.beforeAll and delete it
-in test.afterAll. NEVER invent or hardcode credentials — they will not exist on the live site.
-
-Required fields for POST /api/createAccount (all mandatory):
-  name, email, password, title, birth_date, birth_month, birth_year,
-  firstname, lastname, company, address1, address2, country, zipcode, state, city, mobile_number
-
-Template to follow whenever valid credentials are needed:
-
-const testEmail = \`api_test_\${Date.now()}@example.com\`;
-const testPassword = 'TestPass123';
-
-test.describe('Auth API', () => {
-  test.beforeAll(async ({ request }) => {
-    await request.post('/api/createAccount', { form: {
-      name: 'API Test User', email: testEmail, password: testPassword,
-      title: 'Mr', birth_date: '1', birth_month: '1', birth_year: '2000',
-      firstname: 'API', lastname: 'Test', company: 'QA Co',
-      address1: '123 Main St', address2: '', country: 'United States',
-      zipcode: '10001', state: 'New York', city: 'New York',
-      mobile_number: '5551234567'
-    }});
-  });
-
-  test.afterAll(async ({ request }) => {
-    await request.delete('/api/deleteAccount', {
-      form: { email: testEmail, password: testPassword }
-    });
-  });
-});
-
-### Test tagging
+${API_AUTH_SECTION}### Test tagging
 Tag every generated test so it can be run as part of a targeted subset.
 Apply tags at the end of the test name string, in this order: @smoke @critical @req: @negative/@boundary
 

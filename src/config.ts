@@ -50,6 +50,10 @@ export interface MqaConfig {
   prompts?: {
     /** Site-specific API quirks (response shapes, tricky fields) injected into the API test prompt. */
     apiNotes?: string;
+    /** Site-specific API response contract (e.g. HTTP status vs in-body result code) for the API test prompt. */
+    apiResponseFormat?: string;
+    /** Site-specific pattern for tests needing valid credentials (account create/delete, required fields). */
+    apiAuthPattern?: string;
   };
 }
 
