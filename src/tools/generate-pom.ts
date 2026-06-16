@@ -14,7 +14,7 @@ import { formatOwnedElements, type OwnedElementsEntry } from './pom-index.js';
 import { errorContent } from '../lib/format-error.js';
 
 const ROOT = process.cwd();
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = config.models.primary;
 
 
 // ── Audit context ────────────────────────────────────────────────────────────

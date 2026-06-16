@@ -9,9 +9,10 @@ import { readAppKnowledge, readAppLimitations, appendKnowledgeCandidates, Knowle
 import { errorContent } from '../lib/format-error.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { chromium } from '@playwright/test';
+import { config } from '../config.js';
 
 const ROOT = process.cwd();
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = config.models.primary;
 const SITE_HOST = 'automationexercise.com';
 
 // ── Context gathering ──────────────────────────────────────────────────────────

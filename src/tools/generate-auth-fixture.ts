@@ -5,9 +5,10 @@ import { getSystemBlocks } from '../prompts/system.js';
 import { cleanLlmCode, extractJson } from './llm-utils.js';
 import { safeWrite } from '../lib/safe-write.js';
 import { errorContent } from '../lib/format-error.js';
+import { config } from '../config.js';
 
 const ROOT = process.cwd();
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = config.models.primary;
 
 const GLOBAL_SETUP_PATH = join(ROOT, 'tests', 'global.setup.ts');
 const FIXTURES_PATH     = join(ROOT, 'fixtures', 'index.ts');

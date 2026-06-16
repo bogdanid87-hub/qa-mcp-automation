@@ -1,7 +1,8 @@
 import { runGuardedShellDetached } from '../lib/shell-guard.js';
+import { config } from '../config.js';
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST ?? 'http://localhost:11434';
-const LOCAL_MODEL = process.env.LOCAL_MODEL ?? 'qwen2.5-coder:14b';
+const LOCAL_MODEL = process.env.LOCAL_MODEL ?? config.models.local;
 const TIMEOUT_MS = 300_000; // 5 min — 14B model can be slow on first token
 const STARTUP_POLL_MS = 1_000;
 const STARTUP_TIMEOUT_MS = 20_000;

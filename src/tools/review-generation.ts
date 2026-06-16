@@ -6,9 +6,10 @@ import { getPomIndex } from './list-resources.js';
 import { extractPomMethods, extractPomLocators, type PomIndexEntry } from './pom-index.js';
 import { extractJson } from './llm-utils.js';
 import { TokenBudget } from './budget.js';
+import { config } from '../config.js';
 
 const ROOT = process.cwd();
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = config.models.primary;
 
 export interface ReviewIssue {
   severity: 'warning' | 'info';

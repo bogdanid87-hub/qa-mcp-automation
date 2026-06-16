@@ -11,9 +11,10 @@ import {
   TESTS_VISUAL_PATH,
 } from './test-registry.js';
 import { errorContent } from '../lib/format-error.js';
+import { config } from '../config.js';
 
 const ROOT = process.cwd();
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = config.models.primary;
 export const APP_KNOWLEDGE_PATH = WORKSPACE_PATHS.appKnowledge;
 export const APP_KNOWLEDGE_MANUAL_PATH = WORKSPACE_PATHS.appKnowledgeManual;
 export const APP_KNOWLEDGE_CANDIDATES_PATH = WORKSPACE_PATHS.appKnowledgeCandidates;
