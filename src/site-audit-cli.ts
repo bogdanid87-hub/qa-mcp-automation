@@ -1,4 +1,5 @@
 import { siteAuditTool } from './tools/site-audit.js';
+import { SITE_URL } from './config.js';
 
 function parseArgs(argv: string[]): { url?: string; output?: string; maxPageTypes?: number; mode?: 'structure' | 'data' | 'all' } {
   const raw: Record<string, string> = {};
@@ -26,8 +27,8 @@ async function main(): Promise<void> {
     console.error('  --mode structure  site-audit-report.json/.md only (POM hierarchy)');
     console.error('  --mode data       test-data/constants.ts only (products, users, search terms)\n');
     console.error('Examples:');
-    console.error('  npm run audit_site -- --url https://automationexercise.com');
-    console.error('  npm run audit_site -- --url https://automationexercise.com --mode data\n');
+    console.error(`  npm run audit_site -- --url ${SITE_URL}`);
+    console.error(`  npm run audit_site -- --url ${SITE_URL} --mode data\n`);
     process.exit(1);
   }
 

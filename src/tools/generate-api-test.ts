@@ -50,8 +50,8 @@ request fixture. No browser, no page objects, no DOM — pure API testing.
 Every spec file must have three sections at the top before any test.describe():
 
 1. Endpoint constants — one named const per endpoint used in the file:
-   const PRODUCTS_ENDPOINT = '/api/productsList';
-   const BRANDS_ENDPOINT   = '/api/brandsList';
+   const ITEMS_ENDPOINT = '/api/items';
+   const USERS_ENDPOINT = '/api/users';
 
 2. A shared parseApiResponse helper — import APIResponse from Playwright and use it
    as the parameter type (NOT typeof fetch, which is the browser API, NOT Playwright):
@@ -64,10 +64,10 @@ Every spec file must have three sections at the top before any test.describe():
 3. test.describe() with all tests inside.
 
 Tests then use the helper:
-   test('should return products', async ({ request }) => {
-     const body = await parseApiResponse(await request.get(PRODUCTS_ENDPOINT));
+   test('should return items', async ({ request }) => {
+     const body = await parseApiResponse(await request.get(ITEMS_ENDPOINT));
      expect(body.responseCode).toBe(200);
-     expect(Array.isArray(body.products)).toBe(true);
+     expect(Array.isArray(body.items)).toBe(true);
    });
 
 Never repeat expect(response.status()).toBe(200) inside individual tests — the
