@@ -10,7 +10,7 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'generate_test',
     description:
-      'Generate a Playwright test for automationexercise.com. ' +
+      'Generate a Playwright test for the web application under test (configured via mcp-qa.config.json). ' +
       'Handles UI tests (browser + Page Object Model), API tests (request fixture, no browser), ' +
       'E2E flows (multi-page), and mixed tests (API setup + UI interaction). ' +
       'The type is detected automatically from the description and spec_file path — ' +
@@ -20,6 +20,7 @@ export const TOOL_DEFS: ToolDef[] = [
       description: z.string().describe('What to test — plain text or numbered steps. For API tests describe the endpoint, method, and assertions. For UI tests describe the user flow.'),
       test_name: z.string().optional().describe('Names the test() and describe() blocks. Does not control the filename.'),
       spec_file: z.string().optional().describe('Target spec file, e.g. "tests/ui/cart.spec.ts", "tests/api/products.spec.ts", or "tests/e2e/checkout.spec.ts". Inferred if omitted. tests/api/ prefix forces API generation.'),
+      req_id: z.string().optional().describe('REQ ID from REQUIREMENTS.md / prd-tests.txt\'s # req_id field — when set, the generated test is tagged @req:REQ-NNN for traceability'),
       page_paths: z.array(z.string()).optional().describe('Page paths to inspect live for accurate locators (UI/E2E tests). The server navigates each page headlessly and extracts real DOM elements.'),
       dry_run: z.boolean().optional().describe('When true: generate the test but do NOT write files or run it. Returns a preview showing the target spec path and proposed code. Call again without dry_run to write and run.'),
       type: z.enum(['auto', 'ui', 'e2e', 'api', 'visual']).optional().describe('Override auto-detection: "api" → request fixture, "visual" → screenshot comparison in tests/visual/, "ui"/"e2e" → browser. Omit to auto-detect.'),
@@ -32,7 +33,7 @@ export const TOOL_DEFS: ToolDef[] = [
       'Analyse the existing test suite and identify coverage gaps and risk areas. ' +
       'Scope to a specific spec file, folder, or registry; optionally fetch a page or docs URL for context. ' +
       'Writes coverage-report.md (always) and optionally coverage-gaps.txt in the prd-tests.txt batch format. ' +
-      'For URLs pointing to automationexercise.com, DOM inspection is used for richer element context.',
+      'For URLs on the site under test, DOM inspection is used for richer element context.',
     inputSchema: {
       spec_path: z.string().optional().describe('Spec file or folder to focus on, e.g. "tests/ui/contact.spec.ts" or "tests/api/"'),
       registry_path: z.string().optional().describe('Registry file to focus on, e.g. "TESTS_UI.md"'),
@@ -51,7 +52,8 @@ export const TOOL_DEFS: ToolDef[] = [
       'Writes suggestions to prd-tests.txt in the same batch format as my-test.txt so you can run ' +
       '`npm run generate -- --file prd-tests.txt` directly without any copy-pasting.',
     inputSchema: {
-      prd_content: z.string().describe('The PRD text to analyse. Paste the full document, a feature section, or a list of user stories.'),
+      prd_content: z.string().optional().describe('The PRD text to analyse. Paste the full document, a feature section, or a list of user stories. Required unless spec_path is provided.'),
+      spec_path: z.string().optional().describe('Path to an existing .spec.ts file — extracts its test names and suggests what coverage is missing. Alternative to prd_content.'),
       output_file: z.string().optional().describe('Output file path. Defaults to prd-tests.txt in the project root.'),
       tier: z.array(z.enum(['critical', 'high', 'medium', 'low'])).optional().describe('Only generate tests at these risk levels, e.g. ["critical", "high"]. Omits all others.'),
       focus: z.array(z.string()).optional().describe('Only generate tests for these feature areas, e.g. ["checkout", "authentication"]. Omits all others.'),
@@ -61,7 +63,7 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'generate_pom',
     description:
-      'Inspect one or more pages on automationexercise.com and generate locator-only Page Object Model files. ' +
+      'Inspect one or more pages on the site under test and generate locator-only Page Object Model files. ' +
       'Each file contains readonly Locator properties and constructor assignments — no methods. ' +
       'Use this before generate_test to pre-populate correct locators from the live DOM, eliminating ' +
       'locator guessing and the fix-loop iterations it causes. ' +
@@ -108,7 +110,7 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'inspect_page',
     description:
-      'Navigate to one or more pages on automationexercise.com headlessly and extract real DOM elements ' +
+      'Navigate to one or more pages on the site under test headlessly and extract real DOM elements ' +
       '(data-qa attributes, ids, placeholders, roles, text, form structure). ' +
       'Use the output to understand what locators are available before generating a POM, ' +
       'or pass the paths directly to generate_test via page_paths to do this automatically.',
