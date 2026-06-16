@@ -265,22 +265,11 @@ export async function generateTestTool(args: {
   const MAX_OUTPUT_TOKENS = 8192;
 
   async function callClaude(userBlocks: ReturnType<typeof buildUserBlocks>): Promise<string> {
-    // Soft pre-flight warning only — generation calls (POM + spec) are large and
-    // sometimes span several calls per run, so aborting mid-generation would waste
-    // the tokens already spent and leave nothing usable. The fix loop's pre-flight
-    // check (investigate-fix.ts) is the one that aborts; this one just informs.
-    if (args.budget) {
-      const inputText = [...systemBlocks, ...userBlocks].map((b) => b.text).join('');
-      const estimatedInputTokens = TokenBudget.estimateTokens(inputText);
-      if (args.budget.wouldExceed(estimatedInputTokens, MAX_OUTPUT_TOKENS)) {
-        console.warn(
-          `\n⚠️  This generation call may push spend past the $${args.budget.limitUsd.toFixed(2)} budget ` +
-          `(currently ${args.budget.summary}, est. +${estimatedInputTokens} input tokens). ` +
-          `Continuing anyway — generation calls warn but don't abort.\n`,
-        );
-      }
-    }
-
+    // Generation is intentionally NOT bound by the spend cap: a complex test can
+    // legitimately need many POM + spec tokens, and capping generation could starve
+    // the auto-fix loop the cap is meant to protect. The cap governs the auto-fix
+    // loop only — see investigate-fix.ts, which records its spend and aborts when
+    // over budget. Generation calls here neither check nor accrue against it.
     for (let attempt = 0; attempt <= 1; attempt++) {
       try {
         const message = await client.messages.create({
