@@ -8,6 +8,15 @@ const CACHE_READ_COST_PER_TOKEN = 0.30 / 1_000_000;
  *  actual usage is known (Claude's tokenizer averages ~4 chars/token for English/code). */
 const CHARS_PER_TOKEN = 4;
 
+/**
+ * Tracks API spend against an optional cap.
+ *
+ * Scope: the cap governs the **auto-fix loop only** (investigate-fix.ts), whose job
+ * is to stop a fix loop from burning tokens. Test/POM/spec generation is
+ * intentionally NOT bound by the cap and does not accrue against it — a complex
+ * test can legitimately need many generation tokens, and capping generation could
+ * starve the very loop the cap exists to protect.
+ */
 export class TokenBudget {
   private inputTokens = 0;
   private outputTokens = 0;

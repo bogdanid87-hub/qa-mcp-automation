@@ -238,7 +238,7 @@ async function runBatch(
   console.log(`\n${eq}`);
   console.log(`  Batch complete — ${sections.length} test${sections.length === 1 ? '' : 's'}:`);
   for (const { label, status } of summary) console.log(`    ${status}  ${label}`);
-  console.log(`  Fix budget used: ${budget.summary}`);
+  console.log(`  Fix-loop API spend: ${budget.summary}`);
   console.log(`${eq}\n`);
 }
 
@@ -548,7 +548,7 @@ async function main(): Promise<void> {
     while (stillFailing) {
       const budgetBar = '─'.repeat(48);
       console.log(`\n${budgetBar}`);
-      console.log(`  Fix budget used: ${budget.summary}`);
+      console.log(`  Fix-loop API spend: ${budget.summary}`);
       console.log(`${budgetBar}`);
 
       if (fixAttempts >= maxFixAttempts) {
