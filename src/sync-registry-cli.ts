@@ -93,7 +93,7 @@ async function main(): Promise<void> {
     });
   });
 
-  // ── 3. Failing tests with no entry anywhere in TEST_CASES.md ─────────────
+  // ── 3. Failing tests with no entry anywhere in the registries ─────────────
   // These were never recorded — written manually, via Claude Code, or from an
   // interrupted MCP write that annotated the spec file but never updated the registry.
   const toAddBroken = failingResults.filter(f => {
@@ -255,7 +255,7 @@ async function main(): Promise<void> {
   }
 
   if (changed === 0) {
-    console.log('✅ TEST_CASES.md and TEST_API.md are already in sync — nothing to update.\n');
+    console.log('✅ All registries are already in sync — nothing to update.\n');
   } else {
     console.log(`✅ Registries updated (${changed} change${changed === 1 ? '' : 's'}).\n`);
   }

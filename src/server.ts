@@ -74,7 +74,7 @@ export function createServer(): McpServer {
       description:
         'Analyse a PRD or feature description and generate a prioritised list of test case suggestions ' +
         'grouped by risk level (critical → high → medium → low). ' +
-        'Filters out tests that already exist in TEST_CASES.md so the output is a genuine gap list. ' +
+        'Filters out tests that already exist in the test registries so the output is a genuine gap list. ' +
         'Writes suggestions to prd-tests.txt in the same batch format as my-test.txt so you can run ' +
         '`npm run generate -- --file prd-tests.txt` directly without any copy-pasting.',
       inputSchema: {

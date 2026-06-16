@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { basename, join } from 'path';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -110,6 +110,11 @@ export function registryForSpec(specPath: string): string {
   if (specPath.startsWith(`${folders.e2e}/`))    return TESTS_E2E_PATH;
   if (specPath.startsWith(`${folders.visual}/`)) return TESTS_VISUAL_PATH;
   return TESTS_UI_PATH;
+}
+
+/** Returns just the registry filename (e.g. "TESTS_UI.md") for a given spec path — for user-facing messages. */
+export function registryNameForSpec(specPath: string): string {
+  return basename(registryForSpec(specPath));
 }
 
 // riskTiers entries are regex-alternation fragments (e.g. "place.order" with `.`

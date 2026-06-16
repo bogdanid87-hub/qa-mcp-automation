@@ -2,8 +2,9 @@
 
 Reads a PRD or feature description, classifies every feature by risk, and writes
 a `workspace/prd-tests.txt` file containing test case suggestions ready to feed into
-`generate_test`. Tests already recorded in `TEST_CASES.md` are filtered out, so
-the output is a genuine coverage gap list rather than a repeat of what's already built.
+`generate_test`. Tests already recorded in the registries (`TESTS_UI.md`, `TESTS_API.md`,
+`TESTS_E2E.md`, `TESTS_VISUAL.md`) are filtered out, so the output is a genuine coverage
+gap list rather than a repeat of what's already built.
 
 ---
 
@@ -11,7 +12,7 @@ the output is a genuine coverage gap list rather than a repeat of what's already
 
 - Starting automation on a new feature or sprint and you want a prioritised backlog
 - Received a PRD in any format (Word, PowerPoint, Confluence, PDF) and need to turn it into test cases quickly
-- You want to know which scenarios haven't been covered yet without reading through `TEST_CASES.md` manually
+- You want to know which scenarios haven't been covered yet without reading through the registries manually
 
 ---
 

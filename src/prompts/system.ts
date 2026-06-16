@@ -282,7 +282,7 @@ Tests live under one of these subdirectories:
 
   tests/api/  — direct API tests; Playwright request fixture, no browser
                 Name by resource: products.spec.ts, auth.spec.ts
-                Results are recorded in TEST_API.md (not TEST_CASES.md)
+                Results are recorded in TESTS_API.md (not TESTS_UI.md)
 
 Rules:
 - If a "Spec file hint" is provided, write to EXACTLY that path
