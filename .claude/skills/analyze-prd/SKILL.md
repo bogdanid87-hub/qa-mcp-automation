@@ -1,12 +1,12 @@
 ---
 name: analyze-prd
-description: Reads a PRD (text, PDF, image, or URL), classifies features by risk, and writes a backlog to prd-tests.txt for generate_test (analyze_prd MCP tool / npm run analyze_prd). Load when turning requirements/specs into a test plan, or discussing risk tiers.
+description: Reads a PRD (text, PDF, image, or URL), classifies features by risk, and writes a backlog to workspace/prd-tests.txt for generate_test (analyze_prd MCP tool / npm run analyze_prd). Load when turning requirements/specs into a test plan, or discussing risk tiers.
 ---
 
 # analyze_prd
 
 Reads a PRD or feature description, classifies every feature by risk, and writes
-`prd-tests.txt` — test case suggestions ready for
+`workspace/prd-tests.txt` — test case suggestions ready for
 [generate-test](../generate-test/SKILL.md). Tests already recorded in the
 registries are filtered out, so the output is a genuine gap list.
 
@@ -53,12 +53,12 @@ npm run analyze_prd -- --file prd.md --tier critical,high          # by risk tie
 npm run analyze_prd -- --file prd.md --focus checkout,cart          # by feature area
 npm run analyze_prd -- --file prd.md --tier critical,high --focus checkout  # combined
 ```
-Active filters are noted in `prd-tests.txt`'s header.
+Active filters are noted in `workspace/prd-tests.txt`'s header.
 
-## Output — prd-tests.txt
+## Output — workspace/prd-tests.txt
 
 Same `---`-separated batch format as `my-test.txt` — `npm run generate -- --file
-prd-tests.txt` reads it directly. Each block:
+workspace/prd-tests.txt` reads it directly. Each block:
 
 ```
 # test_name: checkout-guest-happy-path
@@ -105,8 +105,8 @@ npm run analyze_prd -- --file prd.md --output sprint-14-tests.txt   # custom out
 ```bash
 cp prd.md.example prd.md   # or point at a PDF/URL
 npm run analyze_prd -- --file prd.md --tier critical,high
-# review prd-tests.txt — delete/reorder blocks
-npm run generate -- --file prd-tests.txt
+# review workspace/prd-tests.txt — delete/reorder blocks
+npm run generate -- --file workspace/prd-tests.txt
 ```
 
 ## MCP usage
@@ -124,7 +124,7 @@ Analyze this PRD, only critical and high risk tests, focus on checkout:
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `prd_content` | string | The PRD text (required) |
-| `output_file` | string | Output path (default `prd-tests.txt`) |
+| `output_file` | string | Output path (default `workspace/prd-tests.txt`) |
 | `tier` | string[] | Risk tiers to include, e.g. `["critical", "high"]` |
 | `focus` | string[] | Feature areas to include, e.g. `["checkout"]` |
 

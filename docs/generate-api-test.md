@@ -14,8 +14,8 @@ to the Claude API automatically. Writes to `tests/api/` and records results in
 ## When to use it
 
 - Testing an HTTP endpoint directly (status code, response body, error handling)
-- After running `npm run analyze_prd -- --url <api-docs-page>` — the generated `prd-tests.txt`
-  already has `# spec_file: tests/api/...` set; use `npm run generate --file prd-tests.txt`
+- After running `npm run analyze_prd -- --url <api-docs-page>` — the generated `workspace/prd-tests.txt`
+  already has `# spec_file: tests/api/...` set; use `npm run generate --file workspace/prd-tests.txt`
 - When you want API test coverage without spending Claude API tokens on generation
 
 ## How to trigger it
@@ -147,7 +147,7 @@ After writing the spec, the tool:
 # 1. Fetch the API documentation page and generate a test backlog
 npm run analyze_prd -- --url https://automationexercise.com/api_list
 
-# 2. Review prd-tests.txt — spec_file: tests/api/... is already set
+# 2. Review workspace/prd-tests.txt — spec_file: tests/api/... is already set
 #    Delete the blocks you don't want
 
 # 3. Generate tests — terminal or Claude Code

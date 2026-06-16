@@ -219,9 +219,9 @@ instead of `fs.writeFile`. It:
 regeneration is expected and already vetted by other means:
 
 - POM files (`pages/*.ts`) — an exported-method/locator-drop guard runs first
-- `TESTS_UI.md` / `TESTS_API.md` / `TESTS_E2E.md`, `GAPS_BACKLOG.md`,
-  `APP_KNOWLEDGE.md`, `coverage-report.md`, `coverage-gaps.txt`,
-  `site-audit-report.{md,json}`, `test-data/constants.ts`, PRD output reports —
+- `TESTS_UI.md` / `TESTS_API.md` / `TESTS_E2E.md`, `workspace/GAPS_BACKLOG.md`,
+  `workspace/APP_KNOWLEDGE.md`, `workspace/coverage-report.md`, `workspace/coverage-gaps.txt`,
+  `workspace/site-audit-report.{md,json}`, `test-data/constants.ts`, PRD output reports —
   all full-regeneration "report/registry" artifacts
 
 Everything else (specs, fixtures, helpers, the fix loop's proposed file changes)

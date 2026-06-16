@@ -1,7 +1,7 @@
 # analyze\_prd
 
 Reads a PRD or feature description, classifies every feature by risk, and writes
-a `prd-tests.txt` file containing test case suggestions ready to feed into
+a `workspace/prd-tests.txt` file containing test case suggestions ready to feed into
 `generate_test`. Tests already recorded in `TEST_CASES.md` are filtered out, so
 the output is a genuine coverage gap list rather than a repeat of what's already built.
 
@@ -154,14 +154,14 @@ npm run analyze_prd -- --file prd.md --focus checkout,authentication,cart
 npm run analyze_prd -- --file prd.md --tier critical,high --focus checkout
 ```
 
-When filters are active they are noted in the header of `prd-tests.txt` so you
+When filters are active they are noted in the header of `workspace/prd-tests.txt` so you
 remember the scope of a given run.
 
 ---
 
-## Output — `prd-tests.txt`
+## Output — `workspace/prd-tests.txt`
 
-The tool writes `prd-tests.txt` in the project root. This file uses the same
+The tool writes `workspace/prd-tests.txt`. This file uses the same
 `---`-separated batch format as `my-test.txt`, so `npm run generate` reads it
 directly with no reformatting.
 
@@ -226,7 +226,7 @@ when `# source_ref` is `none`.
 ## Requirements traceability — REQUIREMENTS.md
 
 When a block traces back to a numbered PRD item, `analyze_prd` assigns it a stable
-`REQ-NNN` / `REQ-<PREFIX>-NNN` ID (written as `# req_id:` in `prd-tests.txt`) and
+`REQ-NNN` / `REQ-<PREFIX>-NNN` ID (written as `# req_id:` in `workspace/prd-tests.txt`) and
 appends a one-line description to `REQUIREMENTS.md` — a root-level, git-tracked,
 append-only ledger.
 
@@ -267,11 +267,11 @@ cp prd.md.example prd.md
 # 2. Generate the gap list
 npm run analyze_prd -- --file prd.md --tier critical,high
 
-# 3. Review prd-tests.txt
+# 3. Review workspace/prd-tests.txt
 #    Delete the blocks you don't want, or reorder them
 
 # 4. Generate the tests
-npm run generate -- --file prd-tests.txt
+npm run generate -- --file workspace/prd-tests.txt
 ```
 
 ---
@@ -299,7 +299,7 @@ MCP parameters:
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `prd_content` | string | The PRD text (required) |
-| `output_file` | string | Output path (default: `prd-tests.txt`) |
+| `output_file` | string | Output path (default: `workspace/prd-tests.txt`) |
 | `tier` | string[] | Risk tiers to include, e.g. `["critical", "high"]` |
 | `focus` | string[] | Feature areas to include, e.g. `["checkout"]` |
 

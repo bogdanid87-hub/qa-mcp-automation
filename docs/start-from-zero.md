@@ -28,7 +28,7 @@ This produces two outputs in `workspace/`:
 And in `test-data/`:
 - `constants.ts` — typed test data: products/items, categories, search terms, user fixture, payment card
 
-**Read `site-audit-report.md` before proceeding.** It tells you:
+**Read `workspace/site-audit-report.md` before proceeding.** It tells you:
 - Which pages exist (and their URL patterns)
 - Which elements are shared across all pages → belong in `SitePage` / `BasePage`
 - Which intermediate classes might be worth creating (e.g. a product listing base)

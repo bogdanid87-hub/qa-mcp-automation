@@ -11,7 +11,7 @@ Run this **before writing any POMs** on a new project, or after a major site red
 
 | Output | File | When |
 |--------|------|------|
-| Structural audit | `site-audit-report.md` + `site-audit-report.json` | `--mode structure` or `--mode all` |
+| Structural audit | `workspace/site-audit-report.md` + `workspace/site-audit-report.json` | `--mode structure` or `--mode all` |
 | Test data constants | `test-data/constants.ts` | `--mode data` or `--mode all` |
 
 ---
@@ -41,8 +41,8 @@ npm run audit_site -- --url https://example.com --max 30
 
 Crawls the site, fingerprints every page type, and writes:
 
-- `site-audit-report.md` — human-readable matrix with hierarchy recommendation
-- `site-audit-report.json` — machine-readable version read automatically by `generate_pom`
+- `workspace/site-audit-report.md` — human-readable matrix with hierarchy recommendation
+- `workspace/site-audit-report.json` — machine-readable version read automatically by `generate_pom`
 
 The report contains:
 - All discovered page types with representative URLs
@@ -51,7 +51,7 @@ The report contains:
 - Per-page element inventory (IDs, form inputs, structural classes)
 - Recommended POM hierarchy
 
-`generate_pom` reads `site-audit-report.json` automatically when generating POMs —
+`generate_pom` reads `workspace/site-audit-report.json` automatically when generating POMs —
 the page's unique IDs and form inputs are injected as hints into the LLM prompt,
 improving locator selection without any manual work.
 
@@ -147,8 +147,8 @@ These belong in the concrete page class only.
 
 ```
 1. npm run audit_site -- --url https://target.com
-   → site-audit-report.md  (read this — design your hierarchy)
-   → site-audit-report.json (auto-used by generate_pom)
+   → workspace/site-audit-report.md  (read this — design your hierarchy)
+   → workspace/site-audit-report.json (auto-used by generate_pom)
    → test-data/constants.ts (import in tests)
 
 2. Write BasePage, SitePage, any intermediate classes by hand

@@ -44,7 +44,7 @@ Generate a test for the login flow — page_paths: /login
 | `test_name` | no | Names `test()`/`describe()` — not the filename |
 | `spec_file` | no | Target spec, e.g. `"tests/ui/auth.spec.ts"` |
 | `page_paths` | no (recommended) | Pages to inspect live for accurate locators |
-| `req_id` | no | REQ ID from `REQUIREMENTS.md` / a `prd-tests.txt` block's `# req_id` — tags the generated test `@req:REQ-NNN` |
+| `req_id` | no | REQ ID from `REQUIREMENTS.md` / a `workspace/prd-tests.txt` block's `# req_id` — tags the generated test `@req:REQ-NNN` |
 | `dry_run` | no | `true` = generate code but don't write/run — preview only |
 
 **Always provide `page_paths`** when known — without it, locators are invented
@@ -67,7 +67,7 @@ Test the login flow with valid credentials.
 ...
 ```
 
-`req_id` is typically pre-filled by `analyze_prd` in `prd-tests.txt` blocks — see
+`req_id` is typically pre-filled by `analyze_prd` in `workspace/prd-tests.txt` blocks — see
 [analyze-prd](../analyze-prd/SKILL.md) and
 [docs/analyze-prd.md#requirements-traceability--requirementsmd](../../../docs/analyze-prd.md#requirements-traceability--requirementsmd).
 

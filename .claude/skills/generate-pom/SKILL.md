@@ -52,7 +52,7 @@ response is also invalid, the page is skipped) — see
 
 ## Site audit enrichment
 
-If `site-audit-report.md` exists (from `audit_site`), the tool injects the page's
+If `workspace/site-audit-report.md` exists (from `audit_site`), the tool injects the page's
 known IDs/form inputs as hints — pre-filtered, confirmed-present candidates instead
 of raw DOM inference. Recommended for new projects:
 `audit_site` → `generate_pom` per page → `generate_test`.
