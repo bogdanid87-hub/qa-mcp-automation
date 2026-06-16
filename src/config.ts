@@ -11,6 +11,43 @@ export interface IntermediateClass {
   provides: string[];
 }
 
+/**
+ * Optional, site-specific configuration for `audit_site --mode data` — the
+ * selectors/paths it scrapes to seed test-data/constants.ts. Absent for sites
+ * whose catalogue layout the tool can't know; when absent, data mode skips
+ * scraping and emits only the generic fixtures.
+ */
+export interface AuditConfig {
+  /** Product listing page path, e.g. "/products". */
+  productsPath: string;
+  /** Login/registration page path, e.g. "/login". */
+  loginPath: string;
+  selectors: {
+    /** A single product card. */
+    productCard: string;
+    /** Ancestor of the card holding the product-details link. */
+    productWrapper: string;
+    /** The product-details anchor within the wrapper. */
+    productLink: string;
+    /** Regex (as a string) extracting the numeric id from the link href. */
+    productIdRegex: string;
+    /** Product name element within the card. */
+    productName: string;
+    /** Product price element within the card. */
+    productPrice: string;
+    /** Category accordion panel. */
+    categoryPanel: string;
+    /** Category title link within a panel. */
+    categoryTitle: string;
+    /** Subcategory links within a panel. */
+    categorySub: string;
+    /** Search input — its presence means search exists. */
+    search: string;
+    /** Registration/login form inputs. */
+    registrationInputs: string;
+  };
+}
+
 export interface MqaConfig {
   project: {
     name: string;
@@ -46,6 +83,8 @@ export interface MqaConfig {
     primary: string;
     local: string;
   };
+  /** Optional config for `audit_site --mode data` catalogue scraping. */
+  audit?: AuditConfig;
   /** Optional project-specific prompt enrichments injected into generation prompts. */
   prompts?: {
     /** Site-specific API quirks (response shapes, tricky fields) injected into the API test prompt. */
