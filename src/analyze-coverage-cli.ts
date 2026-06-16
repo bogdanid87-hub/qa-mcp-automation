@@ -1,6 +1,7 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { analyzeCoverageTool } from './tools/analyze-coverage.js';
+import { SITE_URL } from './config.js';
 
 const ROOT = process.cwd();
 
@@ -35,8 +36,8 @@ async function main(): Promise<void> {
         '\nUsage:\n' +
         '  npm run analyze_coverage -- --spec tests/ui/contact.spec.ts\n' +
         '  npm run analyze_coverage -- --spec tests/ui/\n' +
-        '  npm run analyze_coverage -- --spec tests/api/ --url https://automationexercise.com/api_list\n' +
-        '  npm run analyze_coverage -- --url https://automationexercise.com/brand_products/Polo\n' +
+        `  npm run analyze_coverage -- --spec tests/api/ --url ${SITE_URL}\n` +
+        `  npm run analyze_coverage -- --url ${SITE_URL}/<feature-page>\n` +
         '  npm run analyze_coverage -- --registry TESTS_UI.md --gaps\n' +
         '  npm run analyze_coverage                              # all registries\n' +
         '  npm run analyze_coverage -- --spec tests/ui/contact.spec.ts --deep  # two-pass (costs extra)\n' +
