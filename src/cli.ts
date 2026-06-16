@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { readFile, readdir, stat, writeFile } from 'fs/promises';
 import { WORKSPACE_PATHS, ensureWorkspace, MY_TEST_TEMPLATE } from './workspace.js';
-import { config, registryNameForSpec } from './config.js';
+import { config, registryNameForSpec, specKind } from './config.js';
 import { join } from 'path';
 import * as readline from 'readline';
 import { generateTestTool } from './tools/generate-test.js';
@@ -157,8 +157,8 @@ async function runBatch(
   // Generating section-by-section causes a cascade: auto-fix annotations pollute
   // the file before the next section reads it as "existing content". One combined
   // call produces a clean, complete file without mid-batch side effects.
-  const apiSections = sections.filter(s => s.specFile?.startsWith('tests/api/'));
-  const nonApiSections = sections.filter(s => !s.specFile?.startsWith('tests/api/'));
+  const apiSections = sections.filter(s => s.specFile != null && specKind(s.specFile) === 'api');
+  const nonApiSections = sections.filter(s => s.specFile == null || specKind(s.specFile) !== 'api');
 
   const apiBySpec = new Map<string, typeof apiSections>();
   for (const s of apiSections) {

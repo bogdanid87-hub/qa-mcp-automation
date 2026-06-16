@@ -69,8 +69,9 @@ function loadConfig(): MqaConfig {
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
       throw new Error(
-        'mcp-qa.config.json not found in the project root. Copy mcp-qa.config.json from ' +
-        'the skeleton and fill in your project details before running any tools.'
+        'mcp-qa.config.json not found in the project root. Run init_project ' +
+        '(npm run init_project -- --name <name> --url <site-url>) to scaffold one ' +
+        'before running any tools.'
       );
     }
     throw err;
@@ -89,6 +90,12 @@ export function validate(cfg: MqaConfig): void {
     ['testing.registries.api',    cfg.testing?.registries?.api],
     ['testing.registries.e2e',    cfg.testing?.registries?.e2e],
     ['testing.registries.visual', cfg.testing?.registries?.visual],
+    // pom and models are used unconditionally at runtime (buildPomHierarchyDescription,
+    // config.models.primary) — validate them here so a malformed config fails fast
+    // with a clear message instead of an opaque crash deep in a tool.
+    ['pom.baseClass',            cfg.pom?.baseClass],
+    ['pom.siteClass',            cfg.pom?.siteClass],
+    ['models.primary',           cfg.models?.primary],
   ];
   const missing = required.filter(([, v]) => !v).map(([k]) => k);
   if (missing.length > 0) {
@@ -126,6 +133,15 @@ export function registryNameForSpec(specPath: string): string {
   return basename(registryForSpec(specPath));
 }
 
+/** Classify a spec path by its configured test folder (ui / api / e2e / visual). */
+export function specKind(specPath: string): 'ui' | 'api' | 'e2e' | 'visual' {
+  const { folders } = config.testing;
+  if (specPath.startsWith(`${folders.api}/`))    return 'api';
+  if (specPath.startsWith(`${folders.e2e}/`))    return 'e2e';
+  if (specPath.startsWith(`${folders.visual}/`)) return 'visual';
+  return 'ui';
+}
+
 // riskTiers entries are regex-alternation fragments (e.g. "place.order" with `.`
 // as any-char), preserved verbatim from the original hardcoded deriveRisk regexes.
 const CRITICAL_RE = new RegExp(config.riskTiers.critical.join('|'));
@@ -148,7 +164,9 @@ export function deriveRisk(spec: string, describe: string): 'critical' | 'high' 
  */
 export function buildPomHierarchyDescription(): string {
   const { pom } = config;
-  const allNames = [pom.siteClass, ...pom.intermediateClasses.map((c) => c.name), pom.baseClass];
+  const intermediateClasses = pom.intermediateClasses ?? [];
+  const siteClassProvides = pom.siteClassProvides ?? [];
+  const allNames = [pom.siteClass, ...intermediateClasses.map((c) => c.name), pom.baseClass];
   const nameWidth = Math.max(...allNames.map((n) => n.length)) + 1;
 
   const lines: string[] = [
@@ -156,20 +174,20 @@ export function buildPomHierarchyDescription(): string {
     '',
     `  ${pom.siteClass.padEnd(nameWidth)}(import from './${pom.siteClass}') — any full site page (has nav bar, footer, loggedInAs)`,
   ];
-  for (const ic of pom.intermediateClasses) {
+  for (const ic of intermediateClasses) {
     lines.push(`  ${ic.name.padEnd(nameWidth)}(import from '${ic.importFrom}') — ${ic.description}: ${ic.paths.join(', ')}`);
   }
   lines.push(`  ${pom.baseClass.padEnd(nameWidth)}(import from './${pom.baseClass}') — only for pages with no site nav/footer`);
 
-  if (pom.siteClassProvides.length > 0) {
+  if (siteClassProvides.length > 0) {
     lines.push(
       '',
       `${pom.siteClass} already provides (do NOT re-declare in subclasses):`,
-      `  ${pom.siteClassProvides.join(', ')}`,
+      `  ${siteClassProvides.join(', ')}`,
     );
   }
 
-  for (const ic of pom.intermediateClasses) {
+  for (const ic of intermediateClasses) {
     if (ic.provides.length === 0) continue;
     lines.push(
       '',

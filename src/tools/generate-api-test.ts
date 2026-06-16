@@ -13,7 +13,7 @@ import { writeTestAnnotation } from './annotations.js';
 import { extractJson } from './llm-utils.js';
 import { formatReqHint } from './requirements-registry.js';
 import { errorContent } from '../lib/format-error.js';
-import { config, SITE_URL, SITE_HOST } from '../config.js';
+import { config, SITE_URL, SITE_HOST, specKind } from '../config.js';
 
 const ROOT = process.cwd();
 const MODEL = config.models.primary;
@@ -302,7 +302,7 @@ export async function generateApiTestTool(args: {
   // ── Write files ───────────────────────────────────────────────────────────
   const written: string[] = [];
   for (const file of parsed.files ?? []) {
-    if (!file.path.startsWith('tests/api/')) continue;
+    if (specKind(file.path) !== 'api') continue;
     const abs = join(ROOT, file.path);
 
     // When the spec file already has content, merge the new test() blocks from
@@ -319,7 +319,7 @@ export async function generateApiTestTool(args: {
   }
 
   const specFile = (parsed.files ?? []).find(
-    f => f.path.startsWith('tests/api/') && f.path.endsWith('.spec.ts'),
+    f => specKind(f.path) === 'api' && f.path.endsWith('.spec.ts'),
   );
 
   // ── Run and record ────────────────────────────────────────────────────────
