@@ -1,4 +1,5 @@
 import { chromium } from '@playwright/test';
+import { existsSync } from 'fs';
 import { join } from 'path';
 import { SITE_URL } from '../config.js';
 
@@ -40,9 +41,12 @@ export async function inspectPages(paths: string[]): Promise<PageSnapshot[]> {
   try {
     for (const path of paths) {
       const url = path.startsWith('http') ? path : `${BASE_URL}${path}`;
-      const context = await browser.newContext({
-        storageState: STORAGE_STATE,
-      });
+      // Reuse the saved guest storage state when present (it carries cookies/CF
+      // clearance for the reference site). On a fresh project the file won't exist
+      // yet — start from a clean context rather than throwing ENOENT.
+      const context = await browser.newContext(
+        existsSync(STORAGE_STATE) ? { storageState: STORAGE_STATE } : {},
+      );
 
       // Block ads so the page settles faster
       await context.route('**/*', (route) => {
@@ -55,7 +59,11 @@ export async function inspectPages(paths: string[]): Promise<PageSnapshot[]> {
       });
 
       const page = await context.newPage();
-      await page.goto(url, { waitUntil: 'load' });
+      // 'domcontentloaded', not 'load' — ad/analytics-heavy sites often never fire
+      // 'load' within the timeout. Mirrors the navigation convention the engine
+      // teaches in generated tests.
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(1500); // let client-rendered / AJAX content settle
 
       // Pass the evaluate body as a string to avoid esbuild injecting __name helpers
       // that aren't available in the browser context.
