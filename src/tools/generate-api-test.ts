@@ -18,13 +18,17 @@ import { config, SITE_URL, SITE_HOST } from '../config.js';
 const ROOT = process.cwd();
 const MODEL = config.models.primary;
 
+// Site-specific API quirks live in mcp-qa.config.json (prompts.apiNotes), not in
+// the engine — kept out of this prompt so the package stays project-agnostic.
+// Injected below only when the project defines them.
+const apiNotes = config.prompts?.apiNotes?.trim();
+const API_NOTES_SECTION = apiNotes
+  ? `### ${SITE_HOST} data shapes — known tricky fields\n${apiNotes}\n\n`
+  : '';
+
 // Focused prompt — shorter and simpler than the UI test system prompt so the
 // local 14B model handles it accurately. API tests are mechanical and repetitive:
 // the pattern is always "send request → assert status → assert body".
-// TODO(packaging): the "data shapes — known tricky fields" section below is
-// automationexercise-specific. When this engine becomes an installable package,
-// move that site-specific knowledge into config / APP_KNOWLEDGE.md rather than
-// hardcoding it in the prompt.
 const API_SYSTEM_PROMPT = `\
 You are a Playwright API test engineer for ${SITE_HOST}.
 
@@ -106,13 +110,7 @@ expect() returns void, not boolean. To assert "A or B", use a boolean expression
   CORRECT: expect(a.includes('top') || b.includes('top')).toBe(true);
   WRONG:   expect(a).toContain('top') || expect(b).toContain('top');  // TS error: void || void
 
-### automationexercise.com data shapes — known tricky fields
-- product.category is a NESTED OBJECT: { usertype: { usertype: "Women" }, category: "Tops" }
-  Never call .toLowerCase() directly on it. To read the category string: product.category.category
-- Duplicate email registration returns responseCode 400, message: "Email already exists!" (with the s)
-- getUserDetailByEmail response uses field name birth_day (not birth_date)
-
-### Asserting message strings — use exact values
+${API_NOTES_SECTION}### Asserting message strings — use exact values
 When the test description specifies a message string, use toBe() with the exact string,
 never toContain() or a paraphrased alternative:
   CORRECT: expect(body.message).toBe('Bad request, email or password parameter is missing in POST request.')

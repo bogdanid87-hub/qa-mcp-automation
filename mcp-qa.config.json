@@ -48,5 +48,8 @@
   "models": {
     "primary": "claude-sonnet-4-6",
     "local": "qwen2.5-coder:14b"
+  },
+  "prompts": {
+    "apiNotes": "- product.category is a NESTED OBJECT: { usertype: { usertype: \"Women\" }, category: \"Tops\" }\n  Never call .toLowerCase() directly on it. To read the category string: product.category.category\n- Duplicate email registration returns responseCode 400, message: \"Email already exists!\" (with the s)\n- getUserDetailByEmail response uses field name birth_day (not birth_date)"
   }
 }

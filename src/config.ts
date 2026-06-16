@@ -46,6 +46,11 @@ export interface MqaConfig {
     primary: string;
     local: string;
   };
+  /** Optional project-specific prompt enrichments injected into generation prompts. */
+  prompts?: {
+    /** Site-specific API quirks (response shapes, tricky fields) injected into the API test prompt. */
+    apiNotes?: string;
+  };
 }
 
 // ── Loader ─────────────────────────────────────────────────────────────────────
