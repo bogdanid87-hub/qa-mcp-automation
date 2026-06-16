@@ -19,8 +19,17 @@ export const BASE_PAGE_TEMPLATE = `import { Page } from '@playwright/test';
 export class BasePage {
   constructor(protected readonly page: Page) {}
 
-  async navigate(path: string): Promise<void> {
-    await this.page.goto(path);
+  /**
+   * Navigate to a path and wait for the DOM to be ready.
+   * @param dismissOnLoad - run the popup-dismissal hook after load (default true).
+   */
+  async navigate(path: string, dismissOnLoad = true): Promise<void> {
+    await this.page.goto(path, { waitUntil: 'domcontentloaded' });
+    if (dismissOnLoad) {
+      // Project popup-dismissal hook — no-op by default. Add your site's
+      // cookie-banner / consent-overlay dismissal here so every navigation
+      // clears it consistently.
+    }
   }
 }
 `;
@@ -150,4 +159,113 @@ export const FIXTURES_INDEX_TEMPLATE = `import { test as base } from '@playwrigh
 export const test = base.extend({});
 
 export { expect } from '@playwright/test';
+`;
+
+// String.raw so the regex backslashes (\\.) survive into the generated file verbatim.
+export const PLAYWRIGHT_CONFIG_TEMPLATE = String.raw`import { defineConfig, devices } from '@playwright/test';
+import { readFileSync } from 'fs';
+
+// baseURL comes from mcp-qa.config.json so this file stays project-agnostic.
+const { project } = JSON.parse(readFileSync('mcp-qa.config.json', 'utf-8'));
+const baseURL: string = project.siteUrl;
+
+export default defineConfig({
+  testDir: './tests',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: 1,
+  workers: process.env.CI ? 2 : undefined,
+  reporter: [['html', { open: 'never' }], ['list']],
+
+  use: {
+    baseURL,
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+  },
+
+  projects: [
+    // Saves guest storage state once; the browser projects depend on it.
+    { name: 'setup', testMatch: /global\.setup\.ts/ },
+
+    {
+      name: 'chromium',
+      testIgnore: /tests\/visual\/.*/,
+      use: { ...devices['Desktop Chrome'], storageState: 'test-data/.auth/guest.json' },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'firefox',
+      testIgnore: /tests\/visual\/.*/,
+      use: { ...devices['Desktop Firefox'], storageState: 'test-data/.auth/guest.json' },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'webkit',
+      testIgnore: /tests\/visual\/.*/,
+      use: { ...devices['Desktop Safari'], storageState: 'test-data/.auth/guest.json' },
+      dependencies: ['setup'],
+    },
+
+    // Visual regression — Chromium only (baselines are browser+OS specific).
+    {
+      name: 'visual',
+      testDir: './tests/visual',
+      use: { ...devices['Desktop Chrome'], storageState: 'test-data/.auth/guest.json' },
+      dependencies: ['setup'],
+      fullyParallel: false,
+    },
+  ],
+});
+`;
+
+export const GLOBAL_SETUP_TEMPLATE = `import { test as setup, chromium } from '@playwright/test';
+import { readFileSync } from 'fs';
+import path from 'path';
+
+// Saves a guest browsing session (cookies/localStorage) so every test starts
+// from the same warm state. Add login/stealth/popup handling here if your site
+// needs it (see generate_auth_fixture for an authenticated variant).
+const { project } = JSON.parse(readFileSync('mcp-qa.config.json', 'utf-8'));
+const guestStorageState = path.join(__dirname, '../test-data/.auth/guest.json');
+
+setup('save guest storage state', async () => {
+  const browser = await chromium.launch();
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto(project.siteUrl, { waitUntil: 'domcontentloaded' });
+  await context.storageState({ path: guestStorageState });
+  await browser.close();
+});
+`;
+
+export const GITIGNORE_TEMPLATE = `# Dependencies
+node_modules/
+
+# Playwright output
+test-results/
+playwright-report/
+
+# Saved auth/browser state (recreated by global.setup.ts)
+test-data/.auth/
+
+# Local secrets
+.env
+.claude/settings.local.json
+`;
+
+export const TSCONFIG_TEMPLATE = `{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020", "DOM"],
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules"]
+}
 `;

@@ -83,6 +83,25 @@ describe('initProjectTool', () => {
 
     const basePage = await readFile(join(dir, 'pages/BasePage.ts'), 'utf-8');
     expect(basePage).toContain('class BasePage');
+    // navigate must accept the dismissOnLoad arg the system prompt documents
+    expect(basePage).toContain('navigate(path: string, dismissOnLoad');
+
+    // Runnable Playwright setup: config (with all three browsers) + global setup.
+    const pwConfig = await readFile(join(dir, 'playwright.config.ts'), 'utf-8');
+    expect(pwConfig).toContain('defineConfig');
+    for (const project of ['chromium', 'firefox', 'webkit', 'setup', 'visual']) {
+      expect(pwConfig).toContain(`name: '${project}'`);
+    }
+    expect(pwConfig).toContain("readFileSync('mcp-qa.config.json'");
+
+    const globalSetup = await readFile(join(dir, 'tests/global.setup.ts'), 'utf-8');
+    expect(globalSetup).toContain('save guest storage state');
+
+    const tsconfig = JSON.parse(await readFile(join(dir, 'tsconfig.json'), 'utf-8'));
+    expect(tsconfig.compilerOptions.strict).toBe(true);
+
+    const gitignore = await readFile(join(dir, '.gitignore'), 'utf-8');
+    expect(gitignore).toContain('test-data/.auth/');
 
     const sitePage = await readFile(join(dir, 'pages/SitePage.ts'), 'utf-8');
     expect(sitePage).toContain('extends BasePage');
