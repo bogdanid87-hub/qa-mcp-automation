@@ -5,7 +5,7 @@
  * of the baseline scaffold.
  */
 
-export { REQUIREMENTS_TEMPLATE } from './requirements-registry.js';
+export { REQUIREMENTS_TEMPLATE } from './requirements-template.js';
 export { MY_TEST_TEMPLATE, PRD_TEMPLATE } from '../workspace.js';
 
 export const BASE_PAGE_TEMPLATE = `import { Page } from '@playwright/test';

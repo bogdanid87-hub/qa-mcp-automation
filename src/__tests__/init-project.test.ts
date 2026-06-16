@@ -3,6 +3,24 @@ import { mkdtemp, rm, readFile, writeFile, mkdir } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
+// ── Bootstrap import safety ──────────────────────────────────────────────────
+// init_project must run in a project that has NO mcp-qa.config.json yet (it creates
+// one), so nothing in its import graph may pull in config.ts's eager singleton load.
+describe('init_project bootstrap import safety', () => {
+  it('init-project imports the schema (not the config singleton)', async () => {
+    const src = await readFile(join(__dirname, '../tools/init-project.ts'), 'utf-8');
+    expect(src).toContain("from '../config-schema.js'");
+    expect(src).not.toMatch(/from '\.\.\/config\.js'/);
+  });
+
+  it('init-project-templates use the import-free requirements template', async () => {
+    const src = await readFile(join(__dirname, '../tools/init-project-templates.ts'), 'utf-8');
+    expect(src).toContain("from './requirements-template.js'");
+    // requirements-registry transitively loads config via test-registry — must not be used here.
+    expect(src).not.toContain("from './requirements-registry.js'");
+  });
+});
+
 import { validate } from '../config';
 import { buildMqaConfig, initProjectTool, PROFILE_RISK_TIERS, type InitProjectArgs } from '../tools/init-project';
 

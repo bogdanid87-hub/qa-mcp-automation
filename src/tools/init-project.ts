@@ -2,7 +2,9 @@ import { access, mkdir, writeFile } from 'fs/promises';
 import { dirname, join } from 'path';
 
 import { safeWrite } from '../lib/safe-write.js';
-import { validate, type MqaConfig } from '../config.js';
+// Import from config-schema (not config.js) so init_project — which creates the
+// config — doesn't trigger config.ts's eager load in a project that has none yet.
+import { validate, type MqaConfig } from '../config-schema.js';
 import { BASE_PAGE_TEMPLATE, FIXTURES_INDEX_TEMPLATE, GITIGNORE_TEMPLATE, GLOBAL_SETUP_TEMPLATE, LEARNED_RULES_TEMPLATE, MY_TEST_TEMPLATE, PLAYWRIGHT_CONFIG_TEMPLATE, PRD_TEMPLATE, REQUIREMENTS_TEMPLATE, SITE_PAGE_TEMPLATE, START_HERE_TEMPLATE, TSCONFIG_TEMPLATE } from './init-project-templates.js';
 
 export type RiskTiers = MqaConfig['riskTiers'];
