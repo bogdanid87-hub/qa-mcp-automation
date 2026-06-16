@@ -149,6 +149,32 @@ test.describe('Auth API', () => {
   });
 });
 
+### Test tagging
+Tag every generated test so it can be run as part of a targeted subset.
+Apply tags at the end of the test name string, in this order: @smoke @critical @req: @negative/@boundary
+
+- @smoke — one primary happy-path test per describe block (e.g. the "should return products list" test)
+- @regression — every test gets this tag; marks tests that run on every PR
+- @critical — auth and data-mutation endpoints (verifyLogin, createAccount, deleteAccount, updateAccount)
+
+  test('should return products list @smoke @regression', async ({ request }) => { ... });
+  test('should verify login with valid credentials @smoke @critical', async ({ request }) => { ... });
+  test('should return 400 when email parameter is missing @regression @negative', async ({ request }) => { ... });
+
+Every generated test MUST have at least @regression. Add @smoke only to the primary success test per describe block. Add @critical to auth endpoints and any endpoint that creates, updates, or deletes user data.
+
+If the test description includes a "Requirement hint: tag this test with @req:REQ-NNN",
+append @req:REQ-NNN after @smoke/@critical and before @negative/@boundary:
+  test('should return products list @smoke @regression @req:REQ-API-001', async ({ request }) => { ... });
+Only add @req: when a Requirement hint is explicitly present in the description.
+
+Also classify each test's type by adding at most one of these tags (after @req: if present):
+- @negative — the test expects an error responseCode (400/404/405 — bad request, not found, method not allowed)
+- @boundary — the test exercises an edge case (empty result list, exact count assertion, min/max parameter values)
+
+Leave both off for ordinary success-path tests — absence means "functional" by default:
+  test('should return at least 20 products @regression @boundary', async ({ request }) => { ... });
+
 ### Output format
 Respond with raw JSON only (no markdown fences):
 {
