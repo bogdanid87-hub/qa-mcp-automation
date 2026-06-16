@@ -30,6 +30,20 @@ Every test suggestion is classified into one of four tiers:
 
 ## Input formats
 
+### Existing spec file — `--file tests/ui/feature.spec.ts`
+
+Point at an existing Playwright spec to find what's missing rather than what's already there. The tool extracts every `test(...)` name, tells Claude which scenarios are already implemented, and asks it to suggest additions — negative cases, boundary conditions, and untested flows.
+
+```bash
+npm run analyze_prd -- --file tests/ui/cart.spec.ts
+npm run analyze_prd -- --file tests/ui/checkout.spec.ts --tier critical,high
+npm run analyze_prd -- --file tests/api/products.spec.ts --focus search,filter
+```
+
+The output is written to `workspace/prd-tests.txt` in the same batch format as any other `analyze_prd` run — review, delete unwanted suggestions, then feed to `generate_test`.
+
+---
+
 ### Web page — `--url`
 
 Point directly at any URL — API documentation, a wiki page, a Confluence spec, a feature changelog. The tool navigates headlessly via Playwright, extracts the fully-rendered text, and passes it to Claude as the PRD. Handles JS-rendered content.

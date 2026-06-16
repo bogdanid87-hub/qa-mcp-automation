@@ -168,6 +168,30 @@ export interface PrdFile {
   mediaType: string;      // 'application/pdf' | 'image/png' | 'image/jpeg' | etc.
 }
 
+/**
+ * Build a "what's missing" prompt from an existing Playwright spec file.
+ * Extracts describe/test names and frames them as already covered so Claude
+ * suggests additions rather than re-suggesting existing tests.
+ */
+export function buildSpecPrompt(content: string, specPath: string): string {
+  const describeNames: string[] = [...content.matchAll(/describe\s*\(\s*['"`](.*?)['"`]/g)].map(m => m[1]);
+  const testNames: string[] = [...content.matchAll(/\btest(?:\.\w+)?\s*\(\s*['"`](.*?)['"`]/g)].map(m => m[1]);
+  const feature = describeNames[0] ?? specPath.replace(/.*[\\/]/, '').replace(/\.spec\.ts$/, '');
+
+  return [
+    `Feature: ${feature}`,
+    '',
+    `Source: existing Playwright spec file (${specPath})`,
+    '',
+    'The following test scenarios are already implemented — do NOT suggest these again:',
+    ...testNames.map(n => `- ${n}`),
+    '',
+    'Suggest additional test cases to improve coverage of this feature.',
+    'Focus on: negative cases (invalid input, error paths), boundary conditions,',
+    'and any user flows not yet covered by the existing tests above.',
+  ].join('\n');
+}
+
 export async function analyzePrdTool(args: {
   prdContent?: string;    // plain text / markdown (optional when prdFile is provided)
   prdFile?: PrdFile;      // PDF passed directly to Claude
@@ -175,14 +199,27 @@ export async function analyzePrdTool(args: {
   outputFile?: string;
   tier?: string[];        // e.g. ['critical', 'high'] — omit medium/low
   focus?: string[];       // e.g. ['checkout', 'authentication'] — omit other features
+  specPath?: string;      // path to an existing .spec.ts — extracts test names, suggests additions
 }): Promise<{ content: { type: 'text'; text: string }[] }> {
   await ensureWorkspace();
   const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
   if (!apiKey) {
     return errorContent('Error: ANTHROPIC_API_KEY is not set.', { category: 'config', tool: 'analyze_prd' });
   }
-  if (!args.prdContent && !args.prdFile) {
-    return { content: [{ type: 'text', text: 'Error: provide either prdContent (text) or prdFile (PDF/image).' }] };
+
+  // Spec file ingestion: read existing test names and reframe as a gap-suggestion prompt
+  let resolvedPrdContent = args.prdContent;
+  if (args.specPath && !resolvedPrdContent && !args.prdFile) {
+    try {
+      const specContent = await readFile(args.specPath, 'utf-8');
+      resolvedPrdContent = buildSpecPrompt(specContent, args.specPath);
+    } catch (err: any) {
+      return { content: [{ type: 'text', text: `Error: could not read spec file ${args.specPath}: ${err.message}` }] };
+    }
+  }
+
+  if (!resolvedPrdContent && !args.prdFile) {
+    return { content: [{ type: 'text', text: 'Error: provide prdContent (text), prdFile (PDF/image), or specPath (existing .spec.ts).' }] };
   }
 
   // Load existing coverage (registry) + backlog so we don't re-suggest known gaps
@@ -212,7 +249,7 @@ export async function analyzePrdTool(args: {
     {
       type: 'text',
       text: knowledgeSection + limitationsSection + coverageList + '\n\n---\n\n## PRD to analyse' +
-        (args.prdContent ? '\n\n' + args.prdContent : '\n\n(see attached file)'),
+        (resolvedPrdContent ? '\n\n' + resolvedPrdContent : '\n\n(see attached file)'),
     },
   ];
 

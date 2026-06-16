@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildCoverageList } from '../tools/analyze-prd';
+import { buildCoverageList, buildSpecPrompt } from '../tools/analyze-prd';
 import type { TestEntry, BrokenEntry } from '../tools/test-registry';
 
 describe('buildCoverageList', () => {
@@ -48,5 +48,67 @@ describe('buildCoverageList', () => {
     const result = buildCoverageList([], [], ['some-gap']);
     expect(result).toContain('some-gap');
     expect(result).not.toBe('No existing test coverage.');
+  });
+});
+
+describe('buildSpecPrompt', () => {
+  const basicSpec = `
+import { test, expect } from '@playwright/test';
+
+describe('Cart', () => {
+  test('should add product to cart', async ({ page }) => {});
+  test('should remove product from cart', async ({ page }) => {});
+  test('should show correct total', async ({ page }) => {});
+});
+`;
+
+  it('uses the describe block name as the feature', () => {
+    const result = buildSpecPrompt(basicSpec, 'tests/ui/cart.spec.ts');
+    expect(result).toContain('Feature: Cart');
+  });
+
+  it('lists existing test names in the do-not-suggest section', () => {
+    const result = buildSpecPrompt(basicSpec, 'tests/ui/cart.spec.ts');
+    expect(result).toContain('- should add product to cart');
+    expect(result).toContain('- should remove product from cart');
+    expect(result).toContain('- should show correct total');
+  });
+
+  it('includes the spec file path in the source line', () => {
+    const result = buildSpecPrompt(basicSpec, 'tests/ui/cart.spec.ts');
+    expect(result).toContain('tests/ui/cart.spec.ts');
+  });
+
+  it('includes a suggestion prompt', () => {
+    const result = buildSpecPrompt(basicSpec, 'tests/ui/cart.spec.ts');
+    expect(result).toContain('Suggest additional test cases');
+    expect(result).toContain('negative cases');
+    expect(result).toContain('boundary conditions');
+  });
+
+  it('falls back to filename when no describe block is present', () => {
+    const specWithoutDescribe = `
+test('should do something', async ({ page }) => {});
+`;
+    const result = buildSpecPrompt(specWithoutDescribe, 'tests/ui/checkout.spec.ts');
+    expect(result).toContain('Feature: checkout');
+  });
+
+  it('handles test.only and test.skip variants', () => {
+    const specWithVariants = `
+describe('Search', () => {
+  test.only('should find products', async ({ page }) => {});
+  test.skip('should handle empty results', async ({ page }) => {});
+});
+`;
+    const result = buildSpecPrompt(specWithVariants, 'tests/ui/search.spec.ts');
+    expect(result).toContain('- should find products');
+    expect(result).toContain('- should handle empty results');
+  });
+
+  it('returns a non-empty string for an empty spec', () => {
+    const result = buildSpecPrompt('', 'tests/ui/empty.spec.ts');
+    expect(result).toContain('Feature:');
+    expect(result).toContain('Suggest additional test cases');
   });
 });

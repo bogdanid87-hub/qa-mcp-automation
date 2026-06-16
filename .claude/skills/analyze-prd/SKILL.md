@@ -1,6 +1,6 @@
 ---
 name: analyze-prd
-description: Reads a PRD (text, PDF, image, or URL), classifies features by risk, and writes a backlog to workspace/prd-tests.txt for generate_test (analyze_prd MCP tool / npm run analyze_prd). Load when turning requirements/specs into a test plan, or discussing risk tiers.
+description: Reads a PRD (text, PDF, image, URL, or existing .spec.ts), classifies features by risk, and writes a backlog to workspace/prd-tests.txt for generate_test (analyze_prd MCP tool / npm run analyze_prd). Load when turning requirements/specs into a test plan, or discussing risk tiers.
 ---
 
 # analyze_prd
@@ -29,6 +29,9 @@ registries are filtered out, so the output is a genuine gap list.
 ## Input formats (CLI)
 
 ```bash
+# Existing spec — extracts test names, suggests what's missing
+npm run analyze_prd -- --file tests/ui/cart.spec.ts
+
 # URL — best for API docs; handles JS-rendered content
 npm run analyze_prd -- --url https://automationexercise.com/api_list
 
@@ -123,11 +126,12 @@ Analyze this PRD, only critical and high risk tests, focus on checkout:
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `prd_content` | string | The PRD text (required) |
+| `prd_content` | string | The PRD text (required unless `spec_path` is provided) |
+| `spec_path` | string | Path to an existing `.spec.ts` — extracts test names, suggests additions |
 | `output_file` | string | Output path (default `workspace/prd-tests.txt`) |
 | `tier` | string[] | Risk tiers to include, e.g. `["critical", "high"]` |
 | `focus` | string[] | Feature areas to include, e.g. `["checkout"]` |
 
-> MCP only accepts text content — for PDF/image inputs, use the terminal CLI.
+> MCP only accepts text content or a spec path — for PDF/image inputs, use the terminal CLI.
 
 Full guide: [docs/analyze-prd.md](../../../docs/analyze-prd.md)

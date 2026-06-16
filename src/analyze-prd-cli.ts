@@ -88,17 +88,19 @@ async function main(): Promise<void> {
       '  npm run analyze_prd -- --file prd.md\n' +
       '  npm run analyze_prd -- --file spec.pdf\n' +
       '  npm run analyze_prd -- --file wireframe.png\n' +
+      '  npm run analyze_prd -- --file tests/ui/cart.spec.ts\n' +
       '  npm run analyze_prd -- --url https://example.com/api-docs\n' +
       '  npm run analyze_prd -- --file prd.md --images wireframe.png,mockup.jpg\n' +
       '  npm run analyze_prd -- --file prd.md --output sprint-tests.txt\n' +
       '  npm run analyze_prd -- --file prd.md --tier critical,high\n' +
       '  npm run analyze_prd -- --file prd.md --focus checkout,authentication\n' +
       '\nSupported inputs:\n' +
-      '  --file prd.md          Text/Markdown — read as plain text\n' +
-      '  --file spec.pdf        PDF — passed to Claude natively (preserves layout)\n' +
-      '  --file wireframe.png   Image (.png .jpg .jpeg .gif .webp) — Claude reads visuals\n' +
-      '  --url https://...      Web page — rendered text extracted via headless browser\n' +
-      '  PowerPoint/Excel/Word  Export to PDF first, then use --file spec.pdf\n',
+      '  --file prd.md              Text/Markdown — read as plain text\n' +
+      '  --file spec.pdf            PDF — passed to Claude natively (preserves layout)\n' +
+      '  --file wireframe.png       Image (.png .jpg .jpeg .gif .webp) — Claude reads visuals\n' +
+      '  --file tests/ui/*.spec.ts  Existing spec — extracts test names, suggests what\'s missing\n' +
+      '  --url https://...          Web page — rendered text extracted via headless browser\n' +
+      '  PowerPoint/Excel/Word      Export to PDF first, then use --file spec.pdf\n',
     );
     process.exit(1);
   }
@@ -111,6 +113,7 @@ async function main(): Promise<void> {
   // Load main input
   let prdContent: string | undefined;
   let prdFile: PrdFile | undefined;
+  let specPath: string | undefined;
   let primaryLabel: string;
 
   if (pageUrl) {
@@ -125,12 +128,16 @@ async function main(): Promise<void> {
     }
   } else {
     const ext = extname(filePath!).toLowerCase();
-    const isImage = ext in IMAGE_TYPES;
-    const isPdf = ext === '.pdf';
-    const isText = !isImage && !isPdf;
+    const isSpec = filePath!.endsWith('.spec.ts');
+    const isImage = !isSpec && ext in IMAGE_TYPES;
+    const isPdf = !isSpec && ext === '.pdf';
+    const isText = !isSpec && !isImage && !isPdf;
 
     try {
-      if (isText) {
+      if (isSpec) {
+        specPath = filePath!;
+        primaryLabel = `${filePath} (spec)`;
+      } else if (isText) {
         prdContent = await readFile(filePath!, 'utf-8');
         primaryLabel = `${filePath} (text)`;
       } else if (isPdf) {
@@ -173,6 +180,7 @@ async function main(): Promise<void> {
   const result = await analyzePrdTool({
     prdContent,
     prdFile: prdFile,
+    specPath,
     images: images.length > 0 ? images : undefined,
     outputFile: raw['output'] ? join(ROOT, raw['output']) : undefined,
     tier: tier?.length ? tier : undefined,

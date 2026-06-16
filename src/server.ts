@@ -78,7 +78,8 @@ export function createServer(): McpServer {
         'Writes suggestions to prd-tests.txt in the same batch format as my-test.txt so you can run ' +
         '`npm run generate -- --file prd-tests.txt` directly without any copy-pasting.',
       inputSchema: {
-        prd_content: z.string().describe('The PRD text to analyse. Paste the full document, a feature section, or a list of user stories.'),
+        prd_content: z.string().optional().describe('The PRD text to analyse. Paste the full document, a feature section, or a list of user stories. Required unless spec_path is provided.'),
+        spec_path: z.string().optional().describe('Path to an existing .spec.ts file — extracts its test names and suggests what coverage is missing. Alternative to prd_content.'),
         output_file: z.string().optional().describe('Output file path. Defaults to prd-tests.txt in the project root.'),
         tier: z.array(z.enum(['critical', 'high', 'medium', 'low'])).optional().describe('Only generate tests at these risk levels, e.g. ["critical", "high"]. Omits all others.'),
         focus: z.array(z.string()).optional().describe('Only generate tests for these feature areas, e.g. ["checkout", "authentication"]. Omits all others.'),
@@ -86,6 +87,7 @@ export function createServer(): McpServer {
     },
     (args) => analyzePrdTool({
       prdContent: args.prd_content,
+      specPath: args.spec_path,
       outputFile: args.output_file,
       tier: args.tier,
       focus: args.focus,
