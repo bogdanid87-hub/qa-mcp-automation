@@ -74,7 +74,8 @@ Test the login flow with valid credentials.
 Every generated test is also self-classified by type: `@negative` (invalid input /
 error path) or `@boundary` (edge value / limit) — at most one, after `@req:` if
 present. Absence of both means "functional" (the default for ordinary happy-path
-tests).
+tests). This applies to both UI **and API** tests — `generate-api-test.ts`'s prompt
+now carries the same tagging rules (added in the API tagging gap fix).
 
 ```bash
 npm run generate -- --file my-test.txt

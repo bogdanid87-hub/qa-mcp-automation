@@ -131,6 +131,31 @@ Generate API tests for the brands list API
 
 ---
 
+## Test tagging
+
+Generated API tests carry the same tags as UI tests so they can be filtered and
+reported by type. Tags are appended to the `test(...)` name in this order:
+
+| Tag | When applied |
+|-----|-------------|
+| `@smoke` | One primary success test per `describe` block |
+| `@regression` | Every test — mandatory minimum |
+| `@critical` | Auth and data-mutation endpoints: `verifyLogin`, `createAccount`, `deleteAccount`, `updateAccount` |
+| `@req:REQ-NNN` | Only when a `# req_id:` field is present in the input block (from `analyze_prd`) |
+| `@negative` | Tests that assert a non-200 `responseCode` (400 bad request, 404 not found, 405 method not allowed) |
+| `@boundary` | Tests exercising edge cases (empty result list, exact count assertions, min/max values) |
+
+```typescript
+test('should return products list @smoke @regression', async ({ request }) => { ... });
+test('should verify login with valid credentials @smoke @critical', async ({ request }) => { ... });
+test('should return 400 when email parameter is missing @regression @negative', async ({ request }) => { ... });
+test('should return at least 20 products @regression @boundary', async ({ request }) => { ... });
+```
+
+These tags are consistent with UI test tagging (see [docs/generate-test.md](generate-test.md)) and feed the same `npm run status` "🏷️ Test types" line and `analyze_coverage`'s "Requirements coverage" section.
+
+---
+
 ## Auto-run and registry
 
 After writing the spec, the tool:
