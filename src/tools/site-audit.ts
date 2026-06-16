@@ -5,7 +5,7 @@ import { readFile, mkdir } from 'fs/promises';
 import { dirname, join } from 'path';
 import { safeWrite } from '../lib/safe-write.js';
 import { appendKnowledgeCandidates } from './generate-app-knowledge.js';
-import { config } from '../config.js';
+import { config, type AuditConfig } from '../config.js';
 
 const ROOT = process.cwd();
 
@@ -409,7 +409,7 @@ interface RawTestData {
   registrationFields: Array<{ name: string; type: string; placeholder: string }>;
 }
 
-async function collectRawTestData(baseUrl: string): Promise<RawTestData> {
+async function collectRawTestData(baseUrl: string, audit: AuditConfig): Promise<RawTestData> {
   const browser = await chromium.launch({ headless: true });
   const ctx = await browser.newContext({
     userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -420,28 +420,29 @@ async function collectRawTestData(baseUrl: string): Promise<RawTestData> {
   try {
     process.stdout.write('  Collecting product catalogue...\n');
     const productsPage = await ctx.newPage();
-    await productsPage.goto(`${baseUrl}/products`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await productsPage.goto(`${baseUrl}${audit.productsPath}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await productsPage.waitForTimeout(1500);
 
-    const { products, categories, subcategories, searchExists } = await productsPage.evaluate(() => {
+    const { products, categories, subcategories, searchExists } = await productsPage.evaluate((sel) => {
+      const idRe = new RegExp(sel.productIdRegex);
       const productCards: Array<{ id: number; name: string; price: string; category: string }> = [];
-      document.querySelectorAll('.productinfo.text-center').forEach(card => {
-        const wrapper = card.closest('.product-image-wrapper');
-        const link = wrapper?.querySelector('a[href*="/product_details/"]') as HTMLAnchorElement | null;
-        const idMatch = link?.getAttribute('href')?.match(/\/product_details\/(\d+)/);
-        const name = card.querySelector('p')?.textContent?.trim() ?? '';
-        const price = card.querySelector('h2')?.textContent?.trim() ?? '';
+      document.querySelectorAll(sel.productCard).forEach(card => {
+        const wrapper = card.closest(sel.productWrapper);
+        const link = wrapper?.querySelector(sel.productLink) as HTMLAnchorElement | null;
+        const idMatch = idRe.exec(link?.getAttribute('href') ?? '');
+        const name = card.querySelector(sel.productName)?.textContent?.trim() ?? '';
+        const price = card.querySelector(sel.productPrice)?.textContent?.trim() ?? '';
         if (idMatch && name) productCards.push({ id: parseInt(idMatch[1]), name, price, category: '' });
       });
 
       const cats: string[] = [];
       const subs: Record<string, string[]> = {};
-      document.querySelectorAll('#accordian .panel').forEach(panel => {
-        const catName = panel.querySelector('.panel-title a')?.textContent?.trim() ?? '';
+      document.querySelectorAll(sel.categoryPanel).forEach(panel => {
+        const catName = panel.querySelector(sel.categoryTitle)?.textContent?.trim() ?? '';
         if (!catName) return;
         cats.push(catName);
         subs[catName] = [];
-        panel.querySelectorAll('.panel-body a').forEach(a => {
+        panel.querySelectorAll(sel.categorySub).forEach(a => {
           const sub = a.textContent?.trim();
           if (sub) subs[catName].push(sub);
         });
@@ -451,27 +452,27 @@ async function collectRawTestData(baseUrl: string): Promise<RawTestData> {
         products: productCards.slice(0, 30),
         categories: cats,
         subcategories: subs,
-        searchExists: !!document.querySelector('#search_product'),
+        searchExists: !!document.querySelector(sel.search),
       };
-    });
+    }, audit.selectors);
 
     await productsPage.close();
 
     process.stdout.write('  Collecting registration form fields...\n');
     const loginPage = await ctx.newPage();
-    await loginPage.goto(`${baseUrl}/login`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await loginPage.goto(`${baseUrl}${audit.loginPath}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await loginPage.waitForTimeout(1000);
 
-    const registrationFields = await loginPage.evaluate(() => {
+    const registrationFields = await loginPage.evaluate((registrationInputs) => {
       const fields: Array<{ name: string; type: string; placeholder: string }> = [];
-      document.querySelectorAll('.signup-form input, .login-form input').forEach(el => {
+      document.querySelectorAll(registrationInputs).forEach(el => {
         const input = el as HTMLInputElement;
         if (input.type === 'submit' || input.type === 'button') return;
         const name = input.name || input.id || input.placeholder;
         if (name) fields.push({ name, type: input.type || 'text', placeholder: input.placeholder || '' });
       });
       return fields;
-    });
+    }, audit.selectors.registrationInputs);
 
     await loginPage.close();
     return { baseUrl, products, categories, subcategories, searchExists, registrationFields };
@@ -653,23 +654,38 @@ export async function siteAuditTool(args: SiteAuditArgs): Promise<string> {
       lines.push('\n⚠️  ANTHROPIC_API_KEY not set — skipping test data generation');
     } else {
       const base = normaliseBase(args.url);
-      process.stdout.write(`\n📦 Collecting test data from ${base}...\n`);
+      const audit = config.audit;
+      let raw: RawTestData;
 
-      const raw = await collectRawTestData(base);
-      process.stdout.write(`  Found ${raw.products.length} products, ${raw.categories.length} categories\n`);
+      if (audit) {
+        process.stdout.write(`\n📦 Collecting test data from ${base}...\n`);
+        raw = await collectRawTestData(base, audit);
+        process.stdout.write(`  Found ${raw.products.length} products, ${raw.categories.length} categories\n`);
 
-      if (!raw.searchExists) {
-        await appendKnowledgeCandidates(
-          [{
-            area: 'Search',
-            note: 'No #search_product element found on /products — search functionality ' +
-              'may not exist, or this site uses a different selector/page for search. ' +
-              'Confirm and record in APP_LIMITATIONS.md if genuinely absent.',
-          }],
-          `audit_site — ${base} (data)`,
-          new Date().toISOString().slice(0, 10),
+        if (!raw.searchExists) {
+          await appendKnowledgeCandidates(
+            [{
+              area: 'Search',
+              note: `No search input (${audit.selectors.search}) found on ${audit.productsPath} — search ` +
+                'functionality may not exist, or this site uses a different selector/page for search. ' +
+                'Confirm and record in APP_LIMITATIONS.md if genuinely absent.',
+            }],
+            `audit_site — ${base} (data)`,
+            new Date().toISOString().slice(0, 10),
+          );
+          lines.push(`   ⚠️  No search input found — candidate noted in APP_KNOWLEDGE_CANDIDATES.md`);
+        }
+      } else {
+        // No site-specific catalogue selectors configured — don't scrape (it would
+        // produce garbage). Emit only the generic fixtures and tell the user how to
+        // enable catalogue scraping for their site.
+        lines.push(
+          '\n📦 No "audit" block in mcp-qa.config.json — skipping catalogue scrape.',
+          '   Generating only the generic TEST_USER / PAYMENT / REVIEW fixtures.',
+          '   Add an "audit" block (productsPath/loginPath + selectors), or fill in',
+          '   product/category/search data in test-data/constants.ts by hand.',
         );
-        lines.push(`   ⚠️  No search input found — candidate noted in APP_KNOWLEDGE_CANDIDATES.md`);
+        raw = { baseUrl: base, products: [], categories: [], subcategories: {}, searchExists: false, registrationFields: [] };
       }
 
       const constantsPath = join(ROOT, 'test-data', 'constants.ts');
