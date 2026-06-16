@@ -9,11 +9,10 @@ import { readAppKnowledge, readAppLimitations, appendKnowledgeCandidates, Knowle
 import { errorContent } from '../lib/format-error.js';
 import { inspectPages, formatSnapshots } from './inspect-page.js';
 import { chromium } from '@playwright/test';
-import { config } from '../config.js';
+import { config, SITE_HOST } from '../config.js';
 
 const ROOT = process.cwd();
 const MODEL = config.models.primary;
-const SITE_HOST = 'automationexercise.com';
 
 // ── Context gathering ──────────────────────────────────────────────────────────
 
@@ -99,7 +98,7 @@ async function fetchUrlContext(url: string): Promise<string> {
 // ── System prompt ──────────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `\
-You are a QA coverage analyst for automationexercise.com.
+You are a QA coverage analyst for ${SITE_HOST}.
 
 Given the existing test suite context (spec files, registry state) and optional
 page/feature information, identify coverage gaps and risk areas.

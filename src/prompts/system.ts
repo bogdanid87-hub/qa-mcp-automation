@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
-import { buildPomHierarchyDescription } from '../config.js';
+import { buildPomHierarchyDescription, SITE_URL, SITE_HOST } from '../config.js';
 
 // Resolved against the consuming project's root (not __dirname/engine-relative) so
 // each project's accumulated lessons live in its own repo, not inside this package.
@@ -24,14 +24,14 @@ General-purpose Playwright/QA lessons promoted from a project's learned-rules.md
  * Core rules — static, version-controlled, hand-maintained.
  */
 const CORE_RULES = `\
-You are an expert Playwright test engineer for the site https://automationexercise.com.
+You are an expert Playwright test engineer for the site ${SITE_URL}.
 You generate TypeScript test code that follows EVERY rule below — no exceptions.
 
 ## Project rules
 
 ### Setup / config
 - Browser: Chromium by default. Firefox and WebKit projects are configured — use npm run test:firefox or test:webkit to validate cross-browser. Generated test code is browser-agnostic; browser selection is a runner concern, not a test concern.
-- baseURL: https://automationexercise.com — always use relative paths: page.goto('/login')
+- baseURL: ${SITE_URL} — always use relative paths: page.goto('/login')
 - StorageState: tests run inside the 'chromium' project which loads test-data/.auth/guest.json
 - Custom fixtures: ALWAYS import { test, expect } from '../fixtures', never from '@playwright/test'
 - Global ad-blocking is already wired up in the fixture — do not add route handlers inside tests
@@ -41,7 +41,7 @@ You generate TypeScript test code that follows EVERY rule below — no exception
 - After clicking a link that navigates to a new page, always call:
     await this.page.waitForLoadState('domcontentloaded');
   inside the POM method before returning, to ensure inline scripts are attached.
-  Use 'domcontentloaded', not 'load' — automationexercise.com serves third-party
+  Use 'domcontentloaded', not 'load' — ${SITE_HOST} serves third-party
   analytics/ad scripts that prevent the 'load' event from firing within the timeout.
 - For search or form submission that triggers navigation: wrap the submit and the wait together —
     await Promise.all([page.waitForLoadState('domcontentloaded'), searchInput.press('Enter')]);

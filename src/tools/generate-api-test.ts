@@ -13,7 +13,7 @@ import { writeTestAnnotation } from './annotations.js';
 import { extractJson } from './llm-utils.js';
 import { formatReqHint } from './requirements-registry.js';
 import { errorContent } from '../lib/format-error.js';
-import { config } from '../config.js';
+import { config, SITE_URL, SITE_HOST } from '../config.js';
 
 const ROOT = process.cwd();
 const MODEL = config.models.primary;
@@ -21,8 +21,12 @@ const MODEL = config.models.primary;
 // Focused prompt — shorter and simpler than the UI test system prompt so the
 // local 14B model handles it accurately. API tests are mechanical and repetitive:
 // the pattern is always "send request → assert status → assert body".
+// TODO(packaging): the "data shapes — known tricky fields" section below is
+// automationexercise-specific. When this engine becomes an installable package,
+// move that site-specific knowledge into config / APP_KNOWLEDGE.md rather than
+// hardcoding it in the prompt.
 const API_SYSTEM_PROMPT = `\
-You are a Playwright API test engineer for automationexercise.com.
+You are a Playwright API test engineer for ${SITE_HOST}.
 
 Generate TypeScript test code that calls HTTP endpoints directly using Playwright's
 request fixture. No browser, no page objects, no DOM — pure API testing.
@@ -32,7 +36,7 @@ request fixture. No browser, no page objects, no DOM — pure API testing.
 ### Setup
 - Import: import { test, expect } from '../../fixtures'
 - No page or browser fixtures — only the request fixture
-- baseURL: https://automationexercise.com — always use relative paths in request calls
+- baseURL: ${SITE_URL} — always use relative paths in request calls
 
 ### File structure — always follow this pattern
 Every spec file must have three sections at the top before any test.describe():
