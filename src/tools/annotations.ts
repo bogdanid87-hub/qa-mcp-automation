@@ -75,7 +75,8 @@ export async function readAnnotationFromSpec(
 
 /**
  * Write an annotation comment directly before each failing test() call in the spec,
- * and record the failure in TEST_CASES.md under the appropriate section.
+ * and record the failure in the matching registry (TESTS_UI.md / TESTS_API.md /
+ * TESTS_E2E.md / TESTS_VISUAL.md) under the appropriate section.
  */
 export async function writeTestAnnotation(
   specPath: string,

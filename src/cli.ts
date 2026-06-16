@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { readFile, readdir, stat, writeFile } from 'fs/promises';
 import { WORKSPACE_PATHS, ensureWorkspace, MY_TEST_TEMPLATE } from './workspace.js';
-import { config } from './config.js';
+import { config, registryNameForSpec } from './config.js';
 import { join } from 'path';
 import * as readline from 'readline';
 import { generateTestTool } from './tools/generate-test.js';
@@ -607,7 +607,7 @@ async function main(): Promise<void> {
         stillFailing = false;
       } else if (fix.fixed) {
         const fixedPassed = (fix.verifyOutput.match(/✓/g) ?? []).length;
-        console.log(`\n✅ Fixed — ${fixedPassed} test${fixedPassed === 1 ? '' : 's'} now passing — recorded in TEST_CASES.md`);
+        console.log(`\n✅ Fixed — ${fixedPassed} test${fixedPassed === 1 ? '' : 's'} now passing — recorded in ${registryNameForSpec(specFile)}`);
         if (fix.lesson) console.log(`  Lesson learned: ${fix.lesson.rule}`);
         stillFailing = false;
       } else {

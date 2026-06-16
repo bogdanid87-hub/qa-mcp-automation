@@ -382,7 +382,7 @@ export async function demoteTobroken(
   await safeWrite(registryPath, buildContent(updatedPassing, broken), { allowOverwrite: true });
 }
 
-/** Read all broken/app-bug entries from the given registry (defaults to TEST_CASES.md). */
+/** Read all broken/app-bug entries from the given registry (defaults to the UI registry, TESTS_UI.md). */
 export async function readBrokenTests(registryPath = TESTS_UI_PATH): Promise<BrokenEntry[]> {
   try {
     return parseBrokenTests(await readFile(registryPath, 'utf-8'));
@@ -391,7 +391,7 @@ export async function readBrokenTests(registryPath = TESTS_UI_PATH): Promise<Bro
   }
 }
 
-/** Read all recorded passing test cases from the given registry (defaults to TEST_CASES.md). */
+/** Read all recorded passing test cases from the given registry (defaults to the UI registry, TESTS_UI.md). */
 export async function readTestCases(registryPath = TESTS_UI_PATH): Promise<TestEntry[]> {
   try {
     return parseTestCases(await readFile(registryPath, 'utf-8'));

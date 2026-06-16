@@ -20,7 +20,7 @@ import { reviewGeneratedFiles } from './review-generation.js';
 import { TokenBudget } from './budget.js';
 import { errorContent } from '../lib/format-error.js';
 import { formatReqHint } from './requirements-registry.js';
-import { config } from '../config.js';
+import { config, registryNameForSpec } from '../config.js';
 
 const ROOT = process.cwd();
 export const MODEL = config.models.primary;
@@ -668,7 +668,7 @@ Never remove existing methods — only append new ones.` : '';
       await markBacklogEntriesCovered(passingNames).catch(() => { /* non-fatal */ });
     }
 
-    const registryName = specFile.path.startsWith('tests/api/') ? 'TEST_API.md' : 'TEST_CASES.md';
+    const registryName = registryNameForSpec(specFile.path);
     if (passed > 0 && !hasFailed) {
       testRunNote = `✅ ${passed} test${passed === 1 ? '' : 's'} passed — recorded in ${registryName}`;
     } else {
@@ -696,7 +696,7 @@ Never remove existing methods — only append new ones.` : '';
         const fixedPassed = (fix.verifyOutput.match(/✓/g) ?? []).length;
         await tagSpecAfterRecording(specFile.path).catch(() => { /* non-fatal */ });
         const parts = [
-          `✅ Auto-fix applied — ${fixedPassed} test${fixedPassed === 1 ? '' : 's'} now passing — recorded in TEST_CASES.md`,
+          `✅ Auto-fix applied — ${fixedPassed} test${fixedPassed === 1 ? '' : 's'} now passing — recorded in ${registryName}`,
           `  Root cause: ${fix.rootCause}`,
         ];
         if (fix.lesson) parts.push(`  Lesson learned: ${fix.lesson.rule}`);
