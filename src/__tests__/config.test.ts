@@ -8,6 +8,9 @@ import {
   TESTS_E2E_PATH,
   TESTS_VISUAL_PATH,
   buildPomHierarchyDescription,
+  specKind,
+  validate,
+  type MqaConfig,
 } from '../config';
 
 describe('config', () => {
@@ -21,6 +24,42 @@ describe('config', () => {
     expect(TESTS_API_PATH.endsWith(config.testing.registries.api)).toBe(true);
     expect(TESTS_E2E_PATH.endsWith(config.testing.registries.e2e)).toBe(true);
     expect(TESTS_VISUAL_PATH.endsWith(config.testing.registries.visual)).toBe(true);
+  });
+});
+
+describe('specKind', () => {
+  const { folders } = config.testing;
+
+  it('classifies a spec path by its configured test folder', () => {
+    expect(specKind(`${folders.api}/products.spec.ts`)).toBe('api');
+    expect(specKind(`${folders.e2e}/checkout.spec.ts`)).toBe('e2e');
+    expect(specKind(`${folders.visual}/cart.spec.ts`)).toBe('visual');
+    expect(specKind(`${folders.ui}/contact.spec.ts`)).toBe('ui');
+  });
+
+  it('defaults to ui for unrecognised paths', () => {
+    expect(specKind('something/else.spec.ts')).toBe('ui');
+  });
+});
+
+describe('validate', () => {
+  // Minimal valid config (mirrors what init_project emits).
+  const base = (): MqaConfig => JSON.parse(JSON.stringify(config));
+
+  it('accepts the loaded config', () => {
+    expect(() => validate(config)).not.toThrow();
+  });
+
+  it('rejects a config missing pom or models (used unconditionally at runtime)', () => {
+    const noPom = base();
+    // @ts-expect-error — deliberately removing a required field
+    delete noPom.pom.baseClass;
+    expect(() => validate(noPom)).toThrow(/pom\.baseClass/);
+
+    const noModel = base();
+    // @ts-expect-error — deliberately removing a required field
+    delete noModel.models.primary;
+    expect(() => validate(noModel)).toThrow(/models\.primary/);
   });
 });
 

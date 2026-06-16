@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { readFile } from 'fs/promises';
-import { join } from 'path';
+import { basename, join } from 'path';
 import { safeWrite } from '../lib/safe-write.js';
 import { getSystemBlocks, getSystemPrompt, buildUserBlocks, buildUserPrompt } from '../prompts/system.js';
 import { isLocalLlmAvailable, callLocalLlm, LOCAL_MODEL } from './local-llm.js';
@@ -20,7 +20,7 @@ import { reviewGeneratedFiles } from './review-generation.js';
 import { TokenBudget } from './budget.js';
 import { errorContent } from '../lib/format-error.js';
 import { formatReqHint } from './requirements-registry.js';
-import { config, registryNameForSpec } from '../config.js';
+import { config, registryNameForSpec, specKind } from '../config.js';
 
 const ROOT = process.cwd();
 export const MODEL = config.models.primary;
@@ -161,7 +161,7 @@ function parseJson(raw: string): GenerateResponse {
  * Strong signals: spec_file under tests/visual/, or explicit visual keywords.
  */
 function detectVisualIntent(description: string, specFile?: string): boolean {
-  if (specFile?.startsWith('tests/visual/')) return true;
+  if (specFile && specKind(specFile) === 'visual') return true;
   const desc = description.toLowerCase();
   if (/\bvisual\s+(test|regression|snapshot|baseline)\b/.test(desc)) return true;
   if (/\btoHaveScreenshot\b|\bbaseline\s+screenshot\b/.test(desc)) return true;
@@ -177,7 +177,7 @@ function detectVisualIntent(description: string, specFile?: string): boolean {
  */
 function detectApiIntent(description: string, specFile?: string): boolean {
   // Spec file path is the strongest signal
-  if (specFile && (specFile.startsWith('tests/api/') || specFile.includes('/api/'))) return true;
+  if (specFile && (specKind(specFile) === 'api' || specFile.includes('/api/'))) return true;
 
   const desc = description.toLowerCase();
 
@@ -229,12 +229,13 @@ export async function generateTestTool(args: {
     (args.type == null && detectVisualIntent(args.description, args.spec_file));
 
   if (isVisualTest) {
-    // Force spec_file into tests/visual/ if not already there
-    const visualSpecFile = args.spec_file?.startsWith('tests/visual/')
-      ? args.spec_file
-      : args.spec_file
-        ? `tests/visual/${args.spec_file.replace(/^tests\/[^/]+\//, '')}`
-        : undefined;
+    // Force spec_file into the configured visual folder if not already there
+    const visualDir = config.testing.folders.visual;
+    const visualSpecFile = !args.spec_file
+      ? undefined
+      : specKind(args.spec_file) === 'visual'
+        ? args.spec_file
+        : `${visualDir}/${basename(args.spec_file)}`;
 
     return generateTestTool({
       ...args,
@@ -348,7 +349,7 @@ export async function generateTestTool(args: {
   // (e.g. "product", "cart") that match existing UI POMs, causing pomExistsForFeature
   // to return true even though the flow-specific POMs (checkout, payment, register)
   // are missing. Force the split so each call stays small and doesn't time out.
-  const isE2E = args.spec_file?.startsWith('tests/e2e/') || args.type === 'e2e';
+  const isE2E = (args.spec_file != null && specKind(args.spec_file) === 'e2e') || args.type === 'e2e';
   const doPomSpecSplit = !args.proposalsOnly && (isE2E || !(await pomExistsForFeature(featureKeywords)));
   let pomGeneratedByLocal = false;
 

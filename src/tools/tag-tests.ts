@@ -5,6 +5,7 @@ import {
   registryForSpec,
   type TestEntry,
 } from './test-registry.js';
+import { specKind } from '../config.js';
 import { safeWrite } from '../lib/safe-write.js';
 
 const ROOT = process.cwd();
@@ -15,10 +16,12 @@ export const ID_COMMENT_RE = /\/\/\s*\[(UI|API|E2E|Visual)[^\]]*#\d+\]/;
 
 /** Return the registry prefix for a spec path. */
 export function prefixForSpec(specPath: string): string {
-  if (specPath.startsWith('tests/api/'))    return 'API';
-  if (specPath.startsWith('tests/e2e/'))    return 'E2E';
-  if (specPath.startsWith('tests/visual/')) return 'Visual';
-  return 'UI';
+  switch (specKind(specPath)) {
+    case 'api':    return 'API';
+    case 'e2e':    return 'E2E';
+    case 'visual': return 'Visual';
+    default:       return 'UI';
+  }
 }
 
 /**
