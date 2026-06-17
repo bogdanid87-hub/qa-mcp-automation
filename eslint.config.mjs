@@ -27,7 +27,7 @@ export default tseslint.config(
         caughtErrorsIgnorePattern: '^_',
       }],
 
-      // require() is used by tsx/ts-node in a CommonJS project — not a problem.
+      // require() is used by tsx in a CommonJS project — not a problem.
       '@typescript-eslint/no-require-imports': 'off',
     },
   },
