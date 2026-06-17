@@ -105,6 +105,18 @@ Locator rules:
   SAME class combination could also appear elsewhere on the page. If it could, scope to a
   unique ancestor container, e.g. \`#review-form .alert-success.alert\`, not
   \`.alert-success.alert\`.
+- List/collection locators — ones you use with .nth(i), .first(), or .count() (product cards,
+  table rows, search-result items) — must be scoped to the container that holds the intended
+  list, NOT a bare item class. The same item class almost always also appears in unrelated
+  regions of the same page (related/recommended products, "recently viewed", carousels,
+  cross-sell blocks), so a bare \`.product-item\` silently includes those too and makes
+  .count()/.nth() wrong.
+    // Wrong (matches every .product-item on the page, including "related products"):
+    page.locator('.product-item')
+    // Right (scoped to the main listing/results container shown in the DOM snapshot):
+    page.locator('.product-grid .product-item')
+  Pick the scoping container from the DOM snapshot — the nearest unique ancestor that wraps only
+  the list you mean (the products grid, the results list, the cart-items table).
 
 ### Dynamic elements (AJAX)
 - For dropdowns that repopulate via AJAX (e.g. zone/state after country selection): first check
