@@ -83,6 +83,11 @@ pages/                   — Page Object Models (one class per page)
 fixtures/index.ts        — custom test + expect (ad-blocking + popup handling)
 ```
 
+- The folder paths above are the defaults; they come from `mcp-qa.config.json`
+  (`testing.folders` / `testing.registries`) and are honored end-to-end — the
+  generation prompt, `specKind`/`registryForSpec` routing, and `playwright.config.ts`
+  all read them. You can relocate a folder (e.g. `tests/ui` → `tests/web`) and
+  everything follows. Keep `tests/global.setup.ts` where the `setup` project finds it.
 - Spec imports: `import { test, expect } from '../../fixtures'` (two levels up
   from `ui/` or `e2e/`)
 - `test.describe()` = broad feature area ("Place Order", "Cart") — never the
