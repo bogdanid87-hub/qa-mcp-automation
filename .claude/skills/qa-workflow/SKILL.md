@@ -40,7 +40,6 @@ asked for it or you're making a direct edit yourself.
 - **Use PRs for all changes** — never push directly to `main`. Work on a feature
   branch (one per logical unit of work, announced when created), commit there, and
   open a PR with `gh pr create` summarising what changed and why.
-- Only push directly to `main` on the skeleton repo (`mcp-qa-skeleton`).
 
 ## When adding or changing a tool
 
@@ -59,14 +58,16 @@ After any session that adds features (not just tools), also update README.md's
 these are frequently missed for scripts, CI workflows, or capabilities spanning
 multiple files.
 
-## Propagation to the skeleton
+## Keep the engine project-agnostic
 
-When a general improvement is made here, ask before propagating to
-`mcp-qa-skeleton` — and only propagate AFTER the change has been tested on this
-project and any bugs found have been fixed. Propagating untested or newly-fixed
-tools means the skeleton gets the broken version. Project-specific Cloudflare
-workarounds (request retries, `page.request`, stealth launch args, webdriver
-spoofing) must never be propagated.
+The `mcp-qa-skeleton` repo is retired — the engine itself (`src/`) is being packaged
+for `npm install`, and `init_project` now scaffolds a complete runnable project for
+any site. There is no separate skeleton to propagate to. The flip side: a general
+improvement belongs in `src/` and stays config-driven (no hardcoded site values),
+while anything project-specific stays in the reference project's files only.
+Project-specific Cloudflare workarounds (request retries, `page.request`, stealth
+launch args, webdriver spoofing) live in the reference `tests/`/`utils/` and must
+never be generalized into `src/` or the `init_project` scaffold.
 
 ## generate_test follow-up
 

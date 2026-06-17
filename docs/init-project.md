@@ -1,8 +1,9 @@
 # init_project
 
-Bootstraps `mcp-qa.config.json` plus a minimal `pages/`/`fixtures/`/`tests/` scaffold
-for a **new** project. Pure file I/O — no `audit_site`, no Claude/Ollama calls, no
-Playwright run.
+Bootstraps `mcp-qa.config.json` plus a **complete, runnable** project scaffold —
+the Playwright setup (`playwright.config.ts`, `tests/global.setup.ts`, `tsconfig.json`,
+`.gitignore`) and the `pages/`/`fixtures/`/`tests/` skeleton — for a **new** project.
+Pure file I/O — no `audit_site`, no Claude/Ollama calls, no Playwright run.
 
 ---
 
@@ -82,9 +83,15 @@ Alongside the config, `init_project` lays down the directory/file skeleton the c
 implies — **create-if-missing only, never overwritten**, independent of `force`
 (which applies only to `mcp-qa.config.json` itself):
 
+- `playwright.config.ts` — runnable config with `setup` + `chromium` + `firefox` +
+  `webkit` + a chromium `visual` project; `baseURL` is read from `mcp-qa.config.json`
+- `tests/global.setup.ts` — saves guest storage state (`test-data/.auth/guest.json`)
+  the browser projects depend on
+- `tsconfig.json`, `.gitignore`
 - `tests/ui/.gitkeep`, `tests/api/.gitkeep`, `tests/e2e/.gitkeep`,
   `tests/visual/.gitkeep`, `test-data/.gitkeep`
-- `pages/BasePage.ts` — `navigate(path)` only, no other deps
+- `pages/BasePage.ts` — `navigate(path, dismissOnLoad?)` (waits for
+  `domcontentloaded`, plus a popup-dismissal hook), no other deps
 - `pages/SitePage.ts` — TODO-commented `extends BasePage` placeholder for
   universal locators (nav, footer, logged-in indicator)
 - `fixtures/index.ts` — `export const test = base.extend({})` with a TODO showing
@@ -143,20 +150,22 @@ programmatic callers; the CLI does not expose them as flags.
 
 ## Multi-project setup
 
-`init_project` bootstraps the **project-specific** files (`mcp-qa.config.json`,
-`pages/`, `fixtures/`, `tests/`, `test-data/`) — it does not copy the engine
-(`src/`, `package.json`, `playwright.config.ts`, CI workflows). Each project
-still needs its own clone of the engine (today, that's `mcp-qa-skeleton`):
+`init_project` bootstraps the **project-specific** files — `mcp-qa.config.json`, the
+Playwright setup (`playwright.config.ts`, `tests/global.setup.ts`, `tsconfig.json`,
+`.gitignore`), and the `pages/`/`fixtures/`/`tests/`/`test-data/` skeleton. It does
+not copy the engine itself (`src/`, the engine's own `package.json`, CI workflows).
+The engine is being packaged for `npm install`; until then, clone this repo to get it:
 
-1. Clone `mcp-qa-skeleton` into a new directory for the new project, `npm install`,
-   `npx playwright install chromium`.
+1. Clone this repo into a new directory for the new project, `npm install`,
+   `npx playwright install` (downloads chromium/firefox/webkit).
 2. From inside that clone, run `npm run init_project -- --name <name> --url <site>`
    (no `--output` needed — it defaults to `./mcp-qa.config.json` in that project's
-   root) to generate the config and verify/create the scaffold. The skeleton already
-   ships placeholder `pages/`/`fixtures/`/`tests/`, so the scaffold pass mostly
-   no-ops there and the config write is the meaningful part.
+   root) to write the config and the runnable scaffold. The scaffold is
+   create-if-missing, so it won't clobber the reference project's existing files —
+   point `--output` at an empty directory to onboard a genuinely separate project.
 3. Continue with the printed next steps (`audit_site` → `generate_pom` →
-   `generate_test`) inside that clone.
+   `generate_test`) — the first `generate_test` runs against the live site with no
+   further setup.
 
 Each project is fully independent — its own `mcp-qa.config.json`, `pages/`,
 `learned-rules.md`, registries. For two unrelated projects that share some domain
