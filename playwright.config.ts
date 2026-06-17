@@ -1,9 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
-import { SITE_URL } from './src/config';
+import { SITE_URL, config } from './src/config';
+
+// Test folders come from mcp-qa.config.json, so relocating them in config is honored
+// here too (the functional projects run ui/api/e2e; the visual project runs visual).
+const folders = config.testing.folders;
+const functionalGlobs = [folders.ui, folders.api, folders.e2e].map((d) => `${d}/**/*.spec.ts`);
 
 export default defineConfig({
-  // Functional tests live under tests/; visual regression tests under tests/visual/
-  testDir: './tests',
   // Each test gets an isolated browser context — fully independent and parallel-safe.
   // Workers: auto (cpus/2) locally; 2 on CI where runners are shared.
   fullyParallel: true,
@@ -41,7 +44,7 @@ export default defineConfig({
     // npm test / npm run test:chromium — default fast run
     {
       name: 'chromium',
-      testIgnore: /tests\/visual\/.*/,
+      testMatch: functionalGlobs,
       use: {
         ...devices['Desktop Chrome'],
         channel: 'chromium',
@@ -53,7 +56,7 @@ export default defineConfig({
     // npm run test:firefox — cross-browser functional validation
     {
       name: 'firefox',
-      testIgnore: /tests\/visual\/.*/,
+      testMatch: functionalGlobs,
       use: {
         ...devices['Desktop Firefox'],
         storageState: 'test-data/.auth/guest.json',
@@ -63,7 +66,7 @@ export default defineConfig({
     // npm run test:webkit — Safari (WebKit) functional validation
     {
       name: 'webkit',
-      testIgnore: /tests\/visual\/.*/,
+      testMatch: functionalGlobs,
       use: {
         ...devices['Desktop Safari'],
         storageState: 'test-data/.auth/guest.json',
@@ -78,7 +81,7 @@ export default defineConfig({
     // npm run test:update-snapshots → regenerate baselines after intentional UI changes
     {
       name: 'visual',
-      testDir: './tests/visual',
+      testDir: folders.visual,
       // Demo site is slow on CI runners; 30s default is not enough for navigation + waitFor
       timeout: 60000,
       use: {

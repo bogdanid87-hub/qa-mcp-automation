@@ -162,15 +162,21 @@ export { expect } from '@playwright/test';
 `;
 
 // String.raw so the regex backslashes (\\.) survive into the generated file verbatim.
+// (No ${} template interpolation in the generated body — string concat is used instead
+// so it doesn't collide with String.raw.)
 export const PLAYWRIGHT_CONFIG_TEMPLATE = String.raw`import { defineConfig, devices } from '@playwright/test';
 import { readFileSync } from 'fs';
 
-// baseURL comes from mcp-qa.config.json so this file stays project-agnostic.
-const { project } = JSON.parse(readFileSync('mcp-qa.config.json', 'utf-8'));
-const baseURL: string = project.siteUrl;
+// baseURL + test folders come from mcp-qa.config.json so this file stays project-agnostic.
+const cfg = JSON.parse(readFileSync('mcp-qa.config.json', 'utf-8'));
+const baseURL: string = cfg.project.siteUrl;
+const folders = cfg.testing.folders; // { ui, api, e2e, visual }
+// Functional projects run the ui/api/e2e folders; the visual project runs the visual folder.
+const functionalGlobs: string[] = [folders.ui, folders.api, folders.e2e].map((d: string) => d + '/**/*.spec.ts');
+
+const storageState = 'test-data/.auth/guest.json';
 
 export default defineConfig({
-  testDir: './tests',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 1,
@@ -190,28 +196,28 @@ export default defineConfig({
 
     {
       name: 'chromium',
-      testIgnore: /tests\/visual\/.*/,
-      use: { ...devices['Desktop Chrome'], storageState: 'test-data/.auth/guest.json' },
+      testMatch: functionalGlobs,
+      use: { ...devices['Desktop Chrome'], storageState },
       dependencies: ['setup'],
     },
     {
       name: 'firefox',
-      testIgnore: /tests\/visual\/.*/,
-      use: { ...devices['Desktop Firefox'], storageState: 'test-data/.auth/guest.json' },
+      testMatch: functionalGlobs,
+      use: { ...devices['Desktop Firefox'], storageState },
       dependencies: ['setup'],
     },
     {
       name: 'webkit',
-      testIgnore: /tests\/visual\/.*/,
-      use: { ...devices['Desktop Safari'], storageState: 'test-data/.auth/guest.json' },
+      testMatch: functionalGlobs,
+      use: { ...devices['Desktop Safari'], storageState },
       dependencies: ['setup'],
     },
 
     // Visual regression — Chromium only (baselines are browser+OS specific).
     {
       name: 'visual',
-      testDir: './tests/visual',
-      use: { ...devices['Desktop Chrome'], storageState: 'test-data/.auth/guest.json' },
+      testDir: folders.visual,
+      use: { ...devices['Desktop Chrome'], storageState },
       dependencies: ['setup'],
       fullyParallel: false,
     },

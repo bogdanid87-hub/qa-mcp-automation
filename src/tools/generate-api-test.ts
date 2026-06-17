@@ -341,7 +341,7 @@ export async function generateApiTestTool(args: {
     }
 
     if (passed > 0 && !hasFailed) {
-      testRunNote = `✅ ${passed} test${passed === 1 ? '' : 's'} passed — recorded in TESTS_API.md`;
+      testRunNote = `✅ ${passed} test${passed === 1 ? '' : 's'} passed — recorded in ${config.testing.registries.api}`;
     } else {
       passing = false;
       lastFailureOutput = testOutput;
@@ -373,7 +373,7 @@ export async function generateApiTestTool(args: {
           passing = true;
           const fixedPassed = (fix.verifyOutput.match(/✓/g) ?? []).length;
           await tagSpecAfterRecording(specFile.path).catch(() => { /* non-fatal */ });
-          testRunNote += `✅ Auto-fix applied — ${fixedPassed} test${fixedPassed === 1 ? '' : 's'} now passing — recorded in TESTS_API.md`;
+          testRunNote += `✅ Auto-fix applied — ${fixedPassed} test${fixedPassed === 1 ? '' : 's'} now passing — recorded in ${config.testing.registries.api}`;
           if (fix.lesson) testRunNote += `\n  Lesson learned: ${fix.lesson.rule}`;
         } else {
           lastFailureOutput = fix.verifyOutput || testOutput;

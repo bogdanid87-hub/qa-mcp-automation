@@ -482,7 +482,7 @@ export async function analyzeCoverageTool(args: {
       readRegistryContext(TESTS_API_PATH),
       readRegistryContext(TESTS_E2E_PATH),
     ]);
-    contextParts.push(`## TESTS_UI.md\n\n${ui}\n\n## TESTS_API.md\n\n${api}\n\n## TESTS_E2E.md\n\n${e2e}`);
+    contextParts.push(`## ${config.testing.registries.ui}\n\n${ui}\n\n## ${config.testing.registries.api}\n\n${api}\n\n## ${config.testing.registries.e2e}\n\n${e2e}`);
     labels.push('all registries');
   }
 

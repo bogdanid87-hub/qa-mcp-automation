@@ -1,6 +1,12 @@
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
-import { buildPomHierarchyDescription, SITE_URL, SITE_HOST } from '../config.js';
+import { buildPomHierarchyDescription, SITE_URL, SITE_HOST, config } from '../config.js';
+
+// Test folders come from config so a project can relocate them (the generation
+// prompt then writes specs to the configured paths, and specKind/registryForSpec
+// route them to the matching registry).
+const { ui: UI_DIR, api: API_DIR, e2e: E2E_DIR, visual: VISUAL_DIR } = config.testing.folders;
+const { ui: UI_REGISTRY, api: API_REGISTRY } = config.testing.registries;
 
 // Resolved against the consuming project's root (not __dirname/engine-relative) so
 // each project's accumulated lessons live in its own repo, not inside this package.
@@ -157,7 +163,7 @@ The spec then consumes it directly — no manual construction:
   RIGHT: test('...', async ({ page, cartPage }) => { ... });
 
 ### Test file conventions
-- Import: import { test, expect } from '../../fixtures'  (for tests/ui/ and tests/e2e/)
+- Import: import { test, expect } from '../../fixtures'  (for ${UI_DIR}/ and ${E2E_DIR}/)
 - Wrap every test inside test.describe('Meaningful Name', () => { ... })
 - Every test MUST contain at least one expect() assertion
 - The spec file is determined by the PRIMARY page where the main user action happens — not by where the test ends or what it asserts on
@@ -285,21 +291,21 @@ Each test in this project starts with a fresh isolated browser context (the gues
 ### Folder structure — where to put new tests
 Tests live under one of these subdirectories:
 
-  tests/ui/   — single-feature browser tests that cover one flow or one page feature
+  ${UI_DIR}/   — single-feature browser tests that cover one flow or one page feature
                 Examples: cart.spec.ts, auth.spec.ts, search.spec.ts, contact.spec.ts
                 Naming: short domain name, not the test scenario name
 
-  tests/e2e/  — full user journeys spanning multiple pages and authentication steps
+  ${E2E_DIR}/  — full user journeys spanning multiple pages and authentication steps
                 Examples: place-order.spec.ts (all checkout variants), account.spec.ts
                 Naming: user goal (place-order), NOT scenario name (placeOrderRegisterWhileCheckout)
 
-  tests/api/  — direct API tests; Playwright request fixture, no browser
+  ${API_DIR}/  — direct API tests; Playwright request fixture, no browser
                 Name by resource: products.spec.ts, auth.spec.ts
-                Results are recorded in TESTS_API.md (not TESTS_UI.md)
+                Results are recorded in ${API_REGISTRY} (not ${UI_REGISTRY})
 
 Rules:
 - If a "Spec file hint" is provided, write to EXACTLY that path
-- If no hint and no matching spec exists, infer: single-feature = tests/ui/, multi-page journey = tests/e2e/
+- If no hint and no matching spec exists, infer: single-feature = ${UI_DIR}/, multi-page journey = ${E2E_DIR}/
 - test_name hints influence the test() and describe() names only, NOT the filename
 
 ### Step comments
@@ -423,8 +429,8 @@ Or capture only the stable elements below the carousel:
   await expect(page.locator('.features_items')).toHaveScreenshot('featured-products.png');
 
 ## Rules for visual tests
-- File location: tests/visual/ (separate project, runs on Chromium only)
-- Spec import: import { test, expect } from '../../fixtures' (two levels up from tests/visual/)
+- File location: ${VISUAL_DIR}/ (separate project, runs on Chromium only)
+- Spec import: import { test, expect } from '../../fixtures' (two levels up from ${VISUAL_DIR}/)
 - Use descriptive, stable snapshot names: 'nav-layout.png' not 'screenshot1.png'
 - Wait for the page to fully load and settle before capturing:
     await page.waitForLoadState('domcontentloaded');
