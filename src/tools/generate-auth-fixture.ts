@@ -94,6 +94,29 @@ Respond with raw JSON only (no markdown fences):
 `;
 
 
+/** True if fixtures/index.ts already declares a fixture named `fixtureName`. */
+export function fixtureNameInUse(fixtures: string, fixtureName: string): boolean {
+  const escaped = fixtureName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\b${escaped}\\b\\s*:`).test(fixtures);
+}
+
+/**
+ * Ensure `Page` is imported from @playwright/test when `fixtureTypeLine` uses the
+ * generic `Page` type — the scaffolded fixtures only import `test as base`, so a
+ * `<name>Page: Page` entry otherwise fails with "Cannot find name 'Page'". Pure.
+ */
+export function ensurePageImport(fixtures: string, fixtureTypeLine: string): string {
+  if (!/:\s*Page\b/.test(fixtureTypeLine)) return fixtures;
+  const alreadyImports = /import\s+(?:type\s+)?\{[^}]*\bPage\b[^}]*\}\s+from\s+['"]@playwright\/test['"]/.test(fixtures);
+  const firstImportEnd = fixtures.indexOf('\n', fixtures.indexOf('import '));
+  if (alreadyImports || firstImportEnd === -1) return fixtures;
+  return (
+    fixtures.slice(0, firstImportEnd + 1) +
+    `import type { Page } from '@playwright/test';\n` +
+    fixtures.slice(firstImportEnd + 1)
+  );
+}
+
 export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
   content: { type: 'text'; text: string }[];
 }> {
@@ -108,6 +131,20 @@ export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
   let existingFixtures = '';
   try { existingSetup   = await readFile(GLOBAL_SETUP_PATH, 'utf-8'); } catch { /* new */ }
   try { existingFixtures = await readFile(FIXTURES_PATH, 'utf-8'); } catch { /* new */ }
+
+  // Guard: refuse to add a fixture whose name already exists — appending it blindly
+  // produces a fixtures/index.ts with a duplicate key that doesn't compile. (A POM
+  // fixture and an auth fixture can collide, e.g. an AdminPage POM's `adminPage`
+  // fixture vs. `--name admin`.) Abort before spending a Claude call.
+  const fixtureName = `${args.name}Page`;
+  if (existingFixtures && fixtureNameInUse(existingFixtures, fixtureName)) {
+    return { content: [{ type: 'text', text:
+      `⚠️  A fixture named \`${fixtureName}\` already exists in fixtures/index.ts — ` +
+      `adding another would produce a duplicate that doesn't compile. ` +
+      `Pick a different name (e.g. \`--name ${args.name}Auth\`, exposing \`${args.name}AuthPage\`) ` +
+      `or remove the existing fixture first. No files were changed.`,
+    }] };
+  }
 
   const contextBlock = [
     existingSetup   ? `## Existing global.setup.ts\n\`\`\`typescript\n${existingSetup}\n\`\`\`` : '',
@@ -189,6 +226,14 @@ export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
       const result = await safeWrite(FIXTURES_PATH, updated);
       if (!result.ok) process.stderr.write(`[generate-auth-fixture] skipping fixtures/index.ts type update — ${result.reason}\n`);
     }
+  }
+
+  // ── Ensure `Page` is imported when the fixture type uses the generic Page ──
+  const withType = await readFile(FIXTURES_PATH, 'utf-8').catch(() => '');
+  const withImport = ensurePageImport(withType, fixtureTypeLine);
+  if (withType && withImport !== withType) {
+    const result = await safeWrite(FIXTURES_PATH, withImport);
+    if (!result.ok) process.stderr.write(`[generate-auth-fixture] skipping fixtures/index.ts Page-import update — ${result.reason}\n`);
   }
 
   // ── Add storage state path to .gitignore ────────────────────────────────
