@@ -75,6 +75,12 @@ supply your own `critical` keywords.
 `pom.siteClassProvides` and `pom.intermediateClasses` start empty — populate them
 once `audit_site` has run (see [Next steps](#next-steps)).
 
+The `testing.folders` and `testing.registries` paths are honored end-to-end — the
+generation prompt, `specKind`/`registryForSpec` routing, and the scaffolded
+`playwright.config.ts` all read them — so you can relocate them (e.g. rename
+`tests/ui` → `tests/web`, or `TESTS_UI.md` → `WEB_TESTS.md`) and everything follows.
+Keep `tests/global.setup.ts` where the `setup` project finds it.
+
 ---
 
 ## Scaffold
