@@ -85,12 +85,17 @@ of the tool suite running end-to-end against automationexercise.com, not
 placeholders.
 
 To point the same engine at a different site, `init_project` bootstraps a fresh
-`mcp-qa.config.json` plus a minimal `pages/`/`fixtures/`/`tests/`/`test-data/`
-scaffold, picks a risk-tier profile (`generic` or `ecommerce`), and prints the
-next-steps checklist (`audit_site` → `generate_pom` → `generate_test`). The engine
-itself (`src/`, `package.json`, CI workflows, `playwright.config.ts`) still needs its
-own clone per project — `mcp-qa-skeleton` is a ready-to-clone starting point with the
-engine pre-installed. See
+`mcp-qa.config.json` plus a **complete, runnable scaffold** — `playwright.config.ts`
+(chromium + firefox + webkit + a visual project, `baseURL` read from the config),
+`tests/global.setup.ts`, `tsconfig.json`, `.gitignore`, and the
+`pages/`/`fixtures/`/`tests/`/`test-data/` skeleton — picks a risk-tier profile
+(`generic` or `ecommerce`), and prints the next-steps checklist (`npx playwright
+install` → `audit_site` → `generate_pom` → `generate_test`). The generated project
+runs its first test without any further setup.
+
+The engine itself (`src/`) is being packaged for `npm install`; until that lands,
+clone this repo to get the engine, then run `init_project` to scaffold a new
+project's files. See
 [docs/init-project.md#multi-project-setup](docs/init-project.md#multi-project-setup)
 for the full walkthrough.
 
@@ -98,7 +103,7 @@ for the full walkthrough.
 
 ## Prerequisites
 
-- **Node.js** 18 or later
+- **Node.js** 20 or later (CI runs on 22)
 - **An Anthropic API key** — [console.anthropic.com](https://console.anthropic.com)
 - **Claude Code** — [install guide](https://docs.anthropic.com/en/docs/claude-code)
 - **Ollama** (optional, recommended) — offloads POM generation to a local model at no API cost

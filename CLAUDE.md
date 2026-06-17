@@ -23,7 +23,7 @@ hierarchy) live in [mcp-qa.config.json](mcp-qa.config.json), loaded by
 ## Always-on safety rules
 
 The full collaboration rules — branch/PR workflow, the tool-update checklist,
-propagation to the skeleton, look-ahead checks — live in
+keeping the engine project-agnostic, look-ahead checks — live in
 [.claude/skills/qa-workflow/SKILL.md](.claude/skills/qa-workflow/SKILL.md) and load
 whenever you're about to change code, run commands, or open a PR. These apply even
 before that:
@@ -38,8 +38,7 @@ before that:
   <spec>`) and confirming it passes. No exceptions.
 - **Never fix a test file directly** without first telling the user what's changing
   and why.
-- **Use PRs for all changes** — never push directly to `main` (only the skeleton,
-  `mcp-qa-skeleton`, takes direct pushes).
+- **Use PRs for all changes** — never push directly to `main`.
 
 ---
 
@@ -77,7 +76,8 @@ npm run mcp                               # start MCP server manually
 
 ```
 src/
-  config.ts             — loads mcp-qa.config.json; derives SITE_URL, registry paths, risk tiers, POM hierarchy
+  config-schema.ts      — MqaConfig types + validate(); no singleton load, so init_project can import it in a fresh project
+  config.ts             — loads mcp-qa.config.json (singleton); derives SITE_URL, registry paths, risk tiers, POM hierarchy
   server.ts             — createServer(): McpServer factory, all 14 tools registered; library entry point (package.json "exports")
   index.ts              — MCP server entry point, connects createServer() to stdio (npm run mcp)
   cli.ts                — npm run generate (interactive, cost-tracked)
@@ -103,7 +103,8 @@ src/
     pom-index.ts        — POM Method Index builder, shared by generate-test and plan-e2e
     init-project.ts     — bootstraps mcp-qa.config.json + pages/fixtures/tests scaffold for a new project
     init-project-templates.ts — BasePage/SitePage/fixtures placeholder templates used by init-project.ts
-    requirements-registry.ts — REQ ID normalization + REQUIREMENTS.md ledger (used by analyze-prd.ts and init-project-templates.ts)
+    requirements-registry.ts — REQ ID normalization + REQUIREMENTS.md ledger (used by analyze-prd.ts)
+    requirements-template.ts — REQUIREMENTS.md starter string, import-free so init_project can use it without loading config
     review-generation.ts — hybrid pre-write reviewer (deterministic checks + 1 LLM call) for generate-test
     review-rules.ts     — stale/near-duplicate rule hygiene report + learned-rules.md -> framework-rules.md promotion
     annotations.ts      — writes /* ⚠️ APP BUG */ and /* ⚠️ BROKEN */ into specs
