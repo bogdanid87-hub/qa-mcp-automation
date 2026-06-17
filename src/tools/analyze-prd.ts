@@ -8,6 +8,7 @@ import { assignReqIds, REQUIREMENTS_PATH, REQUIREMENTS_TEMPLATE } from './requir
 import { errorContent } from '../lib/format-error.js';
 import { config, SITE_HOST } from '../config.js';
 const MODEL = config.models.primary;
+const { ui: UI_DIR, api: API_DIR, e2e: E2E_DIR } = config.testing.folders;
 
 const SYSTEM_PROMPT = `\
 You are a QA analyst for ${SITE_HOST}.
@@ -57,7 +58,7 @@ Separate every block with a line containing exactly three dashes: ---
 Each block must follow this exact structure:
 
 # test_name: kebab-case-descriptive-name
-# spec_file: tests/ui/feature.spec.ts
+# spec_file: ${UI_DIR}/feature.spec.ts
 # page_paths: /path1, /path2
 # source: direct|suggested
 # risk: critical|high|medium|low
@@ -78,11 +79,11 @@ source field:
               scenario not explicitly mentioned. Valuable but requires human judgement.
 
 spec_file rules:
-- tests/api/  for direct API tests (HTTP requests, status codes, response validation — no browser)
-              Name by resource: tests/api/products.spec.ts, tests/api/auth.spec.ts
-- tests/e2e/  for multi-page journeys (checkout, registration flows, full purchase)
-- tests/ui/   for single-feature browser tests (cart, search, forms)
-- Group related tests in the same file (all product API tests → tests/api/products.spec.ts)
+- ${API_DIR}/  for direct API tests (HTTP requests, status codes, response validation — no browser)
+              Name by resource: ${API_DIR}/products.spec.ts, ${API_DIR}/auth.spec.ts
+- ${E2E_DIR}/  for multi-page journeys (checkout, registration flows, full purchase)
+- ${UI_DIR}/   for single-feature browser tests (cart, search, forms)
+- Group related tests in the same file (all product API tests → ${API_DIR}/products.spec.ts)
 
 ---
 

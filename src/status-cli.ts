@@ -1,6 +1,6 @@
 import { WORKSPACE_PATHS } from './workspace.js';
 import { readFile, readdir, stat } from 'fs/promises';
-import { join } from 'path';
+import { basename, join } from 'path';
 import {
   readTestCases,
   readBrokenTests,
@@ -108,11 +108,13 @@ async function main(): Promise<void> {
   console.log(`\n📊 QA Suite Status\n${bar}\n`);
 
   // ── Registries ───────────────────────────────────────────────────────────────
+  // Labels are derived from the registry paths (config-driven) so a renamed
+  // registry shows its real filename here.
   const registries = [
-    { path: TESTS_UI_PATH,     label: 'TESTS_UI.md    ', prefix: 'UI'     },
-    { path: TESTS_API_PATH,    label: 'TESTS_API.md   ', prefix: 'API'    },
-    { path: TESTS_E2E_PATH,    label: 'TESTS_E2E.md   ', prefix: 'E2E'    },
-    { path: TESTS_VISUAL_PATH, label: 'TESTS_VISUAL.md', prefix: 'Visual' },
+    { path: TESTS_UI_PATH,     prefix: 'UI'     },
+    { path: TESTS_API_PATH,    prefix: 'API'    },
+    { path: TESTS_E2E_PATH,    prefix: 'E2E'    },
+    { path: TESTS_VISUAL_PATH, prefix: 'Visual' },
   ];
 
   let grandPassing = 0, grandBroken = 0, grandBugs = 0;
@@ -121,7 +123,8 @@ async function main(): Promise<void> {
   const issues: string[] = [];
 
   console.log('  Registries:');
-  for (const { path, label, prefix } of registries) {
+  for (const { path, prefix } of registries) {
+    const label = basename(path).padEnd(15);
     const [passing, broken, lastMod] = await Promise.all([
       readTestCases(path),
       readBrokenTests(path),
