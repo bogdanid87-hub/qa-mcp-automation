@@ -17,15 +17,9 @@ export interface RequirementEntry {
 
 export const REQUIREMENTS_PATH = join(process.cwd(), 'REQUIREMENTS.md');
 
-export const REQUIREMENTS_TEMPLATE = `# Requirements
-
-Traceability ledger — maps REQ IDs assigned by analyze_prd back to the requirement
-they trace to in the source PRD. Append-only: each ID is permanent once assigned —
-do not renumber or remove existing entries. Descriptions may be edited for clarity.
-
-<!-- requirements-start -->
-<!-- requirements-end -->
-`;
+// Defined in its own import-free module so init_project can use it without
+// dragging this file (and its config-loading deps) into the bootstrap path.
+export { REQUIREMENTS_TEMPLATE } from './requirements-template.js';
 
 // Prefixes that don't add information beyond "this is a requirement" — folded
 // into a plain REQ-NNN id instead of REQ-REQ-NNN / REQ-REQUIREMENT-NNN.

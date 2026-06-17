@@ -67,7 +67,8 @@ General rules:
 
 Navigation and loaded-check pattern — avoid duplication:
 - Every POM that has a primary URL should have a goto() method, but it MUST delegate to this.navigate(), not re-implement navigation:
-    async goto(): Promise<void> { await this.navigate('/the-path', { waitUntil: 'domcontentloaded' }); }
+    async goto(): Promise<void> { await this.navigate('/the-path'); }
+  navigate(path, dismissOnLoad?) already waits for 'domcontentloaded' — do NOT pass page.goto options to it.
 - Every POM should have a verifyLoaded() method with a single focused assertion (URL pattern or unique heading). Do NOT copy-paste verifyLoaded() logic from other POMs — each page has one unique identifier.
 - Never implement page.goto() directly in a POM method — always go through this.navigate() so the base class handles popup dismissal and load state consistently.
 

@@ -2,8 +2,10 @@ import { access, mkdir, writeFile } from 'fs/promises';
 import { dirname, join } from 'path';
 
 import { safeWrite } from '../lib/safe-write.js';
-import { validate, type MqaConfig } from '../config.js';
-import { BASE_PAGE_TEMPLATE, FIXTURES_INDEX_TEMPLATE, LEARNED_RULES_TEMPLATE, MY_TEST_TEMPLATE, PRD_TEMPLATE, REQUIREMENTS_TEMPLATE, SITE_PAGE_TEMPLATE, START_HERE_TEMPLATE } from './init-project-templates.js';
+// Import from config-schema (not config.js) so init_project — which creates the
+// config — doesn't trigger config.ts's eager load in a project that has none yet.
+import { validate, type MqaConfig } from '../config-schema.js';
+import { BASE_PAGE_TEMPLATE, FIXTURES_INDEX_TEMPLATE, GITIGNORE_TEMPLATE, GLOBAL_SETUP_TEMPLATE, LEARNED_RULES_TEMPLATE, MY_TEST_TEMPLATE, PLAYWRIGHT_CONFIG_TEMPLATE, PRD_TEMPLATE, REQUIREMENTS_TEMPLATE, SITE_PAGE_TEMPLATE, START_HERE_TEMPLATE, TSCONFIG_TEMPLATE } from './init-project-templates.js';
 
 export type RiskTiers = MqaConfig['riskTiers'];
 
@@ -100,6 +102,11 @@ async function scaffoldProject(root: string, config: MqaConfig): Promise<Scaffol
   const targets: Array<{ relPath: string; content: string }> = [
     ...Object.values(config.testing.folders).map((folder) => ({ relPath: `${folder}/.gitkeep`, content: '' })),
     { relPath: 'test-data/.gitkeep', content: '' },
+    // Runnable Playwright setup — without these the first generated test can't run.
+    { relPath: 'playwright.config.ts', content: PLAYWRIGHT_CONFIG_TEMPLATE },
+    { relPath: 'tests/global.setup.ts', content: GLOBAL_SETUP_TEMPLATE },
+    { relPath: 'tsconfig.json', content: TSCONFIG_TEMPLATE },
+    { relPath: '.gitignore', content: GITIGNORE_TEMPLATE },
     { relPath: 'pages/BasePage.ts', content: BASE_PAGE_TEMPLATE },
     { relPath: 'pages/SitePage.ts', content: SITE_PAGE_TEMPLATE },
     { relPath: 'fixtures/index.ts', content: FIXTURES_INDEX_TEMPLATE },
@@ -179,11 +186,12 @@ export async function initProjectTool(args: InitProjectArgs): Promise<{ content:
     ...scaffold.map((e) => `  ${e.created ? '✅ created' : '⏭️  skipped (already exists)'}  ${e.relPath}`),
     '',
     'Next steps:',
-    `  1. Run \`npm run audit_site -- --url ${args.siteUrl}\` to discover the site's page structure.`,
-    '  2. Use the audit report to fill in pom.intermediateClasses, pom.siteClassProvides, and riskTiers in mcp-qa.config.json.',
-    '  3. Run generate_pom against your homepage/login page to populate pages/SitePage.ts with real locators.',
-    '  4. Run generate_test for your first test.',
-    '  5. Open workspace/START_HERE.md for a plain-English guide to describing, generating, and checking your first test.',
+    '  1. Install Playwright + browsers: `npm i -D @playwright/test && npx playwright install`.',
+    `  2. Run \`npm run audit_site -- --url ${args.siteUrl}\` to discover the site's page structure.`,
+    '  3. Use the audit report to fill in pom.intermediateClasses, pom.siteClassProvides, and riskTiers in mcp-qa.config.json.',
+    '  4. Run generate_pom against your homepage/login page to populate pages/SitePage.ts with real locators.',
+    '  5. Run generate_test for your first test.',
+    '  6. Open workspace/START_HERE.md for a plain-English guide to describing, generating, and checking your first test.',
   ];
 
   return { content: [{ type: 'text', text: lines.join('\n') }] };

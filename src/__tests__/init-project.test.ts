@@ -3,6 +3,24 @@ import { mkdtemp, rm, readFile, writeFile, mkdir } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
+// ── Bootstrap import safety ──────────────────────────────────────────────────
+// init_project must run in a project that has NO mcp-qa.config.json yet (it creates
+// one), so nothing in its import graph may pull in config.ts's eager singleton load.
+describe('init_project bootstrap import safety', () => {
+  it('init-project imports the schema (not the config singleton)', async () => {
+    const src = await readFile(join(__dirname, '../tools/init-project.ts'), 'utf-8');
+    expect(src).toContain("from '../config-schema.js'");
+    expect(src).not.toMatch(/from '\.\.\/config\.js'/);
+  });
+
+  it('init-project-templates use the import-free requirements template', async () => {
+    const src = await readFile(join(__dirname, '../tools/init-project-templates.ts'), 'utf-8');
+    expect(src).toContain("from './requirements-template.js'");
+    // requirements-registry transitively loads config via test-registry — must not be used here.
+    expect(src).not.toContain("from './requirements-registry.js'");
+  });
+});
+
 import { validate } from '../config';
 import { buildMqaConfig, initProjectTool, PROFILE_RISK_TIERS, type InitProjectArgs } from '../tools/init-project';
 
@@ -83,6 +101,25 @@ describe('initProjectTool', () => {
 
     const basePage = await readFile(join(dir, 'pages/BasePage.ts'), 'utf-8');
     expect(basePage).toContain('class BasePage');
+    // navigate must accept the dismissOnLoad arg the system prompt documents
+    expect(basePage).toContain('navigate(path: string, dismissOnLoad');
+
+    // Runnable Playwright setup: config (with all three browsers) + global setup.
+    const pwConfig = await readFile(join(dir, 'playwright.config.ts'), 'utf-8');
+    expect(pwConfig).toContain('defineConfig');
+    for (const project of ['chromium', 'firefox', 'webkit', 'setup', 'visual']) {
+      expect(pwConfig).toContain(`name: '${project}'`);
+    }
+    expect(pwConfig).toContain("readFileSync('mcp-qa.config.json'");
+
+    const globalSetup = await readFile(join(dir, 'tests/global.setup.ts'), 'utf-8');
+    expect(globalSetup).toContain('save guest storage state');
+
+    const tsconfig = JSON.parse(await readFile(join(dir, 'tsconfig.json'), 'utf-8'));
+    expect(tsconfig.compilerOptions.strict).toBe(true);
+
+    const gitignore = await readFile(join(dir, '.gitignore'), 'utf-8');
+    expect(gitignore).toContain('test-data/.auth/');
 
     const sitePage = await readFile(join(dir, 'pages/SitePage.ts'), 'utf-8');
     expect(sitePage).toContain('extends BasePage');
