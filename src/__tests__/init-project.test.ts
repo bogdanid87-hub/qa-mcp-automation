@@ -117,6 +117,8 @@ describe('initProjectTool', () => {
 
     const tsconfig = JSON.parse(await readFile(join(dir, 'tsconfig.json'), 'utf-8'));
     expect(tsconfig.compilerOptions.strict).toBe(true);
+    // Node types so playwright.config.ts / global.setup.ts (process, __dirname, fs) type-check
+    expect(tsconfig.compilerOptions.types).toContain('node');
 
     const gitignore = await readFile(join(dir, '.gitignore'), 'utf-8');
     expect(gitignore).toContain('test-data/.auth/');

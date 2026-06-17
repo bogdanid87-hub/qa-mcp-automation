@@ -186,7 +186,7 @@ export async function initProjectTool(args: InitProjectArgs): Promise<{ content:
     ...scaffold.map((e) => `  ${e.created ? '✅ created' : '⏭️  skipped (already exists)'}  ${e.relPath}`),
     '',
     'Next steps:',
-    '  1. Install Playwright + browsers: `npm i -D @playwright/test && npx playwright install`.',
+    '  1. Install deps + browsers: `npm i -D @playwright/test @types/node && npx playwright install`.',
     `  2. Run \`npm run audit_site -- --url ${args.siteUrl}\` to discover the site's page structure.`,
     '  3. Use the audit report to fill in pom.intermediateClasses, pom.siteClassProvides, and riskTiers in mcp-qa.config.json.',
     '  4. Run generate_pom against your homepage/login page to populate pages/SitePage.ts with real locators.',

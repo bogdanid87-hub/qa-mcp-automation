@@ -259,6 +259,7 @@ export const TSCONFIG_TEMPLATE = `{
     "target": "ES2020",
     "module": "commonjs",
     "lib": ["ES2020", "DOM"],
+    "types": ["node"],
     "strict": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
