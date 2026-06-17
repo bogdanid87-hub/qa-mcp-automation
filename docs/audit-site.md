@@ -59,8 +59,42 @@ improving locator selection without any manual work.
 
 ## Test data output (`--mode data`)
 
-Crawls `/products` and `/login`, then calls Claude to generate `test-data/constants.ts`
-with comprehensive test fixtures:
+Calls Claude to generate `test-data/constants.ts` with comprehensive test fixtures.
+
+**Catalogue scraping is config-driven.** When `mcp-qa.config.json` has an optional
+`audit` block (catalogue paths + selectors — see below), the tool crawls the product
+and login pages and seeds `PRODUCTS`/`CATEGORIES`/`SEARCH` from the live site. When
+there is **no `audit` block** (the default for an arbitrary site, whose catalogue
+layout the tool can't know), it **skips the crawl** — rather than emit garbage — and
+generates only the generic `TEST_USER`/`PAYMENT`/`REVIEW` fixtures, printing a note to
+add an `audit` block or fill catalogue data by hand.
+
+### The `audit` config block
+
+```jsonc
+"audit": {
+  "productsPath": "/products",
+  "loginPath": "/login",
+  "selectors": {
+    "productCard":  ".productinfo.text-center",
+    "productWrapper": ".product-image-wrapper",
+    "productLink":  "a[href*=\"/product_details/\"]",
+    "productIdRegex": "/product_details/(\\d+)",
+    "productName":  "p",
+    "productPrice": "h2",
+    "categoryPanel": "#accordian .panel",
+    "categoryTitle": ".panel-title a",
+    "categorySub":  ".panel-body a",
+    "search":       "#search_product",
+    "registrationInputs": ".signup-form input, .login-form input"
+  }
+}
+```
+
+(The values above are the reference project's automationexercise selectors; the type
+lives in `src/config-schema.ts` as `AuditConfig`.)
+
+With the `audit` block set, the generated file looks like:
 
 ```typescript
 /** Products extracted from the live catalogue */

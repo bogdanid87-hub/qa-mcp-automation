@@ -97,6 +97,32 @@ test.describe('Products API', () => {
 
 ---
 
+## Site-specific API knowledge (`config.prompts`)
+
+The API system prompt is project-agnostic. Anything specific to your API — response
+contracts, field quirks, the account-setup pattern for authenticated tests — lives in
+optional `prompts.*` fields in `mcp-qa.config.json` and is injected into the prompt only
+when present:
+
+| Field | What it holds |
+|-------|---------------|
+| `prompts.apiResponseFormat` | The response contract — e.g. "all responses are HTTP 200; the real code is in `body.responseCode`". |
+| `prompts.apiNotes` | Known tricky fields / data shapes (nested objects, exact error messages, non-obvious field names). |
+| `prompts.apiAuthPattern` | The pattern for tests needing valid credentials (create an account in `beforeAll`, delete it in `afterAll`; the endpoint's required fields). |
+
+```jsonc
+"prompts": {
+  "apiResponseFormat": "### This API's response format ...",
+  "apiNotes": "- product.category is a NESTED OBJECT ...",
+  "apiAuthPattern": "### Tests that require valid credentials ..."
+}
+```
+
+A project that defines none of these gets a clean, generic API prompt. The reference
+project (automationexercise) sets all three. (See `src/config-schema.ts` for the schema.)
+
+---
+
 ## Usage
 
 ### From the terminal
@@ -190,7 +216,7 @@ npm run sync_registry
 
 ---
 
-## Keeping TEST\_API.md in sync
+## Keeping TESTS\_API.md in sync
 
 API tests are tracked separately from UI/E2E tests:
 - Passing tests → `TESTS_API.md` (passing table)
