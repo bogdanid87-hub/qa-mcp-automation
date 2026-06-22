@@ -36,6 +36,7 @@ const TOOLS: ToolCheck[] = [
   { mcp_name: 'generate_auth_fixture', module: '../src/tools/generate-auth-fixture.js', export: 'generateAuthFixtureTool' },
   { mcp_name: 'generate_mock',         module: '../src/tools/generate-mock.js',         export: 'generateMockTool' },
   { mcp_name: 'generate_app_knowledge',module: '../src/tools/generate-app-knowledge.js',export: 'generateAppKnowledgeTool' },
+  { mcp_name: 'learn_conventions',    module: '../src/tools/learn-conventions.js',      export: 'learnConventionsTool' },
   { mcp_name: 'plan_e2e',               module: '../src/tools/plan-e2e.js',              export: 'planE2eTool' },
   { mcp_name: 'init_project',           module: '../src/tools/init-project.js',          export: 'initProjectTool' },
   { mcp_name: 'review_rules',           module: '../src/tools/review-rules.js',          export: 'reviewRulesTool' },

@@ -12,7 +12,8 @@
     "qa-generate": "bin/qa-generate.mjs",
     "qa-fix": "bin/qa-fix.mjs",
     "qa-status": "bin/qa-status.mjs",
-    "qa-analyze-prd": "bin/qa-analyze-prd.mjs"
+    "qa-analyze-prd": "bin/qa-analyze-prd.mjs",
+    "qa-learn": "bin/qa-learn.mjs"
   },
   "files": [
     "src",
@@ -42,6 +43,7 @@
     "generate_mock": "tsx src/generate-mock-cli.ts",
     "audit_site": "tsx src/site-audit-cli.ts",
     "generate_knowledge": "tsx src/generate-app-knowledge-cli.ts",
+    "learn_conventions": "tsx src/learn-conventions-cli.ts",
     "init_project": "tsx src/init-project-cli.ts",
     "review_rules": "tsx src/review-rules-cli.ts",
     "mcp": "tsx src/index.ts",
