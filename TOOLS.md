@@ -1,82 +1,90 @@
 # Tool Reference
 
-Quick index of all available tools. New here? Start with [docs/getting-started.md](docs/getting-started.md).
-Detailed per-tool guides are in the `docs/` folder. Project naming and architecture decisions: [docs/conventions.md](docs/conventions.md).
+**New here? You really only need the five _everyday_ tools below — the rest are optional.**
+In Claude Code chat you mostly just say what you want in plain English (e.g. *"test the login
+page"*, *"turn these requirements into tests"*) and the right tool runs. Full walkthrough:
+[docs/getting-started.md](docs/getting-started.md); per-tool guides in [docs/](docs/).
 
 ---
 
-## MCP tools (Claude Code chat)
+## Everyday — the five you'll actually use
 
 | Tool | What it does | Doc |
 |------|-------------|-----|
-| `analyze_coverage` | Analyse the existing test suite for gaps and risk areas; writes `workspace/coverage-report.md` and optionally `workspace/coverage-gaps.txt` | [docs/analyze-coverage.md](docs/analyze-coverage.md) |
-| `analyze_prd` | Read a PRD or feature description and generate a risk-prioritised test backlog in `workspace/prd-tests.txt` | [docs/analyze-prd.md](docs/analyze-prd.md) |
-| `generate_pom` | Inspect a live page and generate a locator-only POM file — run this before `generate_test` when starting on a new page | [docs/generate-pom.md](docs/generate-pom.md) |
-| `generate_test` | Generate a UI, API, E2E, or mixed Playwright test — type auto-detected from description and spec_file path. POM + spec + auto-run + auto-fix + registry update | [docs/generate-test.md](docs/generate-test.md) |
-| `inspect_page` | Navigate to a page headlessly and return all DOM elements with their best locator | [docs/inspect-page.md](docs/inspect-page.md) |
-| `investigate_and_fix` | Diagnose a failing test (code bug vs app bug), patch the file, and save a learned rule | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
-| `run_tests` | Run tests and return output — `pattern` targets a file, `grep` runs a single test by name, `browser` selects the project (`chromium`/`firefox`/`webkit`/`visual`) | [docs/run-tests.md](docs/run-tests.md) |
-| `list_resources` | List all existing page objects, fixtures, and spec files | [docs/list-resources.md](docs/list-resources.md) |
-| `generate_auth_fixture` | Generate a Playwright auth fixture for form or OAuth login — saves browser storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
-| `generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
-| `generate_app_knowledge` | Synthesise app bugs, coverage gaps, and coverage report into `workspace/APP_KNOWLEDGE.md` — enriches subsequent `analyze_prd` and `analyze_coverage` calls | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
-| `plan_e2e` | Plan a multi-page E2E journey before generating it — decomposes the flow into POMs/methods and cross-references the POM Method Index for a step → view → POM → exists? → action checklist | [docs/plan-e2e.md](docs/plan-e2e.md) |
-| `init_project` | Bootstrap `mcp-qa.config.json` plus a minimal pages/fixtures/tests scaffold for a new project — picks a riskTiers profile, prints next steps (audit_site → generate_pom → generate_test) | [docs/init-project.md](docs/init-project.md) |
-| `review_rules` | List stale rules and near-duplicate rule pairs across `learned-rules.md`/`framework-rules.md`; `promote` moves a rule into `framework-rules.md` so it applies to every project | [docs/review-rules.md](docs/review-rules.md) |
+| `generate_test` | Describe a test in plain English — it writes the test, runs it, fixes it if it fails the first time, and records the result. **The one you'll use most.** | [docs/generate-test.md](docs/generate-test.md) |
+| `analyze_prd` | Turn a requirements doc or feature description into a prioritised to-do list of tests (skips anything already covered). | [docs/analyze-prd.md](docs/analyze-prd.md) |
+| `status` (`npm run status`) | *"Is everything OK?"* — a plain-English health summary of all your tests, ending with a bottom-line of what needs attention. | — |
+| `investigate_and_fix` (`npm run fix`) | Something failed? Diagnoses and fixes it — and tells apart a real bug in the app from a bug in the test. | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
+| `init_project` | Starting on a new site? Sets the project up (config + a ready-to-run scaffold) in one step. Run once. | [docs/init-project.md](docs/init-project.md) |
 
 ---
 
-## Terminal commands
+## Advanced — optional / power tools
+
+| Tool | What it does | Doc |
+|------|-------------|-----|
+| `generate_auth_fixture` | Set up a reusable "logged-in" state so tests start signed in. Just give the login URL — the fields are auto-detected. | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
+| `generate_pom` | Prepare a reusable "page helper" (Page Object) for a page in advance. Optional — `generate_test` makes these for you. | [docs/generate-pom.md](docs/generate-pom.md) |
+| `plan_e2e` | Preview a complex multi-page journey before generating it. `generate_test` does this internally. | [docs/plan-e2e.md](docs/plan-e2e.md) |
+| `analyze_coverage` | Find gaps and risk areas in the tests you already have; writes a report (and optional ready-to-run list). | [docs/analyze-coverage.md](docs/analyze-coverage.md) |
+| `generate_mock` | Fake a network response (e.g. a payment API like Stripe) or force an error/loading state. | [docs/generate-mock.md](docs/generate-mock.md) |
+| `run_tests` | Run the existing tests (or one by name) and return results — no fixing, no file changes. | [docs/run-tests.md](docs/run-tests.md) |
+| `inspect_page` | Diagnostic — list a page's elements and the best way to target each (for debugging "can't find the element"). | [docs/inspect-page.md](docs/inspect-page.md) |
+
+---
+
+## Maintenance — keep things tidy (mostly from the terminal)
+
+| Command / tool | What it does | Doc |
+|----------------|-------------|-----|
+| `npm run update_registry` | **Quick** — re-runs ONLY the tests currently marked broken/app-bug, to see if any are now fixed (seconds). | [docs/test-registry.md](docs/test-registry.md) |
+| `npm run sync_registry` | **Slow** — re-runs the whole suite to true-up every test catalog against reality. | [docs/test-registry.md](docs/test-registry.md) |
+| `npm run audit_site` | Crawl a site and recommend a page-helper structure (and seed test data). | [docs/audit-site.md](docs/audit-site.md) |
+| `generate_app_knowledge` (`npm run generate_knowledge`) | Gather known bugs/gaps/risk into one reference file the analysis tools read automatically. | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
+| `review_rules` (`npm run review_rules`) | Health-check the engine's saved lessons (stale + near-duplicate); `promote` makes one engine-wide. | [docs/review-rules.md](docs/review-rules.md) |
+| `npm run tag_tests` | Re-add the catalog ID comments to test files after manual edits (`generate_test` does this automatically). | [docs/tag-tests.md](docs/tag-tests.md) |
+
+---
+
+## Everyday flows
+
+```
+Starting on a new site:
+  init_project  →  (then just describe your first test)
+
+From requirements:
+  analyze_prd  →  review the suggested list  →  generate them
+
+Day to day:
+  "test the <feature>"   (generate_test)
+  npm run status         (is everything OK?)
+  npm run fix            (something failed)
+```
+
+---
+
+## For developers — all terminal commands
 
 | Command | What it does | Doc |
 |---------|-------------|-----|
-| `npm run analyze_coverage` | CLI version of `analyze_coverage` — scope by spec, folder, or registry; optional URL | [docs/analyze-coverage.md](docs/analyze-coverage.md) |
-| `npm run analyze_prd` | CLI version of `analyze_prd` — supports PDF and image inputs | [docs/analyze-prd.md](docs/analyze-prd.md) |
-| `npm run generate_api` | Shorthand for generating an API test — forces `type=api`, otherwise identical to `npm run generate` | [docs/generate-api-test.md](docs/generate-api-test.md) |
-| `npm run generate_auth` | Generate a Playwright auth fixture for form or OAuth login — saves storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
-| `npm run generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
-| `npm run audit_site` | Crawl a site, build a page-type × UI-component matrix, and recommend a POM hierarchy | [docs/audit-site.md](docs/audit-site.md) |
-| `npm run init_project` | Bootstrap `mcp-qa.config.json` plus a minimal pages/fixtures/tests scaffold for a new project | [docs/init-project.md](docs/init-project.md) |
-| `npm run review_rules` | Rule hygiene report (stale + near-duplicate rules); `-- --promote <NNN>` moves a rule from `learned-rules.md` to `framework-rules.md` | [docs/review-rules.md](docs/review-rules.md) |
-| `npm run generate_knowledge` | CLI version of `generate_app_knowledge` — synthesises `workspace/APP_KNOWLEDGE.md` from registries, backlog, and coverage report | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
-| `npm run generate` | Generate a test from `my-test.txt` (or any batch `.txt` file) | [docs/generate-test.md](docs/generate-test.md) |
-| `npm run fix` | Interactive fix loop for failing tests | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
-| `npm run status` | Suite health at a glance: registry counts, tagging ratio, open backlog gaps, spec file counts | — |
-| `npm run tag_tests` | Insert `// [UI/API/E2E Describe #N]` comments before each test() call | [docs/tag-tests.md](docs/tag-tests.md) |
-| `npm run update_registry` | **Quick** — re-runs ONLY the tests currently marked broken/app-bug, to see if any are now fixed (seconds) | [docs/test-registry.md](docs/test-registry.md) |
-| `npm run sync_registry` | **Slow** — re-runs the whole suite to true-up every registry against reality | [docs/test-registry.md](docs/test-registry.md) |
+| `npm run generate` | Generate a test from `workspace/my-test.txt` (or any batch `.txt` file) | [docs/generate-test.md](docs/generate-test.md) |
+| `npm run generate_api` | Shorthand for an API test — forces `type=api`, otherwise identical to `npm run generate` | [docs/generate-api-test.md](docs/generate-api-test.md) |
+| `npm run generate_auth` | Auth fixture for form or OAuth login — fields auto-detected from the login page | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
+| `npm run generate_mock` | Network mock — fake a response for a URL | [docs/generate-mock.md](docs/generate-mock.md) |
+| `npm run analyze_prd` | Requirements → prioritised test backlog (supports PDF/image inputs) | [docs/analyze-prd.md](docs/analyze-prd.md) |
+| `npm run analyze_coverage` | Coverage gaps — scope by test file, folder, or catalog; optional URL | [docs/analyze-coverage.md](docs/analyze-coverage.md) |
+| `npm run audit_site` | Crawl a site, recommend a page-helper structure, seed test data | [docs/audit-site.md](docs/audit-site.md) |
+| `npm run init_project` | Set up a new project (config + runnable scaffold) | [docs/init-project.md](docs/init-project.md) |
+| `npm run generate_knowledge` | Build `workspace/APP_KNOWLEDGE.md` from catalogs, backlog, coverage report | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
+| `npm run review_rules` | Saved-lesson hygiene report; `-- --promote <NNN>` makes a lesson engine-wide | [docs/review-rules.md](docs/review-rules.md) |
+| `npm run fix` | Diagnose and fix failing tests | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
+| `npm run status` | Suite health at a glance | — |
+| `npm run tag_tests` | Re-add catalog ID comments to test files | [docs/tag-tests.md](docs/tag-tests.md) |
+| `npm run update_registry` | Quick re-check of only the broken/app-bug tests (seconds) | [docs/test-registry.md](docs/test-registry.md) |
+| `npm run sync_registry` | Full re-run of the whole suite to true-up the catalogs (slow) | [docs/test-registry.md](docs/test-registry.md) |
 | `npm test` | Run all functional tests headless (Chromium) | [docs/run-tests.md](docs/run-tests.md) |
-| `npm run test:all-browsers` | Run functional tests on Chromium + Firefox + WebKit | [docs/run-tests.md](docs/run-tests.md) |
-| `npm run test:visual` | Run visual regression tests only (Chromium, `tests/visual/`) | [docs/run-tests.md](docs/run-tests.md) |
+| `npm run test:all-browsers` | Functional tests on Chromium + Firefox + WebKit | [docs/run-tests.md](docs/run-tests.md) |
+| `npm run test:visual` | Visual regression tests only (Chromium, `tests/visual/`) | [docs/run-tests.md](docs/run-tests.md) |
 | `npm run test:update-snapshots` | Regenerate visual baseline screenshots after intentional UI changes | [docs/run-tests.md](docs/run-tests.md) |
-| `npm run test:headed` | Run with browser visible (Chromium) | [docs/run-tests.md](docs/run-tests.md) |
+| `npm run test:headed` | Run with the browser visible (Chromium) | [docs/run-tests.md](docs/run-tests.md) |
 | `npm run test:report` | Open the HTML test report | [docs/run-tests.md](docs/run-tests.md) |
-
----
-
-## Recommended flow
-
-```
-Starting a new project:
-  init_project / npm run init_project -- --name <name> --url <site>  → mcp-qa.config.json + scaffold
-  → npm run audit_site -- --url <site>  → read workspace/site-audit-report.md
-  → fill in pom/riskTiers from the report → generate_pom → generate_test
-
-From a PRD:
-  analyze_prd / npm run analyze_prd → review workspace/prd-tests.txt → npm run generate --file workspace/prd-tests.txt
-
-New page, no POM yet:
-  generate_pom → generate_test
-
-Existing page:
-  generate_test
-
-Multi-page E2E journey:
-  plan_e2e → review the checklist (reuse vs new methods) → generate_test
-
-Something failed:
-  investigate_and_fix / npm run fix
-
-Registry out of sync:
-  npm run sync_registry
-```
