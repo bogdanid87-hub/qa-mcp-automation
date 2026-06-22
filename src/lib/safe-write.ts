@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir } from 'fs/promises';
+import { readFile, writeFile, mkdir, rename, rm } from 'fs/promises';
 import { dirname } from 'path';
 import { scanForSecrets } from './scan-secrets';
 
@@ -101,7 +101,17 @@ export async function safeWrite(
   }
 
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, content, 'utf-8');
+  // Atomic write: write to a temp file in the same directory, then rename over the
+  // target. A crash mid-write can't leave a truncated/half-written file — readers
+  // see either the old content or the complete new content, never a partial one.
+  const tmp = `${path}.tmp-${process.pid}-${Date.now()}`;
+  try {
+    await writeFile(tmp, content, 'utf-8');
+    await rename(tmp, path);
+  } catch (err) {
+    await rm(tmp, { force: true }).catch(() => { /* best-effort cleanup */ });
+    throw err;
+  }
   return { ok: true, written: true, diff };
 }
 
