@@ -123,6 +123,12 @@ describe('initProjectTool', () => {
     const gitignore = await readFile(join(dir, '.gitignore'), 'utf-8');
     expect(gitignore).toContain('test-data/.auth/');
 
+    // MCP wiring: launches the installed engine's server via the qa-mcp bin.
+    const mcpConfig = JSON.parse(await readFile(join(dir, '.mcp.json'), 'utf-8'));
+    expect(mcpConfig.mcpServers.qa.command).toBe('npx');
+    expect(mcpConfig.mcpServers.qa.args).toEqual(['qa-mcp']);
+    expect(mcpConfig.mcpServers.qa.env.ANTHROPIC_API_KEY).toBe('${ANTHROPIC_API_KEY}');
+
     const sitePage = await readFile(join(dir, 'pages/SitePage.ts'), 'utf-8');
     expect(sitePage).toContain('extends BasePage');
 

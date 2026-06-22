@@ -5,7 +5,7 @@ import { safeWrite } from '../lib/safe-write.js';
 // Import from config-schema (not config.js) so init_project — which creates the
 // config — doesn't trigger config.ts's eager load in a project that has none yet.
 import { validate, type MqaConfig } from '../config-schema.js';
-import { BASE_PAGE_TEMPLATE, FIXTURES_INDEX_TEMPLATE, GITIGNORE_TEMPLATE, GLOBAL_SETUP_TEMPLATE, LEARNED_RULES_TEMPLATE, MY_TEST_TEMPLATE, PLAYWRIGHT_CONFIG_TEMPLATE, PRD_TEMPLATE, REQUIREMENTS_TEMPLATE, SITE_PAGE_TEMPLATE, START_HERE_TEMPLATE, TSCONFIG_TEMPLATE } from './init-project-templates.js';
+import { BASE_PAGE_TEMPLATE, FIXTURES_INDEX_TEMPLATE, GITIGNORE_TEMPLATE, GLOBAL_SETUP_TEMPLATE, LEARNED_RULES_TEMPLATE, MCP_CONFIG_TEMPLATE, MY_TEST_TEMPLATE, PLAYWRIGHT_CONFIG_TEMPLATE, PRD_TEMPLATE, REQUIREMENTS_TEMPLATE, SITE_PAGE_TEMPLATE, START_HERE_TEMPLATE, TSCONFIG_TEMPLATE } from './init-project-templates.js';
 
 export type RiskTiers = MqaConfig['riskTiers'];
 
@@ -106,6 +106,8 @@ async function scaffoldProject(root: string, config: MqaConfig): Promise<Scaffol
     { relPath: 'playwright.config.ts', content: PLAYWRIGHT_CONFIG_TEMPLATE },
     { relPath: 'tests/global.setup.ts', content: GLOBAL_SETUP_TEMPLATE },
     { relPath: 'tsconfig.json', content: TSCONFIG_TEMPLATE },
+    // Wires the installed engine's MCP tools into Claude Code for this project.
+    { relPath: '.mcp.json', content: MCP_CONFIG_TEMPLATE },
     { relPath: '.gitignore', content: GITIGNORE_TEMPLATE },
     { relPath: 'pages/BasePage.ts', content: BASE_PAGE_TEMPLATE },
     { relPath: 'pages/SitePage.ts', content: SITE_PAGE_TEMPLATE },
@@ -186,12 +188,13 @@ export async function initProjectTool(args: InitProjectArgs): Promise<{ content:
     ...scaffold.map((e) => `  ${e.created ? '✅ created' : '⏭️  skipped (already exists)'}  ${e.relPath}`),
     '',
     'Next steps:',
-    '  1. Install deps + browsers: `npm i -D @playwright/test @types/node && npx playwright install`.',
-    `  2. Run \`npm run audit_site -- --url ${args.siteUrl}\` to discover the site's page structure.`,
-    '  3. Use the audit report to fill in pom.intermediateClasses, pom.siteClassProvides, and riskTiers in mcp-qa.config.json.',
-    '  4. Run generate_pom against your homepage/login page to populate pages/SitePage.ts with real locators.',
-    '  5. Run generate_test for your first test.',
-    '  6. Open workspace/START_HERE.md for a plain-English guide to describing, generating, and checking your first test.',
+    '  1. Install the engine + deps: `npm i -D @bogdanid87/qa-mcp-engine @playwright/test @types/node && npx playwright install`.',
+    '  2. Reload Claude Code (or your editor) so it picks up .mcp.json — the QA tools then appear in chat. Make sure ANTHROPIC_API_KEY is set in your environment.',
+    `  3. Ask the audit_site tool in chat to crawl ${args.siteUrl} and discover the site's page structure.`,
+    '  4. Use the audit report to fill in pom.intermediateClasses, pom.siteClassProvides, and riskTiers in mcp-qa.config.json.',
+    '  5. Run generate_pom against your homepage/login page to populate pages/SitePage.ts with real locators.',
+    '  6. Run generate_test for your first test.',
+    '  7. Open workspace/START_HERE.md for a plain-English guide to describing, generating, and checking your first test.',
   ];
 
   return { content: [{ type: 'text', text: lines.join('\n') }] };
