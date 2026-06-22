@@ -1,6 +1,7 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { generateMockTool, type GenerateMockArgs } from './tools/generate-mock.js';
+import { cliHelp } from './lib/cli-help.js';
 
 const ROOT = process.cwd();
 
@@ -43,33 +44,7 @@ async function main(): Promise<void> {
   const flags = parseArgs(process.argv.slice(2));
 
   if (flags.help) {
-    console.log(`
-Usage: npm run generate_mock -- [options]
-
-Options:
-  --name <name>        Mock name, e.g. "stripeSuccess", "productSearch"
-  --url <pattern>      URL pattern to intercept, e.g. '**/api/products'
-  --method <method>    HTTP method (GET, POST, etc.) — default: *
-  --status <code>      HTTP status code — default: 200
-  --response <body>    Describe or paste the response body
-  --scope <scope>      'fixture' (default) or 'inline'
-  --notes <text>       Extra context for the AI
-
-Examples:
-  npm run generate_mock -- \\
-    --name productSearch \\
-    --url '**/api/products' \\
-    --method GET \\
-    --response '{"products": [{"id": 1, "name": "Blue Top", "price": 500}]}' \\
-    --notes "Returns a single deterministic product for search tests"
-
-  npm run generate_mock -- \\
-    --name stripeError \\
-    --url 'https://api.stripe.com/**' \\
-    --status 402 \\
-    --response "payment required error with decline code card_declined" \\
-    --scope inline
-`);
+    console.log('\n' + cliHelp('generate_mock'));
     process.exit(0);
   }
 

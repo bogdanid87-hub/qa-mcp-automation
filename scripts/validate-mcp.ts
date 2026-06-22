@@ -16,6 +16,7 @@
 
 import { z } from 'zod';
 import { TOOL_DEFS } from '../src/tool-manifest.js';
+import { CLI_HELP_SPECS } from '../src/lib/cli-help.js';
 
 interface ToolCheck {
   mcp_name: string;
@@ -132,6 +133,43 @@ function checkSchemas(): { passed: number; errors: string[] } {
   return { passed, errors };
 }
 
+// ── Pass 3: CLI ↔ manifest param coverage ────────────────────────────────────
+// Each registered CLI declares a param → flag map. Assert it covers every one of
+// the tool's schema params (or marks it mcpOnly), so adding a tool param can't
+// silently leave the CLI unable to pass it.
+
+function checkCliSpecs(): { passed: number; errors: string[] } {
+  console.log('\nPass 3 — CLI ↔ manifest param coverage\n');
+  let passed = 0;
+  const errors: string[] = [];
+
+  for (const spec of CLI_HELP_SPECS) {
+    const def = TOOL_DEFS.find((d) => d.name === spec.tool);
+    if (!def) {
+      errors.push(`${spec.tool}: CLI help spec references a tool not in TOOL_DEFS`);
+      continue;
+    }
+    const params = new Set(Object.keys(def.inputSchema));
+    const covered = new Set([...Object.keys(spec.flags), ...(spec.mcpOnly ?? [])]);
+
+    const missing = [...params].filter((p) => !covered.has(p));
+    const unknown = [...covered].filter((p) => !params.has(p));
+
+    const specErrors: string[] = [];
+    if (missing.length) specErrors.push(`schema params not exposed as a flag (or marked mcpOnly): ${missing.join(', ')}`);
+    if (unknown.length) specErrors.push(`flags/mcpOnly reference params not in the schema: ${unknown.join(', ')}`);
+
+    if (specErrors.length === 0) {
+      console.log(`  ✓  ${spec.tool} (${spec.script})`);
+      passed++;
+    } else {
+      for (const e of specErrors) errors.push(`${spec.tool}: ${e}`);
+    }
+  }
+
+  return { passed, errors };
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -144,6 +182,9 @@ async function main() {
   const schemaResult = checkSchemas();
   allErrors.push(...schemaResult.errors);
 
+  const cliResult = checkCliSpecs();
+  allErrors.push(...cliResult.errors);
+
   console.log('');
 
   if (allErrors.length > 0) {
@@ -154,7 +195,8 @@ async function main() {
 
   console.log(
     `✅ ${exportResult.passed}/${TOOLS.length} handler exports valid` +
-    `   |   ${schemaResult.passed}/${TOOL_DEFS.length} tool schemas MCP-compliant`,
+    `   |   ${schemaResult.passed}/${TOOL_DEFS.length} tool schemas MCP-compliant` +
+    `   |   ${cliResult.passed}/${CLI_HELP_SPECS.length} CLI specs cover their tool params`,
   );
 }
 
