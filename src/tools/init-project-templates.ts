@@ -260,6 +260,22 @@ test-data/.auth/
 .claude/settings.local.json
 `;
 
+// Wires the installed engine's MCP server into Claude Code for this project.
+// `npx qa-mcp` resolves the qa-mcp bin from the consumer's node_modules. The
+// ANTHROPIC_API_KEY is expanded from the environment that launches Claude Code.
+export const MCP_CONFIG_TEMPLATE = `{
+  "mcpServers": {
+    "qa": {
+      "command": "npx",
+      "args": ["qa-mcp"],
+      "env": {
+        "ANTHROPIC_API_KEY": "\${ANTHROPIC_API_KEY}"
+      }
+    }
+  }
+}
+`;
+
 export const TSCONFIG_TEMPLATE = `{
   "compilerOptions": {
     "target": "ES2020",
