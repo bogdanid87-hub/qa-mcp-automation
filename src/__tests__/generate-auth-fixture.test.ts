@@ -103,4 +103,17 @@ describe('inferLoginSelectors', () => {
     expect(r.passwordSelector).toBeUndefined();
     expect(r.notes.join(' ')).toMatch(/password field/i);
   });
+  it('on a combined login+register page, prefers the login fields and flags the ambiguity', () => {
+    const r = inferLoginSelectors(snap([
+      { selector: '#login-email', tag: 'input', type: 'email', id: 'login-email' },
+      { selector: '#login-password', tag: 'input', type: 'password', id: 'login-password' },
+      { selector: '#register-email', tag: 'input', type: 'email', id: 'register-email' },
+      { selector: '#register-password', tag: 'input', type: 'password', id: 'register-password' },
+      { selector: '#register-confirm', tag: 'input', type: 'password', id: 'register-confirm-password' },
+    ]));
+    expect(r.passwordSelector).toBe('#login-password');
+    expect(r.emailSelector).toBe('#login-email');
+    expect(r.notes.join(' ')).toMatch(/login and registration/i);
+  });
+
 });

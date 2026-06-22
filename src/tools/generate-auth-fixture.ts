@@ -142,16 +142,30 @@ export function inferLoginSelectors(snapshot: PageSnapshot): InferredLogin {
   const notes: string[] = [];
   const result: InferredLogin = { notes };
 
-  // Password — the one input[type=password].
-  const password = inputs.find((el) => el.type === 'password');
+  const hintOf = (el: PageSnapshot['elements'][number]): string =>
+    [el.id, el.name, el.placeholder, el.dataQa].filter(Boolean).join(' ');
+  // Fields that belong to a REGISTER form, not the login form — avoid these when a
+  // page combines login + registration (two password fields, two email fields).
+  const REGISTER_HINT = /confirm|register|signup|sign-?up|new[-_ ]?password|repeat/i;
+
+  // Password — prefer a password field that doesn't look like a register/confirm one.
+  const passwords = inputs.filter((el) => el.type === 'password');
+  const password = passwords.find((el) => !REGISTER_HINT.test(hintOf(el))) ?? passwords[0];
   if (password) result.passwordSelector = password.selector;
   else notes.push('Could not find a password field — pass --password-selector manually.');
+  if (passwords.length > 1) {
+    notes.push(`Found ${passwords.length} password fields — this page may combine login and registration; confirm the login form's fields (or pass selectors).`);
+  }
 
-  // Email / username — prefer type=email, then a name/id/placeholder hint, then the first text input.
+  // Email / username — prefer type=email, then a name/id/placeholder hint, then the
+  // first text input; at each step skip fields that look like register/confirm fields.
   const textInputs = inputs.filter((el) => !NON_TEXT_INPUT_TYPES.has(el.type ?? 'text'));
+  const matchesHint = (el: PageSnapshot['elements'][number]) => /e-?mail|user|login/i.test(hintOf(el));
   const email =
+    textInputs.find((el) => el.type === 'email' && !REGISTER_HINT.test(hintOf(el))) ??
     textInputs.find((el) => el.type === 'email') ??
-    textInputs.find((el) => /e-?mail|user|login/i.test([el.id, el.name, el.placeholder, el.dataQa].filter(Boolean).join(' '))) ??
+    textInputs.find((el) => matchesHint(el) && !REGISTER_HINT.test(hintOf(el))) ??
+    textInputs.find(matchesHint) ??
     textInputs[0];
   if (email) result.emailSelector = email.selector;
   else notes.push('Could not find an email/username field — pass --email-selector manually.');
