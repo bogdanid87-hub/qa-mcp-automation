@@ -10,6 +10,11 @@ Generates a Playwright auth fixture for a login flow. Produces:
 
 Run this once per auth role your tests need (e.g. `loggedIn`, `admin`, `premiumUser`).
 
+**You don't need to know any CSS selectors.** Give it the login page URL and a name —
+it inspects the page and auto-detects the email/username, password, and submit fields.
+Pass selectors only when you want to override the auto-detection (e.g. an ambiguous form).
+The result lists what it auto-detected so you can confirm.
+
 ---
 
 ## Why this matters
@@ -26,19 +31,21 @@ once per test run, and tests stay focused on what they're actually testing.
 ### From Claude Code
 
 ```
-Generate an auth fixture for the login page at /login.
-The email input is [data-qa="login-email"], password is [data-qa="login-password"],
-submit is [data-qa="login-button"]. Call the fixture "loggedIn".
-Store credentials in TEST_EMAIL and TEST_PASSWORD env vars.
+Set up a logged-in fixture called "loggedIn" using the login page at /login.
+Store the credentials in TEST_EMAIL and TEST_PASSWORD env vars.
 ```
+
+That's enough — the fields are auto-detected. To override, just add them in plain
+English ("the email input is [data-qa=login-email]").
 
 ### From the terminal
 
 ```bash
-# Interactive (prompts for missing values)
-npm run generate_auth
+# Simplest — fields auto-detected from the login page
+npm run generate_auth -- --type form --name loggedIn --login-url /login \
+  --username-env TEST_EMAIL --password-env TEST_PASSWORD
 
-# Non-interactive
+# Override the auto-detection when a form is ambiguous
 npm run generate_auth -- \
   --type form \
   --name loggedIn \
@@ -62,9 +69,9 @@ Run `npm run generate_auth -- --help` for all options.
 | `type` | no | `form` (default) or `oauth` |
 | `name` | yes | Fixture name, e.g. `loggedIn`, `admin` — becomes `<name>Page` in tests |
 | `loginUrl` | yes | Login page path or full URL |
-| `emailSelector` | no | CSS / data-qa selector for the email or username input |
-| `passwordSelector` | no | CSS / data-qa selector for the password input |
-| `submitSelector` | no | CSS / data-qa selector for the submit button |
+| `emailSelector` | no | Selector for the email/username input. **Auto-detected from the page if omitted** — pass to override. |
+| `passwordSelector` | no | Selector for the password input. **Auto-detected if omitted** — pass to override. |
+| `submitSelector` | no | Selector for the submit button. **Auto-detected if omitted** — pass to override. |
 | `successIndicator` | no | URL pattern or selector confirming successful login |
 | `usernameEnvVar` | no | Env var holding the username, e.g. `TEST_EMAIL` |
 | `passwordEnvVar` | no | Env var holding the password, e.g. `TEST_PASSWORD` |

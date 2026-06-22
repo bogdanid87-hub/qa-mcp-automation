@@ -122,16 +122,18 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'generate_auth_fixture',
     description:
-      'Generate a Playwright auth fixture for a login flow — produces a global.setup.ts task that ' +
-      'authenticates and saves browser storage state, plus a named fixture (e.g. loggedInPage) for ' +
-      'use in tests. Supports form-based login and OAuth redirect flows.',
+      'Set up a reusable "logged-in" state for tests. Give it the login page URL and a name; ' +
+      'it inspects the page to auto-detect the email/password/submit fields, then produces a ' +
+      'global.setup.ts task that signs in and saves the browser session, plus a named fixture ' +
+      '(e.g. loggedInPage) so tests start already authenticated. The field selectors are optional ' +
+      '(only needed to override the auto-detection). Supports form login and OAuth redirect flows.',
     inputSchema: {
       type:             z.enum(['form', 'oauth']).default('form').describe('Auth flow type'),
       name:             z.string().describe('Fixture name, e.g. "loggedIn", "admin", "premiumUser"'),
       loginUrl:         z.string().describe('Login page path or full URL'),
-      emailSelector:    z.string().optional().describe('CSS/data-qa selector for the email or username input'),
-      passwordSelector: z.string().optional().describe('CSS/data-qa selector for the password input'),
-      submitSelector:   z.string().optional().describe('CSS/data-qa selector for the submit button'),
+      emailSelector:    z.string().optional().describe('Optional — selector for the email/username input. Auto-detected from the page if omitted.'),
+      passwordSelector: z.string().optional().describe('Optional — selector for the password input. Auto-detected from the page if omitted.'),
+      submitSelector:   z.string().optional().describe('Optional — selector for the submit button. Auto-detected from the page if omitted.'),
       successIndicator: z.string().optional().describe('URL pattern or selector confirming successful login'),
       usernameEnvVar:   z.string().optional().describe('Environment variable name for the username, e.g. TEST_EMAIL'),
       passwordEnvVar:   z.string().optional().describe('Environment variable name for the password, e.g. TEST_PASSWORD'),
