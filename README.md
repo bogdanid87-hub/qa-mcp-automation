@@ -165,24 +165,21 @@ NO_LOCAL_LLM=1 npm run generate -- --file my-test.txt   # same via env var
 
 ## Tools
 
-Fourteen tools are available in Claude Code chat and (most) from the terminal. See [docs/getting-started.md](docs/getting-started.md) for a walkthrough of the first test, [TOOLS.md](TOOLS.md) for a quick index, and [docs/](docs/) for detailed per-tool guides.
+You mostly need just **five everyday tools** — `generate_test`, `analyze_prd`, `status`,
+`fix` (investigate_and_fix), and `init_project`. In Claude Code chat you describe what you
+want in plain English and the right one runs.
 
-| Tool | One-liner | Guide |
-|------|-----------|-------|
-| `analyze_coverage` | Analyse the existing test suite for coverage gaps and risk areas — scoped or full-suite, with optional URL context | [docs/analyze-coverage.md](docs/analyze-coverage.md) |
-| `analyze_prd` | Turn a PRD into a risk-prioritised test backlog (`workspace/prd-tests.txt`) | [docs/analyze-prd.md](docs/analyze-prd.md) |
-| `generate_pom` | Inspect a live page, write a locator-only POM — run before `generate_test` for new pages | [docs/generate-pom.md](docs/generate-pom.md) |
-| `generate_test` | Generate a UI, API, E2E, or mixed Playwright test — type auto-detected; POM + spec + auto-run + auto-fix + registry | [docs/generate-test.md](docs/generate-test.md) |
-| `inspect_page` | See real DOM elements and locators on a page | [docs/inspect-page.md](docs/inspect-page.md) |
-| `investigate_and_fix` | Diagnose a failure (code bug vs app bug), patch, learn, re-run | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
-| `run_tests` | Run tests and return output — `pattern` targets a file, `grep` runs a single test by name, `browser` selects the project (`chromium`/`firefox`/`webkit`/`visual`) | [docs/run-tests.md](docs/run-tests.md) |
-| `list_resources` | List all existing POMs, fixtures, and spec files | [docs/list-resources.md](docs/list-resources.md) |
-| `generate_auth_fixture` | Generate a Playwright auth fixture — saves browser storage state and adds a named fixture | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
-| `generate_mock` | Generate a `page.route()` network mock — intercepts a URL and returns a controlled response | [docs/generate-mock.md](docs/generate-mock.md) |
-| `generate_app_knowledge` | Synthesise app bugs, gaps, and coverage report into `workspace/APP_KNOWLEDGE.md` — enriches `analyze_prd` and `analyze_coverage` | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
-| `plan_e2e` | Plan a multi-page E2E journey — decompose into POMs/methods, cross-reference the POM Method Index for a step → view → POM → exists? → action checklist | [docs/plan-e2e.md](docs/plan-e2e.md) |
-| `init_project` | Bootstrap `mcp-qa.config.json` plus a minimal pages/fixtures/tests scaffold for a new project | [docs/init-project.md](docs/init-project.md) |
-| `review_rules` | List stale and near-duplicate rules across `learned-rules.md`/`framework-rules.md`; `promote` moves a rule into `framework-rules.md` so it applies to every project | [docs/review-rules.md](docs/review-rules.md) |
+| Everyday tool | What it does |
+|---------------|--------------|
+| `generate_test` | Describe a test in plain English — it writes, runs, auto-fixes, and records it. |
+| `analyze_prd` | Turn requirements into a prioritised to-do list of tests. |
+| `status` (`npm run status`) | "Is everything OK?" — a plain-English health summary. |
+| `investigate_and_fix` (`npm run fix`) | Diagnose and fix a failing test. |
+| `init_project` | Set up a new project for a site in one step. |
+
+The remaining **advanced** and **maintenance** tools (page helpers, auth, mocks, coverage,
+catalog upkeep) live in **[TOOLS.md](TOOLS.md)**, grouped by when you'd reach for them.
+Full first-test walkthrough: [docs/getting-started.md](docs/getting-started.md).
 
 ---
 
