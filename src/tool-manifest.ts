@@ -165,6 +165,19 @@ export const TOOL_DEFS: ToolDef[] = [
   },
 
   {
+    name: 'learn_conventions',
+    description:
+      'Read this project\'s existing pages, fixtures, tests, and Playwright config to detect the ' +
+      'conventions it already uses — the page-helper class hierarchy, how tests get their page ' +
+      'helpers, where test data lives, the API-test style, and the runner setup — and write a ' +
+      'PROJECT_CONVENTIONS.md report. Run this after dropping the engine into an existing project so ' +
+      'later generation can match the house style instead of imposing defaults.',
+    inputSchema: {
+      output: z.string().optional().describe('Output file path (default: workspace/PROJECT_CONVENTIONS.md)'),
+    },
+  },
+
+  {
     name: 'plan_e2e',
     description:
       'Advanced: sketch a multi-page journey before writing it — break the flow into the page helpers ' +

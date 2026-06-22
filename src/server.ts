@@ -12,6 +12,7 @@ import { inspectPageTool } from './tools/inspect-page.js';
 import { generateAuthFixtureTool } from './tools/generate-auth-fixture.js';
 import { generateMockTool } from './tools/generate-mock.js';
 import { generateAppKnowledgeTool } from './tools/generate-app-knowledge.js';
+import { learnConventionsTool } from './tools/learn-conventions.js';
 import { planE2eTool } from './tools/plan-e2e.js';
 import { initProjectTool } from './tools/init-project.js';
 import { reviewRulesTool } from './tools/review-rules.js';
@@ -47,6 +48,7 @@ const HANDLERS: Record<string, (args: any) => unknown> = {
   generate_auth_fixture: (args) => generateAuthFixtureTool(args),
   generate_mock:         (args) => generateMockTool(args),
   generate_app_knowledge:(args) => generateAppKnowledgeTool(args),
+  learn_conventions:     (args) => learnConventionsTool(args),
   plan_e2e:              (args) => planE2eTool(args),
   init_project:          (args) => initProjectTool({
     projectName: args.project_name,
@@ -59,7 +61,7 @@ const HANDLERS: Record<string, (args: any) => unknown> = {
   review_rules:          (args) => reviewRulesTool({ promote: args.promote }),
 };
 
-/** Builds the MCP server with all 14 tools registered. Caller connects it to a transport. */
+/** Builds the MCP server with all 15 tools registered. Caller connects it to a transport. */
 export function createServer(): McpServer {
   const server = new McpServer({ name: 'qa-mcp-automation', version: '1.0.0' });
 

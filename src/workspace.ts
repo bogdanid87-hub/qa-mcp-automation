@@ -37,4 +37,5 @@ export const WORKSPACE_PATHS = {
   appKnowledgeManual: join(WORKSPACE, 'APP_KNOWLEDGE_MANUAL.md'),
   appKnowledgeCandidates: join(WORKSPACE, 'APP_KNOWLEDGE_CANDIDATES.md'),
   siteAuditReport: join(WORKSPACE, 'site-audit-report.md'),
+  projectConventions: join(WORKSPACE, 'PROJECT_CONVENTIONS.md'),
 };
