@@ -206,3 +206,18 @@ describe('unifiedDiff', () => {
     expect(diff).toMatch(/@@ -\d+,\d+ \+\d+,\d+ @@/);
   });
 });
+
+describe('safeWrite atomicity', () => {
+  it('writes the content and leaves no .tmp-* file behind', async () => {
+    const { readdir } = await import('fs/promises');
+    const target = join(dir, 'pages', 'HomePage.ts');
+    const res = await safeWrite(target, 'export const x = 1;\n');
+    expect(res.ok).toBe(true);
+    expect(res.written).toBe(true);
+    expect(await readFile(target, 'utf-8')).toBe('export const x = 1;\n');
+    // The temp file used for the atomic rename must not survive a successful write.
+    const siblings = await readdir(join(dir, 'pages'));
+    expect(siblings.filter((f) => f.includes('.tmp-'))).toHaveLength(0);
+    expect(siblings).toEqual(['HomePage.ts']);
+  });
+});
