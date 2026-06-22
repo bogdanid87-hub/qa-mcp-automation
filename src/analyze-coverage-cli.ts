@@ -1,7 +1,7 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { analyzeCoverageTool } from './tools/analyze-coverage.js';
-import { SITE_URL } from './config.js';
+import { cliHelp } from './lib/cli-help.js';
 
 const ROOT = process.cwd();
 
@@ -32,22 +32,7 @@ async function main(): Promise<void> {
   if (!raw['spec'] && !raw['registry'] && !raw['url'] && !flags.has('gaps')) {
     if (process.argv.length <= 2) {
       // No args — show usage
-      console.error(
-        '\nUsage:\n' +
-        '  npm run analyze_coverage -- --spec tests/ui/contact.spec.ts\n' +
-        '  npm run analyze_coverage -- --spec tests/ui/\n' +
-        `  npm run analyze_coverage -- --spec tests/api/ --url ${SITE_URL}\n` +
-        `  npm run analyze_coverage -- --url ${SITE_URL}/<feature-page>\n` +
-        '  npm run analyze_coverage -- --registry TESTS_UI.md --gaps\n' +
-        '  npm run analyze_coverage                              # all registries\n' +
-        '  npm run analyze_coverage -- --spec tests/ui/contact.spec.ts --deep  # two-pass (costs extra)\n' +
-        '\nOptions:\n' +
-        '  --spec <path>      Scope to a spec file or folder\n' +
-        '  --registry <file>  Scope to a registry file (TESTS_UI.md / TESTS_API.md / TESTS_E2E.md)\n' +
-        '  --url <url>        Add feature context (site page uses DOM extraction; docs page uses text)\n' +
-        '  --gaps             Also write coverage-gaps.txt in prd-tests.txt format\n' +
-        '  --deep             Run pre-analysis pass to identify untested paths (extra Claude call)\n',
-      );
+      console.error('\n' + cliHelp('analyze_coverage'));
       process.exit(1);
     }
   }
