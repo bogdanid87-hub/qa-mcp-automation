@@ -43,8 +43,8 @@ Detailed per-tool guides are in the `docs/` folder. Project naming and architect
 | `npm run fix` | Interactive fix loop for failing tests | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
 | `npm run status` | Suite health at a glance: registry counts, tagging ratio, open backlog gaps, spec file counts | — |
 | `npm run tag_tests` | Insert `// [UI/API/E2E Describe #N]` comments before each test() call | [docs/tag-tests.md](docs/tag-tests.md) |
-| `npm run sync_registry` | Full reconciliation of all three registries against actual test results | [docs/test-registry.md](docs/test-registry.md) |
-| `npm run update_registry` | Re-check only recorded broken/app-bug entries | [docs/test-registry.md](docs/test-registry.md) |
+| `npm run update_registry` | **Quick** — re-runs ONLY the tests currently marked broken/app-bug, to see if any are now fixed (seconds) | [docs/test-registry.md](docs/test-registry.md) |
+| `npm run sync_registry` | **Slow** — re-runs the whole suite to true-up every registry against reality | [docs/test-registry.md](docs/test-registry.md) |
 | `npm test` | Run all functional tests headless (Chromium) | [docs/run-tests.md](docs/run-tests.md) |
 | `npm run test:all-browsers` | Run functional tests on Chromium + Firefox + WebKit | [docs/run-tests.md](docs/run-tests.md) |
 | `npm run test:visual` | Run visual regression tests only (Chromium, `tests/visual/`) | [docs/run-tests.md](docs/run-tests.md) |

@@ -157,6 +157,14 @@ async function main(): Promise<void> {
   const totBugs    = `${grandBugs} app bug${grandBugs !== 1 ? 's' : ''}`;
   console.log(`    Total         ${totPassing}  ${totBroken}  ${totBugs}`);
 
+  const knownIssues = grandBroken + grandBugs;
+  if (knownIssues > 0) {
+    console.log(
+      `    ↳ to see if any are fixed, re-check just these ${knownIssues}: ` +
+      `\`npm run update_registry\` (fast). Full reconcile of every test: \`npm run sync_registry\` (slow).`,
+    );
+  }
+
   if (grandBroken > 0) {
     issues.push(`${grandBroken} test${grandBroken === 1 ? '' : 's'} ${grandBroken === 1 ? 'is' : 'are'} broken — run \`npm run fix\` to investigate.`);
   }
