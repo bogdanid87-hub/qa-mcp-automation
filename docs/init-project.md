@@ -158,20 +158,21 @@ programmatic callers; the CLI does not expose them as flags.
 
 `init_project` bootstraps the **project-specific** files — `mcp-qa.config.json`, the
 Playwright setup (`playwright.config.ts`, `tests/global.setup.ts`, `tsconfig.json`,
-`.gitignore`), and the `pages/`/`fixtures/`/`tests/`/`test-data/` skeleton. It does
-not copy the engine itself (`src/`, the engine's own `package.json`, CI workflows).
-The engine is being packaged for `npm install`; until then, clone this repo to get it:
+`.gitignore`), the `.mcp.json` that wires the engine into Claude Code, and the
+`pages/`/`fixtures/`/`tests/`/`test-data/` skeleton. It does not copy the engine itself
+(`src/`) — you install that as a package:
 
-1. Clone this repo into a new directory for the new project, `npm install`,
-   `npx playwright install` (downloads chromium/firefox/webkit).
-2. From inside that clone, run `npm run init_project -- --name <name> --url <site>`
-   (no `--output` needed — it defaults to `./mcp-qa.config.json` in that project's
-   root) to write the config and the runnable scaffold. The scaffold is
-   create-if-missing, so it won't clobber the reference project's existing files —
-   point `--output` at an empty directory to onboard a genuinely separate project.
-3. Continue with the printed next steps (`audit_site` → `generate_pom` →
-   `generate_test`) — the first `generate_test` runs against the live site with no
-   further setup.
+1. In the new project's directory, install the engine + Playwright:
+   `npm install -D @bogdanid87/qa-mcp-engine @playwright/test @types/node && npx playwright install`.
+2. Run `npx qa-init --name <name> --url <site>` (no `--output` needed — it defaults to
+   `./mcp-qa.config.json` in that project's root) to write the config, the `.mcp.json`
+   wiring, and the runnable scaffold. The scaffold is create-if-missing, so it won't
+   clobber existing files.
+3. Reload Claude Code so it reads `.mcp.json`, then continue with the printed next steps
+   (`audit_site` → `generate_pom` → `generate_test`) — the first `generate_test` runs
+   against the live site with no further setup.
+
+See [install-as-dependency.md](install-as-dependency.md) for the full install walkthrough.
 
 Each project is fully independent — its own `mcp-qa.config.json`, `pages/`,
 `learned-rules.md`, registries. For two unrelated projects that share some domain
