@@ -9,11 +9,29 @@
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 const require = createRequire(import.meta.url);
 
-/** Run an engine entry `.ts` file through tsx, forwarding argv + exit code. */
-export function run(relPath) {
+/**
+ * Run an engine entry `.ts` file through tsx, forwarding argv + exit code.
+ *
+ * Every command except `qa-init` needs an mcp-qa.config.json in the current
+ * directory. Without the preflight, the engine reads config eagerly at import
+ * time, so a config-less run (e.g. `qa-status` before `qa-init`) would surface
+ * as a raw stack trace before the CLI's own error handling runs. Checking here
+ * lets us print the one-line "run qa-init first" hint cleanly instead.
+ */
+export function run(relPath, { requiresConfig = true } = {}) {
+  if (requiresConfig && !existsSync(join(process.cwd(), 'mcp-qa.config.json'))) {
+    process.stderr.write(
+      '\nNo mcp-qa.config.json found in this directory.\n' +
+      'Run `npx qa-init --name <name> --url <site-url>` to set up this project first.\n\n',
+    );
+    process.exit(1);
+  }
+
   const tsxCli = require.resolve('tsx/cli');
   const target = fileURLToPath(new URL(relPath, import.meta.url));
   const { status, signal } = spawnSync(
