@@ -1,10 +1,23 @@
 {
-  "name": "qa-mcp-automation",
+  "name": "@bogdanid87/qa-mcp-engine",
   "version": "1.0.0",
   "description": "AI-powered Playwright test generation engine (MCP server) — config-driven via mcp-qa.config.json, with a complete reference implementation for automationexercise.com.",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/server.ts"
+  },
+  "files": [
+    "src",
+    "!src/__tests__",
+    "README.md",
+    "docs"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bogdanid87-hub/qa-mcp-automation.git"
   },
   "scripts": {
     "generate": "tsx src/cli.ts",
@@ -37,8 +50,16 @@
     "lint": "eslint src/ scripts/",
     "prepare": "husky"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "playwright",
+    "test-generation",
+    "mcp",
+    "model-context-protocol",
+    "qa",
+    "e2e",
+    "page-object-model"
+  ],
+  "author": "Bogdan Dumitru",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
