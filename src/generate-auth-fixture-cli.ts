@@ -55,26 +55,30 @@ async function main(): Promise<void> {
     console.log(`
 Usage: npm run generate_auth -- [options]
 
+The login fields are auto-detected from the page — you usually only need
+--name and --login-url. Pass selectors only to override the auto-detection.
+
 Options:
   --type <form|oauth>        Auth type (default: form)
-  --name <name>              Fixture name, e.g. "loggedIn", "admin"
-  --login-url <url>          Login page URL
-  --email-selector <sel>     Email/username input selector
-  --password-selector <sel>  Password input selector
-  --submit-selector <sel>    Submit button selector
-  --success <indicator>      URL pattern or selector after successful login
-  --username-env <VAR>       Env var holding the username
+  --name <name>              Name for this logged-in state, e.g. "loggedIn", "admin"
+  --login-url <url>          Login page URL or path
+  --email-selector <sel>     (optional) Override the auto-detected email/username field
+  --password-selector <sel>  (optional) Override the auto-detected password field
+  --submit-selector <sel>    (optional) Override the auto-detected submit button
+  --success <indicator>      URL pattern or selector shown after successful login
+  --username-env <VAR>       Env var holding the username/email
   --password-env <VAR>       Env var holding the password
-  --notes <text>             Extra context for the AI
+  --notes <text>             Extra context for the generator
 
-Example:
-  npm run generate_auth -- --type form --name loggedIn \\
-    --login-url /login \\
+Example (fields auto-detected):
+  npm run generate_auth -- --type form --name loggedIn --login-url /login \\
+    --username-env TEST_EMAIL --password-env TEST_PASSWORD
+
+Example (overriding the auto-detection):
+  npm run generate_auth -- --type form --name loggedIn --login-url /login \\
     --email-selector '[data-qa="login-email"]' \\
     --password-selector '[data-qa="login-password"]' \\
-    --submit-selector '[data-qa="login-button"]' \\
-    --success '/dashboard' \\
-    --username-env TEST_EMAIL --password-env TEST_PASSWORD
+    --submit-selector '[data-qa="login-button"]'
 `);
     process.exit(0);
   }
