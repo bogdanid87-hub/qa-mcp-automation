@@ -6,7 +6,7 @@ async function main() {
   const server = createServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  process.stderr.write('qa-mcp-automation MCP server running\n');
+  process.stderr.write('qa-mcp-engine MCP server running\n');
 }
 
 main().catch((err) => {

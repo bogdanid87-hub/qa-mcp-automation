@@ -6,9 +6,18 @@
   "exports": {
     ".": "./src/server.ts"
   },
+  "bin": {
+    "qa-mcp": "bin/qa-mcp.mjs",
+    "qa-init": "bin/qa-init.mjs",
+    "qa-generate": "bin/qa-generate.mjs",
+    "qa-fix": "bin/qa-fix.mjs",
+    "qa-status": "bin/qa-status.mjs",
+    "qa-analyze-prd": "bin/qa-analyze-prd.mjs"
+  },
   "files": [
     "src",
     "!src/__tests__",
+    "bin",
     "README.md",
     "docs"
   ],
