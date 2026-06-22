@@ -10,12 +10,11 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'generate_test',
     description:
-      'Generate a Playwright test for the web application under test (configured via mcp-qa.config.json). ' +
-      'Handles UI tests (browser + Page Object Model), API tests (request fixture, no browser), ' +
-      'E2E flows (multi-page), and mixed tests (API setup + UI interaction). ' +
-      'The type is detected automatically from the description and spec_file path — ' +
-      'no need to call a separate API test tool. ' +
-      'Writes the spec, runs it, attempts auto-fix on failure, and records the result.',
+      'Write an automated test for the web app being tested (configured in mcp-qa.config.json) ' +
+      'from a plain-English description — the single most-used tool. It works out the kind of test ' +
+      '(a single-page UI check, an API check with no browser, a multi-page journey, or a mix), ' +
+      'writes the test file, runs it, fixes it if it fails on the first try, records the result, ' +
+      'and builds any reusable page helpers (Page Objects) the test needs along the way.',
     inputSchema: {
       description: z.string().describe('What to test — plain text or numbered steps. For API tests describe the endpoint, method, and assertions. For UI tests describe the user flow.'),
       test_name: z.string().optional().describe('Names the test() and describe() blocks. Does not control the filename.'),
@@ -30,13 +29,13 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'analyze_coverage',
     description:
-      'Analyse the existing test suite and identify coverage gaps and risk areas. ' +
-      'Scope to a specific spec file, folder, or registry; optionally fetch a page or docs URL for context. ' +
-      'Writes coverage-report.md (always) and optionally coverage-gaps.txt in the prd-tests.txt batch format. ' +
-      'For URLs on the site under test, DOM inspection is used for richer element context.',
+      'Review the tests that already exist and report what is missing or risky — untested flows, ' +
+      'missing negative/edge cases — and how important each gap is. Writes a plain-English report ' +
+      '(coverage-report.md) and can also write a ready-to-run list of the suggested tests. ' +
+      'Focus it on one test file/folder, point it at a page or docs URL for extra context.',
     inputSchema: {
-      spec_path: z.string().optional().describe('Spec file or folder to focus on, e.g. "tests/ui/contact.spec.ts" or "tests/api/"'),
-      registry_path: z.string().optional().describe('Registry file to focus on, e.g. "TESTS_UI.md"'),
+      spec_path: z.string().optional().describe('A test file or folder to focus on, e.g. "tests/ui/contact.spec.ts" or "tests/api/"'),
+      registry_path: z.string().optional().describe('A test-catalog file to focus on (the registries that track recorded tests), e.g. "TESTS_UI.md"'),
       url: z.string().optional().describe('URL for feature context — site pages use DOM extraction, external docs use plain text'),
       generate_gaps: z.boolean().optional().describe('Also write coverage-gaps.txt in prd-tests.txt batch format (default: false)'),
       deep: z.boolean().optional().describe('Run a pre-analysis pass to identify untested paths before the main analysis — improves accuracy but costs an extra Claude call (default: false)'),
@@ -46,11 +45,10 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'analyze_prd',
     description:
-      'Analyse a PRD or feature description and generate a prioritised list of test case suggestions ' +
-      'grouped by risk level (critical → high → medium → low). ' +
-      'Filters out tests that already exist in the test registries so the output is a genuine gap list. ' +
-      'Writes suggestions to prd-tests.txt in the same batch format as my-test.txt so you can run ' +
-      '`npm run generate -- --file prd-tests.txt` directly without any copy-pasting.',
+      'Turn a requirements doc or feature description into a prioritised to-do list of tests ' +
+      '(most critical first). It skips anything already covered, so you get a genuine list of what is ' +
+      'missing, and writes it to prd-tests.txt ready to feed straight into test generation ' +
+      '(`npm run generate -- --file prd-tests.txt`) — no copy-pasting.',
     inputSchema: {
       prd_content: z.string().optional().describe('The PRD text to analyse. Paste the full document, a feature section, or a list of user stories. Required unless spec_path is provided.'),
       spec_path: z.string().optional().describe('Path to an existing .spec.ts file — extracts its test names and suggests what coverage is missing. Alternative to prd_content.'),
@@ -63,11 +61,10 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'generate_pom',
     description:
-      'Inspect one or more pages on the site under test and generate locator-only Page Object Model files. ' +
-      'Each file contains readonly Locator properties and constructor assignments — no methods. ' +
-      'Use this before generate_test to pre-populate correct locators from the live DOM, eliminating ' +
-      'locator guessing and the fix-loop iterations it causes. ' +
-      'generate_test will add methods to these files when building tests.',
+      'Prepare a reusable "page helper" (a Page Object) for one or more pages by looking at the live ' +
+      'page and capturing the right way to find each element — so later test-writing does not have to ' +
+      'guess. Usually optional: generate_test creates these automatically; use this only when you want ' +
+      'to set a page up in advance. generate_test fills in the actions later.',
     inputSchema: {
       urls: z.array(z.string()).describe('Page paths to inspect and generate POMs for, e.g. ["/login", "/checkout"].'),
       page_name: z.string().optional().describe('Class name override when inspecting a single URL, e.g. "LoginPage". Inferred from the URL if omitted.'),
@@ -77,9 +74,8 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'run_tests',
     description:
-      'Run Playwright tests (Chromium) and return the output. ' +
-      'Use pattern to target a file or folder; use grep to run a single test by name ' +
-      'without triggering investigation or file changes.',
+      'Run the existing tests and return the results. Target one file or folder, or run a single ' +
+      'test by name — it purely runs them, with no fixing or file changes.',
     inputSchema: {
       pattern: z.string().optional().describe('File path, folder, or glob — e.g. "tests/ui/cart.spec.ts" or "tests/api/"'),
       grep: z.string().optional().describe('Filter by test name (Playwright --grep). Runs only tests whose name contains this string, e.g. "should add two products to cart"'),
@@ -90,17 +86,17 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'list_resources',
     description:
-      'List existing page objects, fixtures, and test files in the project. ' +
-      'Useful before calling generate_test to avoid duplicating existing code.',
+      'List the test files and reusable helpers (page objects, login/setup fixtures) that already ' +
+      'exist in the project — handy to check before making new ones so you do not duplicate work.',
     inputSchema: {},
   },
 
   {
     name: 'investigate_and_fix',
     description:
-      'Investigate a Playwright test failure, fix the code, and add a learned rule to the system prompt ' +
-      'so the same problem never occurs in generated tests again. ' +
-      'Paste the failure output, or leave it empty to run the tests automatically first.',
+      'Diagnose a failing test, fix the cause, and remember the lesson so the same mistake is not ' +
+      'repeated in future tests. It tells apart a real bug in the app from a bug in the test. ' +
+      'Paste the failure, or leave it empty to run the tests and find the failure first.',
     inputSchema: {
       test_output: z.string().optional().describe('Paste of failing playwright test output. If omitted, tests are run automatically.'),
       pattern: z.string().optional().describe('Test file pattern to run when test_output is not provided.'),
@@ -110,10 +106,9 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'inspect_page',
     description:
-      'Navigate to one or more pages on the site under test headlessly and extract real DOM elements ' +
-      '(data-qa attributes, ids, placeholders, roles, text, form structure). ' +
-      'Use the output to understand what locators are available before generating a POM, ' +
-      'or pass the paths directly to generate_test via page_paths to do this automatically.',
+      'Diagnostic: open one or more pages and list the elements found, with the best way to target ' +
+      'each — useful for debugging why a test cannot find something on the page. You rarely need this ' +
+      'directly; generate_test and generate_pom already do it for you.',
     inputSchema: {
       paths: z.array(z.string()).describe('Page paths to inspect, e.g. ["/contact_us", "/login"]'),
     },
@@ -144,9 +139,9 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'generate_mock',
     description:
-      'Generate a Playwright page.route() network mock — intercepts a URL pattern and returns a ' +
-      'controlled response. Use for mocking third-party APIs (Stripe, Twilio), testing error states, ' +
-      'or making test data deterministic. Outputs a reusable fixture or an inline code snippet.',
+      'Fake a network response so a test does not depend on a real or third-party service ' +
+      '(e.g. a payment API like Stripe), or to force an error/loading state and keep the data ' +
+      'predictable. Outputs a reusable helper or an inline snippet.',
     inputSchema: {
       name:         z.string().describe('Mock name, e.g. "stripeSuccess", "productSearch", "apiError"'),
       urlPattern:   z.string().describe('URL pattern to intercept, e.g. "**/api/products" or "https://api.stripe.com/**"'),
@@ -161,10 +156,9 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'generate_app_knowledge',
     description:
-      'Synthesise accumulated knowledge about the app into APP_KNOWLEDGE.md — a per-feature ' +
-      'risk document covering known app bugs, recurring coverage gaps, and risk patterns. ' +
-      'Once generated, analyze_prd and analyze_coverage automatically read it to enrich ' +
-      'their analysis with institutional knowledge about this specific application.',
+      'Gather what has been learned about this app — known bugs, recurring gaps, risk patterns — ' +
+      'into one reference file (APP_KNOWLEDGE.md). Once it exists, analyze_prd and analyze_coverage ' +
+      'read it automatically, so their suggestions account for this specific app.',
     inputSchema: {
       output: z.string().optional().describe('Output file path (default: APP_KNOWLEDGE.md in project root)'),
     },
@@ -173,11 +167,10 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'plan_e2e',
     description:
-      'Plan a multi-page E2E journey before generating it. Asks Claude to decompose the flow into ' +
-      'the POMs each step needs (file, new vs existing, methods, page_url), then cross-references ' +
-      'the POM Method Index to produce a step → view → POM → exists? → action checklist — flagging ' +
-      'methods that already exist elsewhere so generate_test reuses them instead of creating ' +
-      'forwarding aliases. Writes no files; one Claude call.',
+      'Advanced: sketch a multi-page journey before writing it — break the flow into the page helpers ' +
+      'and steps it needs, and flag any helper actions that already exist so they get reused instead ' +
+      'of duplicated. Writes no files; one planning step. generate_test does this internally, so use ' +
+      'this only to preview a complex flow first.',
     inputSchema: {
       description: z.string().describe('The end-to-end journey to plan, e.g. numbered steps across multiple pages.'),
       page_paths: z.array(z.string()).optional().describe('Page paths to inspect live for DOM context, improving plan accuracy.'),
@@ -187,11 +180,10 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'init_project',
     description:
-      'Bootstrap mcp-qa.config.json plus a minimal pages/fixtures/tests scaffold for a new project. ' +
-      'Generates a config with the standard ui/api/e2e/visual registries, a starting riskTiers profile, ' +
-      'and a BasePage/SitePage/fixtures placeholder hierarchy — then prints next steps ' +
-      '(audit_site, generate_pom, generate_test). Writes no files outside the config\'s directory tree ' +
-      'and runs no audit or LLM calls.',
+      'Set up a new project to test a given site: writes the config file (mcp-qa.config.json) and a ' +
+      'ready-to-run starter scaffold (Playwright config, a page-helper skeleton, the test folders), ' +
+      'then prints the next steps. No site crawl or AI calls — just files. Run this once when ' +
+      'starting on a new site.',
     inputSchema: {
       project_name: z.string().describe('Name for the new project, e.g. "my-shop"'),
       site_url: z.string().describe('Base URL of the site to test, e.g. "https://example.com"'),
@@ -210,13 +202,10 @@ export const TOOL_DEFS: ToolDef[] = [
   {
     name: 'review_rules',
     description:
-      'List stale rules (referencing POM classes/methods that no longer exist) and ' +
-      'near-duplicate rule pairs across learned-rules.md and framework-rules.md — a ' +
-      'read-only hygiene report. Pass promote to move a rule from learned-rules.md ' +
-      'into framework-rules.md (renumbering the remaining learned rules), making it ' +
-      "part of every project's system prompt via this engine. Which rules are " +
-      'framework-worthy is a human judgment call — this tool never suggests promotion ' +
-      'candidates, only flags hygiene issues.',
+      'Maintenance: health-check the saved lessons (the "learned rules" the engine accumulates from ' +
+      'fixing tests) — flag stale ones and near-duplicates. Pass `promote` to move a project-specific ' +
+      'lesson into the engine-wide rule set so it applies to every project. Read-only unless you ' +
+      'promote; it never auto-suggests what to promote — that is a human judgment call.',
     inputSchema: {
       promote: z.string().optional().describe(
         'Rule number in learned-rules.md to promote to framework-rules.md, e.g. "015". ' +
