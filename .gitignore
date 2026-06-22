@@ -31,3 +31,4 @@ prd.md
 .setup-guide.md
 .qa-notes.md
 test-data/.auth/loggedIn.json
+*.tgz
