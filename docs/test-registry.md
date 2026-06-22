@@ -105,19 +105,26 @@ app bug and you want to check if the entries can be promoted to passing.
 
 ---
 
-## sync_registry vs update_registry
+## Which one do I run? (`update_registry` vs `sync_registry`)
 
-| | sync_registry | update_registry |
-|--|---------------|-----------------|
-| Runs the full suite | ✓ | ✗ (only affected specs) |
-| Handles all three registries | ✓ | ✓ |
-| Finds undocumented passing tests | ✓ | ✗ |
-| Finds regressions in passing tests | ✓ | ✗ |
+**Start with `update_registry` — the quick one.** It re-runs *only* the handful of tests
+currently marked broken or app-bug, to see if any are now fixed (seconds, not minutes).
+This is what you want most of the time — e.g. "did that app bug get fixed yet?"
+
+Reach for **`sync_registry`** only when you need a full re-baseline: it re-runs the *whole*
+suite to true-up every registry against reality (find newly-passing tests, catch
+regressions in tests that used to pass, promote fixes). Thorough, but slow.
+
+| | `update_registry` (quick) | `sync_registry` (full) |
+|--|---------------------------|------------------------|
+| What it re-runs | Only tests marked broken/app-bug | The whole suite |
+| Speed | Fast (seconds) | Slow (minutes) |
 | Promotes resolved broken/app-bug entries | ✓ | ✓ |
-| Speed | Slower (full suite) | Fast |
+| Finds undocumented passing tests | ✗ | ✓ |
+| Finds regressions in tests that used to pass | ✗ | ✓ |
 
-**Rule of thumb:** use `update_registry` after a targeted fix; use `sync_registry`
-after bulk changes, a period of inactivity, or if you're unsure about the state.
+**Rule of thumb:** after a targeted fix → `update_registry`. After bulk changes, a period
+of inactivity, or when unsure → `sync_registry`.
 
 ---
 
