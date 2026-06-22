@@ -63,9 +63,37 @@ export function cleanLlmCode(raw: string, opts: CleanCodeOptions = {}): string {
 export function extractJson(raw: string): string {
   const stripped = raw.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
   try { JSON.parse(stripped); return stripped; } catch { /* fall through */ }
+
+  // Prefer a `{` at the start of a line (the JSON object), so an inline `{` in
+  // preamble prose doesn't become the start point.
   const lineStart = stripped.search(/(?:^|\n)\s*\{/);
   const start = lineStart !== -1 ? stripped.indexOf('{', lineStart) : stripped.indexOf('{');
+  if (start === -1) throw new Error('No JSON object found in response');
+
+  // Scan for the brace that closes the FIRST object, tracking string state so that
+  // braces inside string values, and any trailing prose (which may contain stray
+  // `}`), don't break the slice. lastIndexOf('}') alone over-captures in those cases.
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < stripped.length; i++) {
+    const ch = stripped[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+    } else if (ch === '"') {
+      inStr = true;
+    } else if (ch === '{') {
+      depth++;
+    } else if (ch === '}') {
+      depth--;
+      if (depth === 0) return stripped.slice(start, i + 1);
+    }
+  }
+
+  // Unbalanced (e.g. truncated output) — fall back to the previous first-`{`..last-`}`.
   const end = stripped.lastIndexOf('}');
-  if (start !== -1 && end > start) return stripped.slice(start, end + 1);
+  if (end > start) return stripped.slice(start, end + 1);
   throw new Error('No JSON object found in response');
 }
