@@ -104,4 +104,19 @@ describe('extractJson', () => {
     const input = 'Use an object like {options} to configure it.\n{"key": "value"}';
     expect(JSON.parse(extractJson(input))).toEqual({ key: 'value' });
   });
+
+  it('stops at the object close even when trailing prose contains a stray }', () => {
+    const input = '{"summary": "done"}\n\nThat completes the task } — let me know if anything else!';
+    expect(JSON.parse(extractJson(input))).toEqual({ summary: 'done' });
+  });
+
+  it('handles braces inside string values', () => {
+    const input = '{"message": "use {curly} braces like } this", "ok": true}';
+    expect(JSON.parse(extractJson(input))).toEqual({ message: 'use {curly} braces like } this', ok: true });
+  });
+
+  it('captures the full object with nested objects amid prose', () => {
+    const input = 'Here it is:\n{"a": {"b": {"c": 1}}, "d": 2}\nThanks.';
+    expect(JSON.parse(extractJson(input))).toEqual({ a: { b: { c: 1 } }, d: 2 });
+  });
 });
