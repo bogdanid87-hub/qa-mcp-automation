@@ -93,11 +93,11 @@ To point the same engine at a different site, `init_project` bootstraps a fresh
 install` → `audit_site` → `generate_pom` → `generate_test`). The generated project
 runs its first test without any further setup.
 
-The engine itself (`src/`) is being packaged for `npm install`; until that lands,
-clone this repo to get the engine, then run `init_project` to scaffold a new
-project's files. See
-[docs/init-project.md#multi-project-setup](docs/init-project.md#multi-project-setup)
-for the full walkthrough.
+The engine ships as an installable package — **`@bogdanid87/qa-mcp-engine`**. To test a
+different site you don't clone this repo: add the package to that project, run
+`npx qa-init`, and Claude Code picks up the tools. One engine, any number of projects;
+`npm update` instead of copy-paste. See
+[docs/install-as-dependency.md](docs/install-as-dependency.md) for the full walkthrough.
 
 ---
 
