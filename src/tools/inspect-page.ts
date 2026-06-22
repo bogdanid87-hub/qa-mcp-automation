@@ -1,4 +1,4 @@
-import { chromium } from '@playwright/test';
+import { chromium, type Page, type BrowserContext } from '@playwright/test';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { SITE_URL } from '../config.js';
@@ -33,6 +33,20 @@ export interface PageSnapshot {
   html?: string;
 }
 
+const GOTO_TIMEOUT_MS = 45_000;
+
+/** Navigate with one retry — slow/throttled sites sometimes exceed the first timeout. */
+async function gotoWithRetry(page: Page, url: string): Promise<void> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: GOTO_TIMEOUT_MS });
+      return;
+    } catch (err) {
+      if (attempt === 1) throw err;
+    }
+  }
+}
+
 /** Navigate to each path and extract DOM element info for POM generation. */
 export async function inspectPages(paths: string[]): Promise<PageSnapshot[]> {
   const browser = await chromium.launch({ headless: true });
@@ -41,10 +55,12 @@ export async function inspectPages(paths: string[]): Promise<PageSnapshot[]> {
   try {
     for (const path of paths) {
       const url = path.startsWith('http') ? path : `${BASE_URL}${path}`;
+      let context: BrowserContext | undefined;
+      try {
       // Reuse the saved guest storage state when present (it carries cookies/CF
       // clearance for the reference site). On a fresh project the file won't exist
       // yet — start from a clean context rather than throwing ENOENT.
-      const context = await browser.newContext(
+      context = await browser.newContext(
         existsSync(STORAGE_STATE) ? { storageState: STORAGE_STATE } : {},
       );
 
@@ -62,7 +78,7 @@ export async function inspectPages(paths: string[]): Promise<PageSnapshot[]> {
       // 'domcontentloaded', not 'load' — ad/analytics-heavy sites often never fire
       // 'load' within the timeout. Mirrors the navigation convention the engine
       // teaches in generated tests.
-      await page.goto(url, { waitUntil: 'domcontentloaded' });
+      await gotoWithRetry(page, url);
       await page.waitForTimeout(1500); // let client-rendered / AJAX content settle
 
       // Pass the evaluate body as a string to avoid esbuild injecting __name helpers
@@ -148,7 +164,13 @@ export async function inspectPages(paths: string[]): Promise<PageSnapshot[]> {
 
       snapshot.html = await page.content();
       snapshots.push(snapshot);
-      await context.close();
+      } catch (err) {
+        // Per-page isolation: one slow/failed page is skipped, not fatal —
+        // the other pages still produce snapshots.
+        process.stderr.write(`[inspect-page] skipping ${url} — ${(err as Error)?.message ?? String(err)}\n`);
+      } finally {
+        await context?.close();
+      }
     }
   } finally {
     await browser.close();
