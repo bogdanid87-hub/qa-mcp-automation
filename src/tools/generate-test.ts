@@ -160,11 +160,12 @@ function parseJson(raw: string): GenerateResponse {
  * Detect whether a test description is asking for a visual regression test.
  * Strong signals: spec_file under tests/visual/, or explicit visual keywords.
  */
-function detectVisualIntent(description: string, specFile?: string): boolean {
+export function detectVisualIntent(description: string, specFile?: string): boolean {
   if (specFile && specKind(specFile) === 'visual') return true;
   const desc = description.toLowerCase();
   if (/\bvisual\s+(test|regression|snapshot|baseline)\b/.test(desc)) return true;
-  if (/\btoHaveScreenshot\b|\bbaseline\s+screenshot\b/.test(desc)) return true;
+  // toHaveScreenshot is camelCase — match the original (case-insensitive), not the lowercased desc.
+  if (/\btoHaveScreenshot\b/i.test(description) || /\bbaseline\s+screenshot\b/.test(desc)) return true;
   if (/\bcapture\s+(the\s+)?(layout|appearance|screenshot|page)\b/.test(desc)) return true;
   return false;
 }
@@ -175,7 +176,7 @@ function detectVisualIntent(description: string, specFile?: string): boolean {
  * keywords are secondary. Deliberately conservative — when ambiguous, default
  * to the UI path so the user gets POM generation and browser context.
  */
-function detectApiIntent(description: string, specFile?: string): boolean {
+export function detectApiIntent(description: string, specFile?: string): boolean {
   // Spec file path is the strongest signal
   if (specFile && (specKind(specFile) === 'api' || specFile.includes('/api/'))) return true;
 
