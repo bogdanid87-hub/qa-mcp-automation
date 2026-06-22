@@ -1,6 +1,6 @@
 ---
 name: generate-auth-fixture
-description: Generates a Playwright auth fixture (form or OAuth login) — adds a global.setup.ts task, saves storage state, and adds a named fixture (generate_auth_fixture MCP tool / npm run generate_auth). Load when setting up or discussing pre-authenticated test fixtures.
+description: Generates a Playwright auth fixture (form or OAuth login) — auto-detects the login fields from the page (selectors optional), adds a global.setup.ts task, saves storage state, and adds a named fixture (generate_auth_fixture MCP tool / npm run generate_auth). Load when setting up or discussing pre-authenticated test fixtures.
 ---
 
 # generate_auth_fixture
@@ -11,6 +11,12 @@ Generates a Playwright auth fixture for a login flow: a new setup task in
 `loggedInPage`) any test can use to start pre-authenticated, and a `.gitignore`
 entry for the storage state file. Run once per auth role (`loggedIn`, `admin`,
 `premiumUser`).
+
+For form login, the email/password/submit fields are **auto-detected** from the login
+page (it inspects the DOM via inspect_page) — the user only needs the login URL and a
+name. Provided selectors override the auto-detection; the result lists what was detected
+so the user can confirm. Ambiguous/missing fields fall back to a flagged placeholder
+rather than failing.
 
 ## Why this matters
 

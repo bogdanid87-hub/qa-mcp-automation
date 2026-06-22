@@ -6,6 +6,7 @@ import { cleanLlmCode, extractJson } from './llm-utils.js';
 import { safeWrite } from '../lib/safe-write.js';
 import { errorContent } from '../lib/format-error.js';
 import { config } from '../config.js';
+import { inspectPages, type PageSnapshot } from './inspect-page.js';
 
 const ROOT = process.cwd();
 const MODEL = config.models.primary;
@@ -117,6 +118,58 @@ export function ensurePageImport(fixtures: string, fixtureTypeLine: string): str
   );
 }
 
+export interface InferredLogin {
+  emailSelector?: string;
+  passwordSelector?: string;
+  submitSelector?: string;
+  /** Human-readable notes on what was auto-detected, guessed, or not found. */
+  notes: string[];
+}
+
+// Input types that are never the email/username field.
+const NON_TEXT_INPUT_TYPES = new Set([
+  'password', 'submit', 'button', 'hidden', 'checkbox', 'radio', 'file', 'image', 'reset',
+]);
+
+/**
+ * Best-effort inference of a login form's field selectors from a page snapshot, so a
+ * non-technical user can run generate_auth_fixture with just a login URL. Pure — takes
+ * the DOM snapshot from inspect_page, returns the inferred selectors + notes. Caller's
+ * explicitly-provided selectors always win over these.
+ */
+export function inferLoginSelectors(snapshot: PageSnapshot): InferredLogin {
+  const inputs = snapshot.elements.filter((el) => el.tag === 'input');
+  const notes: string[] = [];
+  const result: InferredLogin = { notes };
+
+  // Password — the one input[type=password].
+  const password = inputs.find((el) => el.type === 'password');
+  if (password) result.passwordSelector = password.selector;
+  else notes.push('Could not find a password field — pass --password-selector manually.');
+
+  // Email / username — prefer type=email, then a name/id/placeholder hint, then the first text input.
+  const textInputs = inputs.filter((el) => !NON_TEXT_INPUT_TYPES.has(el.type ?? 'text'));
+  const email =
+    textInputs.find((el) => el.type === 'email') ??
+    textInputs.find((el) => /e-?mail|user|login/i.test([el.id, el.name, el.placeholder, el.dataQa].filter(Boolean).join(' '))) ??
+    textInputs[0];
+  if (email) result.emailSelector = email.selector;
+  else notes.push('Could not find an email/username field — pass --email-selector manually.');
+
+  // Submit — an explicit submit element, else a button whose text reads login/sign in.
+  const submit =
+    snapshot.elements.find((el) => (el.tag === 'button' || el.tag === 'input') && el.type === 'submit') ??
+    snapshot.elements.find((el) => el.tag === 'button' && /log\s?in|sign\s?in|submit/i.test(el.text ?? ''));
+  if (submit) result.submitSelector = submit.selector;
+  else {
+    // inspect_page only captures id/data-qa'd buttons, so a class-only submit won't appear.
+    result.submitSelector = 'button[type="submit"], input[type="submit"]';
+    notes.push('No submit button with an id/data-qa in the snapshot — using a generic submit selector; confirm it matches your login button (or pass --submit-selector).');
+  }
+
+  return result;
+}
+
 export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
   content: { type: 'text'; text: string }[];
 }> {
@@ -146,6 +199,38 @@ export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
     }] };
   }
 
+  // ── Auto-detect login fields ─────────────────────────────────────────────
+  // A non-technical user shouldn't have to supply CSS selectors. For form login,
+  // when any selector is missing, inspect the login page and infer it. Explicitly
+  // provided selectors always win; ambiguous/missing fields fall back to a flagged
+  // placeholder rather than failing.
+  let resolved = args;
+  const autodetect: string[] = [];
+  const needsInference = args.type === 'form' &&
+    (!args.emailSelector || !args.passwordSelector || !args.submitSelector);
+  if (needsInference) {
+    try {
+      const [snapshot] = await inspectPages([args.loginUrl]);
+      const inferred = snapshot ? inferLoginSelectors(snapshot) : null;
+      if (inferred) {
+        resolved = {
+          ...args,
+          emailSelector:    args.emailSelector    ?? inferred.emailSelector,
+          passwordSelector: args.passwordSelector ?? inferred.passwordSelector,
+          submitSelector:   args.submitSelector   ?? inferred.submitSelector,
+        };
+        if (resolved.emailSelector)    autodetect.push(`email/username → \`${resolved.emailSelector}\`${args.emailSelector ? ' (provided)' : ''}`);
+        if (resolved.passwordSelector) autodetect.push(`password → \`${resolved.passwordSelector}\`${args.passwordSelector ? ' (provided)' : ''}`);
+        if (resolved.submitSelector)   autodetect.push(`submit → \`${resolved.submitSelector}\`${args.submitSelector ? ' (provided)' : ''}`);
+        autodetect.push(...inferred.notes);
+        // Give the model the same context so its generated code uses these selectors.
+        resolved = { ...resolved, notes: [args.notes, ...inferred.notes].filter(Boolean).join('\n') || undefined };
+      }
+    } catch (err) {
+      autodetect.push(`Could not inspect ${args.loginUrl} to auto-detect fields (${(err as Error).message}) — pass selectors manually if the generated setup is incomplete.`);
+    }
+  }
+
   const contextBlock = [
     existingSetup   ? `## Existing global.setup.ts\n\`\`\`typescript\n${existingSetup}\n\`\`\`` : '',
     existingFixtures ? `## Existing fixtures/index.ts\n\`\`\`typescript\n${existingFixtures}\n\`\`\`` : '',
@@ -158,8 +243,8 @@ export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
     messages: [{
       role: 'user',
       content: contextBlock
-        ? `${contextBlock}\n\n---\n\n${TASK_PROMPT(args)}`
-        : TASK_PROMPT(args),
+        ? `${contextBlock}\n\n---\n\n${TASK_PROMPT(resolved)}`
+        : TASK_PROMPT(resolved),
     }],
   });
 
@@ -247,6 +332,9 @@ export async function generateAuthFixtureTool(args: AuthFixtureArgs): Promise<{
 
   const lines = [
     `✅ ${parsed.summary}`,
+    ...(autodetect.length > 0
+      ? ['', '**Auto-detected login fields** (confirm, or re-run with explicit selectors):', ...autodetect.map(a => `  - ${a}`)]
+      : []),
     '',
     '**Files updated:**',
     `  - tests/global.setup.ts — new setup task added`,
