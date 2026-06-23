@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildFixtureMap, pomPrimaryPath, rewriteNewPomFixtures } from '../tools/spec-fixture-rewrite';
+import { buildFixtureMap, pomPrimaryPath, rewriteNewPomFixtures, rewriteFixturesImport } from '../tools/spec-fixture-rewrite';
 
 describe('buildFixtureMap', () => {
   it('maps each fixture class to its fixture name', () => {
@@ -20,6 +20,34 @@ describe('pomPrimaryPath', () => {
     expect(pomPrimaryPath("async goto() { await this.navigate('/'); }")).toBe('/');
     expect(pomPrimaryPath("async goto() { await this.navigate('/view_cart'); }")).toBe('/view_cart');
     expect(pomPrimaryPath('no navigate here')).toBeNull();
+  });
+});
+
+describe('rewriteFixturesImport', () => {
+  it('repoints test/expect from @playwright/test to the fixtures module', () => {
+    const spec = "import { test, expect } from '@playwright/test';\ntest('x', async () => {});";
+    const r = rewriteFixturesImport(spec, '../../fixtures');
+    expect(r.changed).toBe(true);
+    expect(r.content).toContain("import { test, expect } from '../../fixtures';");
+    expect(r.content).not.toContain("@playwright/test");
+  });
+
+  it('keeps non-fixture names (Page, APIResponse) on a separate @playwright/test import', () => {
+    const spec = "import { test, expect, type APIResponse } from '@playwright/test';";
+    const r = rewriteFixturesImport(spec, '../../fixtures');
+    expect(r.content).toContain("import { test, expect } from '../../fixtures';");
+    expect(r.content).toContain("import { type APIResponse } from '@playwright/test';");
+  });
+
+  it('leaves a spec that only imports non-fixture names alone', () => {
+    const spec = "import type { APIResponse } from '@playwright/test';";
+    const r = rewriteFixturesImport(spec, '../../fixtures');
+    expect(r.changed).toBe(false);
+  });
+
+  it('leaves a spec already importing from fixtures alone', () => {
+    const spec = "import { test, expect } from '../../fixtures';";
+    expect(rewriteFixturesImport(spec, '../../fixtures').changed).toBe(false);
   });
 });
 

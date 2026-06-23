@@ -17,7 +17,7 @@ import { readAppLimitations } from './generate-app-knowledge.js';
 import { extractJson } from './llm-utils.js';
 import { extractExportedFunctionNames, extractPomMethods } from './pom-index.js';
 import { reviewGeneratedFiles } from './review-generation.js';
-import { buildFixtureMap, pomPrimaryPath, rewriteNewPomFixtures } from './spec-fixture-rewrite.js';
+import { buildFixtureMap, pomPrimaryPath, rewriteNewPomFixtures, rewriteFixturesImport } from './spec-fixture-rewrite.js';
 import { extractAssertingMethods, findNonAssertingTests } from './spec-checks.js';
 import { TokenBudget } from './budget.js';
 import { errorContent } from '../lib/format-error.js';
@@ -69,10 +69,20 @@ async function applyFixtureRewrites(parsed: GenerateResponse, pagePaths: string[
 
   for (const f of parsed.files ?? []) {
     if (!(f.path.startsWith('tests/') && f.path.endsWith('.spec.ts'))) continue;
+
     const { content, rewrites } = rewriteNewPomFixtures(f.content, typeToFixture, resolveAncestor);
     if (rewrites.length) {
       f.content = content;
       process.stderr.write(`[generate-test] fixture rewrite (${f.path}) — ${rewrites.join('; ')}\n`);
+    }
+
+    // Repoint test/expect from '@playwright/test' to the project's fixtures module.
+    const depth = f.path.split('/').length - 1; // tests/ui/x.spec.ts → 2 dirs deep
+    const fixturesPath = `${'../'.repeat(depth)}fixtures`;
+    const imp = rewriteFixturesImport(f.content, fixturesPath);
+    if (imp.changed) {
+      f.content = imp.content;
+      process.stderr.write(`[generate-test] repointed test/expect import to '${fixturesPath}' (${f.path})\n`);
     }
   }
 }
