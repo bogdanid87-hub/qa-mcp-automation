@@ -9,6 +9,8 @@ import {
   buildPomConfig,
   computePomApply,
   renderConventionsBlock,
+  findApiClientFixture,
+  resolveClassImport,
   primaryProject,
   type PomHierarchy,
   type DetectedConventions,
@@ -178,6 +180,19 @@ describe('detectRunnerConfig + stripComments', () => {
   });
 });
 
+describe('findApiClientFixture / resolveClassImport', () => {
+  const fx = { exportsTest: true, exportsExpect: true, hasTrackCleanup: false, baseExtension: './routeBlocker', injectedFixtures: [{ name: 'homePage', type: 'HomePage' }, { name: 'apiClient', type: 'ApiClient' }] };
+  it('finds the api-client fixture by name/type', () => {
+    expect(findApiClientFixture(fx)).toEqual({ name: 'apiClient', type: 'ApiClient' });
+    expect(findApiClientFixture({ ...fx, injectedFixtures: [{ name: 'homePage', type: 'HomePage' }] })).toBeNull();
+  });
+  it('resolves a class import in fixtures/index.ts to a root-relative .ts path', () => {
+    const content = "import { ApiClient } from '../api/ApiClient';\nimport { LoginPage } from '../pages/LoginPage';";
+    expect(resolveClassImport(content, 'ApiClient')).toBe('api/ApiClient.ts');
+    expect(resolveClassImport(content, 'Nope')).toBeNull();
+  });
+});
+
 describe('primaryProject', () => {
   const r = (projects: string[]): RunnerConfig => ({ projects, hasChromium: false, hasFirefox: false, hasWebkit: false, hasVisual: false, setupStyle: 'none', storageState: null });
   it('prefers an exact chromium project', () => {
@@ -262,12 +277,12 @@ describe('renderConventionsBlock', () => {
     fixtures: { exportsTest: true, exportsExpect: true, hasTrackCleanup: false, baseExtension: './routeBlocker', injectedFixtures: [{ name: 'homePage', type: 'HomePage' }, { name: 'apiClient', type: 'ApiClient' }] },
     idioms: { pomConsumption: 'fixture-injection', pomCounts: { injected: 9, instantiated: 2 }, testImportPath: '../../fixtures/index', dataSources: ['../../data/testData'], apiPattern: 'apiClient', apiCounts: { apiClient: 2, request: 0 }, usesTags: false, usesSteps: false },
     runner: null,
+    apiClient: { fixtureName: 'apiClient', className: 'ApiClient', methods: [{ name: 'verifyLogin', params: 'email: string, password: string', returnType: '' }] },
   };
 
   it('emits the collapsed-hierarchy, fixture-injection, data, apiClient and no-trackCleanup rules', () => {
     const block = renderConventionsBlock(detected);
     expect(block).toContain('there is NO separate site class');
-    expect(block).toContain('injected fixtures');
     expect(block).toContain('`../../fixtures/index`');
     expect(block).toContain('`../../data/testData`');
     expect(block).toContain('apiClient');
@@ -275,11 +290,20 @@ describe('renderConventionsBlock', () => {
     expect(block).toContain('SidebarComponent');
   });
 
+  it('surfaces the fixture→class map and the ApiClient method signatures', () => {
+    const block = renderConventionsBlock(detected);
+    expect(block).toContain('`homePage` (HomePage)'); // fixture → class
+    expect(block).toContain('do NOT `new` the class');
+    expect(block).toContain('`verifyLogin(email: string, password: string)`'); // real signature
+    expect(block).toContain("do NOT invent generic ones like `.post()`");
+  });
+
   it('omits inapplicable lines (no trackCleanup warning when it exists; no apiClient line for request style)', () => {
     const block = renderConventionsBlock({
       ...detected,
       fixtures: { ...detected.fixtures!, hasTrackCleanup: true },
       idioms: { ...detected.idioms, apiPattern: 'request', dataSources: [] },
+      apiClient: null,
     });
     expect(block).not.toContain('NO `trackCleanup`');
     expect(block).not.toContain('ApiClient abstraction'); // the API-pattern line is omitted for request-style
