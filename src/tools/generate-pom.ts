@@ -223,7 +223,7 @@ ${ownedElementsBlock}
 ## Output format
 Raw JSON only (no markdown fences, no explanation):
 {
-  "file": "pages/SomePage.ts",
+  "file": "${pomDir()}/SomePage.ts",
   "className": "SomePage",
   "parentClass": "${config.pom.siteClass}",
   "locators": [
