@@ -6,6 +6,9 @@ import {
   detectRunnerConfig,
   stripComments,
   extractLocatorFieldNames,
+  buildPomConfig,
+  computePomApply,
+  type PomHierarchy,
 } from '../tools/learn-conventions';
 
 // ── POM hierarchy ────────────────────────────────────────────────────────────
@@ -174,5 +177,57 @@ describe('extractLocatorFieldNames', () => {
   it('extracts readonly Locator field names', () => {
     expect(extractLocatorFieldNames('readonly navHome: Locator;\nreadonly footer: Locator;\nfoo: string;'))
       .toEqual(['navHome', 'footer']);
+  });
+});
+
+// ── buildPomConfig / computePomApply (PR 2) ──────────────────────────────────
+
+const HIERARCHY: PomHierarchy = {
+  baseClass: 'BasePage',
+  siteClass: 'BasePage',
+  collapsed: true,
+  intermediateClasses: [{ name: 'ProductListingPage', importFrom: './ProductListingPage', extendsClass: 'BasePage', provides: ['sort', 'filter'] }],
+  siteClassProvides: ['navHome', 'navProducts'],
+  leafPages: ['HomePage'],
+  components: ['SidebarComponent'],
+};
+
+describe('buildPomConfig', () => {
+  it('maps a detected hierarchy to a config pom block', () => {
+    const pom = buildPomConfig(HIERARCHY);
+    expect(pom.baseClass).toBe('BasePage');
+    expect(pom.siteClass).toBe('BasePage');
+    expect(pom.siteClassProvides).toEqual(['navHome', 'navProducts']);
+    expect(pom.intermediateClasses[0]).toMatchObject({ name: 'ProductListingPage', importFrom: './ProductListingPage', provides: ['sort', 'filter'], paths: [] });
+    expect(pom.intermediateClasses[0].description).toContain('detected');
+  });
+
+  it('preserves human-authored description/paths for an existing intermediate class', () => {
+    const pom = buildPomConfig(HIERARCHY, {
+      intermediateClasses: [{ name: 'ProductListingPage', importFrom: './ProductListingPage', description: 'Listing pages', paths: ['/products', '/category'], provides: [] }],
+    });
+    expect(pom.intermediateClasses[0].description).toBe('Listing pages');
+    expect(pom.intermediateClasses[0].paths).toEqual(['/products', '/category']);
+    // provides is re-detected from code, not preserved
+    expect(pom.intermediateClasses[0].provides).toEqual(['sort', 'filter']);
+  });
+});
+
+describe('computePomApply', () => {
+  it('reports the diff and produces a merged config when the hierarchy differs', () => {
+    const current = { project: { name: 'x' }, pom: { baseClass: 'BasePage', siteClass: 'SitePage', siteClassProvides: [], intermediateClasses: [] } };
+    const apply = computePomApply(current, HIERARCHY);
+    expect(apply.changed).toBe(true);
+    expect(apply.summary.join(' ')).toContain('siteClass: SitePage → BasePage');
+    expect(apply.summary.join(' ')).toContain('ProductListingPage');
+    // merged config keeps other top-level keys and swaps in the new pom
+    const merged = JSON.parse(apply.newConfigJson);
+    expect(merged.project.name).toBe('x');
+    expect(merged.pom.siteClass).toBe('BasePage');
+  });
+
+  it('reports no change when config.pom already matches', () => {
+    const current = { pom: buildPomConfig(HIERARCHY) };
+    expect(computePomApply(current, HIERARCHY).changed).toBe(false);
   });
 });
