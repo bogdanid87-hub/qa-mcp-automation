@@ -74,11 +74,44 @@ should see the `qa` server connected and the tools available. `.mcp.json` expand
 
 `workspace/START_HERE.md` (scaffolded by `qa-init`) is the plain-English version of this.
 
-> **Already have tests?** Run [`learn_conventions`](learn-conventions.md) first
-> (`npm run learn_conventions -- --apply-pom --apply-conventions --write`). It detects the
-> project's existing page-helper hierarchy, fixtures, data source, and API style, and wires them
-> into the config so generated tests match the code you already have instead of the engine's
-> defaults.
+---
+
+## Existing Playwright project (already have tests)
+
+If the project already has a Playwright + TypeScript suite, you don't start from the
+scaffold — you point the engine at your existing code so it generates tests in **your**
+house style instead of its defaults. One extra step, `learn_conventions`, does this.
+
+```bash
+# 1. Install the engine (your Playwright is the peer dep you already have)
+npm install -D @bogdanid87/qa-mcp-engine
+
+# 2. Scaffold the config + MCP wiring. qa-init is create-if-missing — it never
+#    clobbers your existing playwright.config.ts, tsconfig.json, pages/, fixtures/, or tests/.
+npx qa-init --name my-project --url https://my-site.example.com
+
+# 3. Learn the project's conventions and wire them into the config.
+#    Run it once to write workspace/PROJECT_CONVENTIONS.md and review what it detected:
+npx qa-learn
+#    Then apply (dry-run preview without --write):
+npx qa-learn --apply-pom --apply-conventions --write
+
+# 4. export ANTHROPIC_API_KEY=... and reload Claude Code (it reads the new .mcp.json)
+```
+
+`learn_conventions` reads your `pages/`, `fixtures/index.ts`, specs, and
+`playwright.config.ts` and detects: the page-helper class hierarchy (including the
+"collapsed" case where the base class owns the nav and there's no separate `SitePage`),
+how tests consume page helpers (fixture injection vs `new`), where test data lives, the
+API style (an `ApiClient` abstraction vs the raw `request` fixture), and the runner
+projects. `--apply-*` writes that into `mcp-qa.config.json` (`pom.*`,
+`prompts.conventions`, `testing.runnerProject`) so generation matches it.
+
+After that, `generate_test` produces tests that extend your real base class, inject your
+fixtures, call your `ApiClient` methods, and use your data source — not the engine's
+defaults. See **[learn-conventions.md](learn-conventions.md)** for exactly what's detected,
+the flags, and the known requirements (your POMs should live in `pages/` and fixtures in
+`fixtures/index.ts`; set `config.testing.folders` if your test layout differs).
 
 ---
 
