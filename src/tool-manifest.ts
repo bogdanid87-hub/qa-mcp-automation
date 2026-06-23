@@ -174,6 +174,8 @@ export const TOOL_DEFS: ToolDef[] = [
       'later generation can match the house style instead of imposing defaults.',
     inputSchema: {
       output: z.string().optional().describe('Output file path (default: workspace/PROJECT_CONVENTIONS.md)'),
+      apply_pom: z.boolean().optional().describe('Also apply the detected page-helper hierarchy to mcp-qa.config.json (previews the change unless write is also set)'),
+      write: z.boolean().optional().describe('With apply_pom, actually write the config changes instead of just previewing them'),
     },
   },
 

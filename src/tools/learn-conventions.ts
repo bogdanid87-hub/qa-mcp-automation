@@ -12,6 +12,7 @@
 import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
 import { safeWrite } from '../lib/safe-write.js';
+import { validate } from '../config-schema.js';
 import { WORKSPACE_PATHS, ensureWorkspace } from '../workspace.js';
 import { errorContent } from '../lib/format-error.js';
 import { buildPomIndex, extractPomLocators, type PomIndexEntry } from './pom-index.js';
@@ -28,7 +29,7 @@ export interface PomHierarchy {
   siteClass: string;
   /** True when the site nav lives on the root itself (base === site). */
   collapsed: boolean;
-  intermediateClasses: { name: string; importFrom: string; extendsClass?: string; methodCount: number }[];
+  intermediateClasses: { name: string; importFrom: string; extendsClass?: string; provides: string[] }[];
   /** Locator field + method names declared on the site class. */
   siteClassProvides: string[];
   leafPages: string[];
@@ -93,12 +94,15 @@ export function detectPomHierarchy(
   const isAncestor = (name: string) => (childrenOf.get(name) ?? []).length > 0;
   const intermediateClasses = entries
     .filter((e) => e.className !== baseClass && e.className !== siteClass && isAncestor(e.className))
-    .map((e) => ({
-      name: e.className,
-      importFrom: `./${e.file.replace(/^pages\//, '').replace(/\.ts$/, '')}`,
-      extendsClass: e.extendsClass,
-      methodCount: e.methods.length,
-    }));
+    .map((e) => {
+      const content = contentOf(pages, e.file);
+      return {
+        name: e.className,
+        importFrom: `./${e.file.replace(/^pages\//, '').replace(/\.ts$/, '')}`,
+        extendsClass: e.extendsClass,
+        provides: [...new Set([...extractLocatorFieldNames(content), ...e.methods.map((m) => m.name)])],
+      };
+    });
 
   const siteContent = contentOf(pages, siteEntry.file);
   const siteClassProvides = [
@@ -112,6 +116,38 @@ export function detectPomHierarchy(
 
 function contentOf(pages: { name: string; content: string }[], file: string): string {
   return pages.find((p) => p.name === file || p.name.endsWith(`/${file}`) || file.endsWith(p.name))?.content ?? '';
+}
+
+/** The shape of mcp-qa.config.json's `pom` section (mirrors config-schema's MqaConfig['pom']). */
+export interface PomConfig {
+  baseClass: string;
+  siteClass: string;
+  siteClassProvides: string[];
+  intermediateClasses: { name: string; importFrom: string; description: string; paths: string[]; provides: string[] }[];
+}
+
+/**
+ * Map a detected hierarchy to a config `pom` block. Pure. `existing` is the current
+ * config.pom (if any) so human-authored `description`/`paths` — which can't be
+ * detected from code — are preserved per intermediate class.
+ */
+export function buildPomConfig(h: PomHierarchy, existing?: Partial<PomConfig>): PomConfig {
+  const prior = new Map((existing?.intermediateClasses ?? []).map((ic) => [ic.name, ic]));
+  return {
+    baseClass: h.baseClass,
+    siteClass: h.siteClass,
+    siteClassProvides: h.siteClassProvides,
+    intermediateClasses: h.intermediateClasses.map((ic) => {
+      const kept = prior.get(ic.name);
+      return {
+        name: ic.name,
+        importFrom: ic.importFrom,
+        description: kept?.description || `${ic.name} (detected — describe the pages it covers)`,
+        paths: kept?.paths ?? [],
+        provides: ic.provides,
+      };
+    }),
+  };
 }
 
 export interface FixtureShape {
@@ -258,6 +294,38 @@ export function detectRunnerConfig(rawContent: string): RunnerConfig {
   };
 }
 
+export interface PomApplyResult {
+  changed: boolean;
+  newPom: PomConfig;
+  summary: string[];
+  /** The full config with `pom` merged, pretty-printed — ready to write. */
+  newConfigJson: string;
+}
+
+function diffPom(prev: Partial<PomConfig> | undefined, next: PomConfig): string[] {
+  const out: string[] = [];
+  if (prev?.baseClass !== next.baseClass) out.push(`baseClass: ${prev?.baseClass ?? '(unset)'} → ${next.baseClass}`);
+  if (prev?.siteClass !== next.siteClass) out.push(`siteClass: ${prev?.siteClass ?? '(unset)'} → ${next.siteClass}`);
+  const prevInter = new Set((prev?.intermediateClasses ?? []).map((c) => c.name));
+  const nextInter = new Set(next.intermediateClasses.map((c) => c.name));
+  const added = [...nextInter].filter((n) => !prevInter.has(n));
+  const removed = [...prevInter].filter((n) => !nextInter.has(n));
+  if (added.length) out.push(`intermediate classes added: ${added.join(', ')}`);
+  if (removed.length) out.push(`intermediate classes removed: ${removed.join(', ')}`);
+  const prevProvides = (prev?.siteClassProvides ?? []).length;
+  if (prevProvides !== next.siteClassProvides.length) out.push(`siteClassProvides: ${prevProvides} → ${next.siteClassProvides.length} entries`);
+  return out;
+}
+
+/** Merge a detected hierarchy into a parsed config object. Pure — does no I/O. */
+export function computePomApply(currentConfig: Record<string, unknown>, hierarchy: PomHierarchy): PomApplyResult {
+  const existing = currentConfig.pom as Partial<PomConfig> | undefined;
+  const newPom = buildPomConfig(hierarchy, existing);
+  const summary = diffPom(existing, newPom);
+  const next = { ...currentConfig, pom: newPom };
+  return { changed: summary.length > 0, newPom, summary, newConfigJson: JSON.stringify(next, null, 2) + '\n' };
+}
+
 export interface DetectedConventions {
   hierarchy: PomHierarchy | null;
   fixtures: FixtureShape | null;
@@ -279,7 +347,7 @@ export function renderConventionsReport(d: DetectedConventions): string {
     lines.push(`- **site class (owns nav/footer):** \`${h.siteClass}\`${h.collapsed ? '  ⚠️ collapsed — nav lives on the base class itself (no separate SitePage)' : ''}`);
     if (h.intermediateClasses.length) {
       lines.push('- **intermediate classes:**');
-      for (const ic of h.intermediateClasses) lines.push(`  - \`${ic.name}\` (import \`${ic.importFrom}\`${ic.extendsClass ? `, extends ${ic.extendsClass}` : ''}, ${ic.methodCount} methods)`);
+      for (const ic of h.intermediateClasses) lines.push(`  - \`${ic.name}\` (import \`${ic.importFrom}\`${ic.extendsClass ? `, extends ${ic.extendsClass}` : ''}, provides ${ic.provides.length})`);
     }
     if (h.components.length) lines.push(`- **components (composition):** ${h.components.map((c) => `\`${c}\``).join(', ')}`);
     lines.push(`- **leaf pages:** ${h.leafPages.length}`);
@@ -383,7 +451,7 @@ export async function gatherConventions(): Promise<DetectedConventions> {
 }
 
 export async function learnConventionsTool(
-  args: { output?: string } = {},
+  args: { output?: string; applyPom?: boolean; write?: boolean } = {},
 ): Promise<{ content: { type: 'text'; text: string }[] }> {
   await ensureWorkspace();
   const detected = await gatherConventions();
@@ -394,16 +462,51 @@ export async function learnConventionsTool(
   if (!result.ok) return errorContent(`Failed to write ${outputPath}: ${result.reason}`, { category: 'unknown', tool: 'learn_conventions' });
 
   const h = detected.hierarchy;
-  const summary = [
+  const lines = [
     `✅ Wrote ${outputPath}`,
     '',
     h ? `POM: base \`${h.baseClass}\`, site \`${h.siteClass}\`${h.collapsed ? ' (collapsed)' : ''}, ${h.intermediateClasses.length} intermediate, ${h.leafPages.length} leaf pages${h.components.length ? `, ${h.components.length} components` : ''}` : 'POM: none found',
     `Fixtures: ${detected.fixtures ? `${detected.fixtures.injectedFixtures.length} injected, trackCleanup ${detected.fixtures.hasTrackCleanup ? 'present' : 'absent'}` : 'none'}`,
     `Idioms: POM consumption ${detected.idioms.pomConsumption}, API pattern ${detected.idioms.apiPattern}`,
     detected.runner ? `Runner: projects ${detected.runner.projects.join(', ') || '(none)'}` : 'Runner: no config',
-    '',
-    'Review the report; PR 2 will apply the hierarchy to mcp-qa.config.json.',
-  ].join('\n');
+  ];
 
-  return { content: [{ type: 'text', text: summary }] };
+  if (args.applyPom) {
+    lines.push('', ...(await applyPomSection(detected.hierarchy, !!args.write)));
+  } else {
+    lines.push('', 'Review the report. Run with --apply-pom to write the detected hierarchy into mcp-qa.config.json.');
+  }
+
+  return { content: [{ type: 'text', text: lines.join('\n') }] };
+}
+
+/** Apply (or dry-run) the detected POM hierarchy into mcp-qa.config.json. Returns summary lines. */
+async function applyPomSection(hierarchy: PomHierarchy | null, write: boolean): Promise<string[]> {
+  if (!hierarchy) return ['⚠️  --apply-pom: no page objects found under pages/ — nothing to apply.'];
+
+  const configPath = join(ROOT, 'mcp-qa.config.json');
+  let raw: string;
+  try { raw = await readFile(configPath, 'utf-8'); }
+  catch { return ['⚠️  --apply-pom: mcp-qa.config.json not found — run qa-init first, then --apply-pom.']; }
+
+  let currentConfig: Record<string, unknown>;
+  try { currentConfig = JSON.parse(raw); }
+  catch (err) { return [`⚠️  --apply-pom: could not parse mcp-qa.config.json: ${(err as Error).message}`]; }
+
+  const apply = computePomApply(currentConfig, hierarchy);
+  try { validate(JSON.parse(apply.newConfigJson)); }
+  catch (err) { return [`⚠️  --apply-pom: the merged config is invalid, not writing: ${(err as Error).message}`]; }
+
+  if (!apply.changed) return ['✓ config.pom already matches the detected hierarchy — no change.'];
+
+  const header = write ? '✅ Applied to mcp-qa.config.json — pom changes:' : '👀 Dry run — proposed pom changes (not written):';
+  const out = [header, ...apply.summary.map((s) => `  - ${s}`)];
+
+  if (write) {
+    const w = await safeWrite(configPath, apply.newConfigJson, { allowOverwrite: true });
+    if (!w.ok) return [`⚠️  --apply-pom: failed to write mcp-qa.config.json: ${w.reason}`];
+  } else {
+    out.push('', 'Re-run with `--apply-pom --write` to apply these changes.');
+  }
+  return out;
 }

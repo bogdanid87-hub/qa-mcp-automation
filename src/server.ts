@@ -48,7 +48,11 @@ const HANDLERS: Record<string, (args: any) => unknown> = {
   generate_auth_fixture: (args) => generateAuthFixtureTool(args),
   generate_mock:         (args) => generateMockTool(args),
   generate_app_knowledge:(args) => generateAppKnowledgeTool(args),
-  learn_conventions:     (args) => learnConventionsTool(args),
+  learn_conventions:     (args) => learnConventionsTool({
+    output:   args.output,
+    applyPom: args.apply_pom,
+    write:    args.write,
+  }),
   plan_e2e:              (args) => planE2eTool(args),
   init_project:          (args) => initProjectTool({
     projectName: args.project_name,
