@@ -32,10 +32,14 @@ describe('configurable POM dir + fixtures path — reads a non-default config', 
     try {
       writeFileSync(join(dir, 'mcp-qa.config.json'), JSON.stringify(NON_DEFAULT_CONFIG));
 
-      // Runs in a child process with cwd=dir so config.ts loads our config.
+      // Runs in a child process with cwd=dir so config.ts loads our config. Uses
+      // require() (not dynamic import) — reliable named exports for this type:commonjs
+      // project across Node versions; import()'s ESM/CJS interop varies (Node 22 vs 24).
       const probe = `(async () => {
-        const c = await import(${JSON.stringify(join(SRC, 'config.ts'))});
-        const s = await import(${JSON.stringify(join(SRC, 'prompts/system.ts'))});
+        const cm = require(${JSON.stringify(join(SRC, 'config.ts'))});
+        const sm = require(${JSON.stringify(join(SRC, 'prompts/system.ts'))});
+        const c = cm.pomDir ? cm : cm.default;   // tolerate a default-wrapped namespace
+        const s = sm.getSystemPrompt ? sm : sm.default;
         const prompt = await s.getSystemPrompt();
         console.log(JSON.stringify({
           pomDir: c.pomDir(),
