@@ -99,6 +99,14 @@ different site you don't clone this repo: add the package to that project, run
 `npm update` instead of copy-paste. See
 [docs/install-as-dependency.md](docs/install-as-dependency.md) for the full walkthrough.
 
+**Already have a Playwright + TypeScript suite?** Drop the engine in and run
+`learn_conventions` — it reads your existing `pages/`, `fixtures/`, specs, and
+`playwright.config.ts` and wires your page-helper hierarchy, fixture-injection style, data
+source, and API-client pattern into the config, so generated tests match the code you
+already have (not the engine's defaults). See
+[docs/install-as-dependency.md#existing-playwright-project-already-have-tests](docs/install-as-dependency.md#existing-playwright-project-already-have-tests)
+and [docs/learn-conventions.md](docs/learn-conventions.md).
+
 ---
 
 ## Prerequisites
