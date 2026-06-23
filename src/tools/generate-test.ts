@@ -17,6 +17,7 @@ import { readAppLimitations } from './generate-app-knowledge.js';
 import { extractJson } from './llm-utils.js';
 import { extractExportedFunctionNames, extractPomMethods } from './pom-index.js';
 import { reviewGeneratedFiles } from './review-generation.js';
+import { buildFixtureMap, pomPrimaryPath, rewriteNewPomFixtures } from './spec-fixture-rewrite.js';
 import { TokenBudget } from './budget.js';
 import { errorContent } from '../lib/format-error.js';
 import { formatReqHint } from './requirements-registry.js';
@@ -30,6 +31,51 @@ export const MODEL = config.models.primary;
  * (the system prompt instructs Claude to leave these). Append any new ones to
  * test-data/constants.ts so the user knows what to add on the next audit run.
  */
+/**
+ * Deterministically rewrite `new SomePage(page)` in generated specs to the project's
+ * injected fixtures. A base/intermediate class with no direct fixture (e.g. BasePage)
+ * resolves to the fixture for the page under test — the fixture whose POM's primary
+ * navigate() path matches the first requested page_path. Mutates parsed.files in place.
+ */
+async function applyFixtureRewrites(parsed: GenerateResponse, pagePaths: string[]): Promise<void> {
+  let fixturesContent: string;
+  try { fixturesContent = await readFile(join(ROOT, 'fixtures', 'index.ts'), 'utf-8'); }
+  catch { return; }
+
+  const typeToFixture = buildFixtureMap(fixturesContent);
+  if (typeToFixture.size === 0) return;
+
+  const ancestors = new Set<string>([
+    config.pom.baseClass,
+    config.pom.siteClass,
+    ...(config.pom.intermediateClasses ?? []).map((c) => c.name),
+  ]);
+
+  // The fixture for the page under test, used to resolve `new BasePage(page)` etc.
+  let pageUnderTestFixture: string | undefined;
+  const target = pagePaths[0];
+  if (target) {
+    for (const [cls, fx] of typeToFixture) {
+      try {
+        if (pomPrimaryPath(await readFile(join(ROOT, 'pages', `${cls}.ts`), 'utf-8')) === target) {
+          pageUnderTestFixture = fx;
+          break;
+        }
+      } catch { /* not a pages/ class */ }
+    }
+  }
+  const resolveAncestor = (cls: string) => (ancestors.has(cls) ? pageUnderTestFixture : undefined);
+
+  for (const f of parsed.files ?? []) {
+    if (!(f.path.startsWith('tests/') && f.path.endsWith('.spec.ts'))) continue;
+    const { content, rewrites } = rewriteNewPomFixtures(f.content, typeToFixture, resolveAncestor);
+    if (rewrites.length) {
+      f.content = content;
+      process.stderr.write(`[generate-test] fixture rewrite (${f.path}) — ${rewrites.join('; ')}\n`);
+    }
+  }
+}
+
 async function appendConstantsTodos(files: Array<{ path: string; content: string }>): Promise<void> {
   const constantsPath = join(ROOT, 'test-data', 'constants.ts');
   let existing: string;
@@ -554,6 +600,12 @@ Never remove existing methods — only append new ones.` : '';
   } catch {
     return errorContent('Claude returned invalid JSON in spec step.', { tool: 'generate_test', detail: raw });
   }
+
+  // Deterministic fixture-usage fix — rewrite `new SomePage(page)` in the generated
+  // spec to the project's injected fixture (the convention). The review pass only
+  // flags this; enforcing it here removes the dependence on the model getting it right.
+  // Runs before the proposals/dry-run gates so previews reflect the final code.
+  await applyFixtureRewrites(parsed, args.page_paths ?? []);
 
   // proposals-only: skip all file I/O and test runs
   if (args.proposalsOnly) {
