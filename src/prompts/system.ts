@@ -1,12 +1,18 @@
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
-import { buildPomHierarchyDescription, SITE_URL, SITE_HOST, config } from '../config.js';
+import { buildPomHierarchyDescription, SITE_URL, SITE_HOST, config, pomDir, fixturesFile, fixturesImportSpecifier, relativeImport } from '../config.js';
 
 // Test folders come from config so a project can relocate them (the generation
 // prompt then writes specs to the configured paths, and specKind/registryForSpec
 // route them to the matching registry).
 const { ui: UI_DIR, api: API_DIR, e2e: E2E_DIR, visual: VISUAL_DIR } = config.testing.folders;
 const { ui: UI_REGISTRY, api: API_REGISTRY } = config.testing.registries;
+
+// POM directory and the fixtures import path are configurable (pom.dir / testing.fixtures);
+// these feed the prompt so generation emits the project's real paths, not the pages//fixtures defaults.
+const POM_DIR = pomDir();                                              // e.g. "pages" or "src/pages"
+const FIXTURES_IMPORT = fixturesImportSpecifier(`${UI_DIR}/x.spec.ts`); // e.g. "../../fixtures" for a tests/<folder>/ spec
+const POM_IMPORT_FROM_FIXTURES = relativeImport(fixturesFile(), `${POM_DIR}/CartPage.ts`); // e.g. "../pages/CartPage"
 
 // Resolved against the consuming project's root (not __dirname/engine-relative) so
 // each project's accumulated lessons live in its own repo, not inside this package.
@@ -39,7 +45,7 @@ You generate TypeScript test code that follows EVERY rule below — no exception
 - Browser: Chromium by default. Firefox and WebKit projects are configured — use npm run test:firefox or test:webkit to validate cross-browser. Generated test code is browser-agnostic; browser selection is a runner concern, not a test concern.
 - baseURL: ${SITE_URL} — always use relative paths: page.goto('/login')
 - StorageState: tests run inside the 'chromium' project which loads test-data/.auth/guest.json
-- Custom fixtures: ALWAYS import { test, expect } from '../fixtures', never from '@playwright/test'
+- Custom fixtures: ALWAYS import { test, expect } from '${FIXTURES_IMPORT}', never from '@playwright/test'
 - Global ad-blocking is already wired up in the fixture — do not add route handlers inside tests
 
 ### Navigation
@@ -64,10 +70,10 @@ You generate TypeScript test code that follows EVERY rule below — no exception
 ${buildPomHierarchyDescription()}
 
 General rules:
-- BasePage (pages/BasePage.ts) exposes: navigate(path, dismissOnLoad?) — use this for direct navigation
+- BasePage (${POM_DIR}/BasePage.ts) exposes: navigate(path, dismissOnLoad?) — use this for direct navigation
 - Declare all locators as readonly Locator properties in the constructor
 - Constructor signature: constructor(page: Page) { super(page); ... }
-- If a POM for the target page already exists in pages/, ADD the new locators and methods to that file — never create a second class for the same page
+- If a POM for the target page already exists in ${POM_DIR}/, ADD the new locators and methods to that file — never create a second class for the same page
 - Only create a new POM file when no existing class covers that page
 - Before adding a new method to any POM, check the POM Method Index in the existing project context below — if a method that already returns the same data exists (same selector, different name or parameter shape, possibly on another POM class), REUSE it in the spec — do NOT add a second method that just forwards to it (e.g. never add getProductName(i) when getRowProductName(i) already exists on another page class). Forwarding aliases are forbidden.
 
@@ -148,7 +154,7 @@ expose a fixture for a POM this test needs, ADD one via fixture_additions — pr
 COMPLETE updated file content (import the class, extend the fixture type, add one lazy
 fixture function per POM). Example, adding a \`cartPage\` fixture for CartPage:
 
-  import { CartPage } from '../pages/CartPage';
+  import { CartPage } from '${POM_IMPORT_FROM_FIXTURES}';
   // ...
   export const test = base.extend<{
     trackCleanup: (fn: CleanupFn) => void;
@@ -165,7 +171,7 @@ The spec then consumes it directly — no manual construction:
   RIGHT: test('...', async ({ page, cartPage }) => { ... });
 
 ### Test file conventions
-- Import: import { test, expect } from '../../fixtures'  (for ${UI_DIR}/ and ${E2E_DIR}/) — unless the Project conventions above specify a different fixtures import path
+- Import: import { test, expect } from '${FIXTURES_IMPORT}'  (for ${UI_DIR}/ and ${E2E_DIR}/) — unless the Project conventions above specify a different fixtures import path
 - Wrap every test inside test.describe('Meaningful Name', () => { ... })
 - Every test MUST contain at least one expect() assertion
 - The spec file is determined by the PRIMARY page where the main user action happens — not by where the test ends or what it asserts on
@@ -434,7 +440,7 @@ Or capture only the stable elements below the carousel:
 
 ## Rules for visual tests
 - File location: ${VISUAL_DIR}/ (separate project, runs on Chromium only)
-- Spec import: import { test, expect } from '../../fixtures' (two levels up from ${VISUAL_DIR}/)
+- Spec import: import { test, expect } from '${FIXTURES_IMPORT}' (relative to ${VISUAL_DIR}/)
 - Use descriptive, stable snapshot names: 'nav-layout.png' not 'screenshot1.png'
 - Wait for the page to fully load and settle before capturing:
     await page.waitForLoadState('domcontentloaded');
@@ -469,7 +475,7 @@ Respond with a JSON object (no markdown fences, raw JSON only) in this exact sha
   "summary": "One-sentence description of what was generated",
   "files": [
     {
-      "path": "pages/SomePage.ts",
+      "path": "${POM_DIR}/SomePage.ts",
       "content": "full TypeScript file content here"
     },
     {

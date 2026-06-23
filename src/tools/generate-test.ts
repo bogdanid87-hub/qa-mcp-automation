@@ -22,7 +22,7 @@ import { extractAssertingMethods, findNonAssertingTests } from './spec-checks.js
 import { TokenBudget } from './budget.js';
 import { errorContent } from '../lib/format-error.js';
 import { formatReqHint } from './requirements-registry.js';
-import { config, registryNameForSpec, specKind } from '../config.js';
+import { config, registryNameForSpec, specKind, pomDir, fixturesFile, fixturesImportSpecifier } from '../config.js';
 
 const ROOT = process.cwd();
 export const MODEL = config.models.primary;
@@ -40,7 +40,7 @@ export const MODEL = config.models.primary;
  */
 async function applyFixtureRewrites(parsed: GenerateResponse, pagePaths: string[]): Promise<void> {
   let fixturesContent: string;
-  try { fixturesContent = await readFile(join(ROOT, 'fixtures', 'index.ts'), 'utf-8'); }
+  try { fixturesContent = await readFile(join(ROOT, fixturesFile()), 'utf-8'); }
   catch { return; }
 
   const typeToFixture = buildFixtureMap(fixturesContent);
@@ -58,7 +58,7 @@ async function applyFixtureRewrites(parsed: GenerateResponse, pagePaths: string[
   if (target) {
     for (const [cls, fx] of typeToFixture) {
       try {
-        if (pomPrimaryPath(await readFile(join(ROOT, 'pages', `${cls}.ts`), 'utf-8')) === target) {
+        if (pomPrimaryPath(await readFile(join(ROOT, pomDir(), `${cls}.ts`), 'utf-8')) === target) {
           pageUnderTestFixture = fx;
           break;
         }
@@ -77,8 +77,7 @@ async function applyFixtureRewrites(parsed: GenerateResponse, pagePaths: string[
     }
 
     // Repoint test/expect from '@playwright/test' to the project's fixtures module.
-    const depth = f.path.split('/').length - 1; // tests/ui/x.spec.ts → 2 dirs deep
-    const fixturesPath = `${'../'.repeat(depth)}fixtures`;
+    const fixturesPath = fixturesImportSpecifier(f.path);
     const imp = rewriteFixturesImport(f.content, fixturesPath);
     if (imp.changed) {
       f.content = imp.content;
@@ -90,9 +89,9 @@ async function applyFixtureRewrites(parsed: GenerateResponse, pagePaths: string[
 /** Read all top-level pages/*.ts (POMs are on disk by the time we check the spec). */
 async function readPomContents(): Promise<string[]> {
   try {
-    const files = await readdir(join(ROOT, 'pages'));
+    const files = await readdir(join(ROOT, pomDir()));
     return await Promise.all(
-      files.filter((f) => f.endsWith('.ts')).map((f) => readFile(join(ROOT, 'pages', f), 'utf-8')),
+      files.filter((f) => f.endsWith('.ts')).map((f) => readFile(join(ROOT, pomDir(), f), 'utf-8')),
     );
   } catch {
     return [];
@@ -163,7 +162,7 @@ Respond with ONLY this JSON (no TypeScript, no explanation):
 {
   "poms": [
     {
-      "file": "pages/SomePage.ts",
+      "file": "${pomDir()}/SomePage.ts",
       "is_new": true,
       "methods": ["methodOne", "methodTwo"],
       "page_url": "/some-path"
@@ -172,7 +171,7 @@ Respond with ONLY this JSON (no TypeScript, no explanation):
 }
 
 Rules:
-- Only include pages/ files
+- Only include ${pomDir()}/ files
 - is_new: false means the file exists — list only the NEW methods to add, not existing ones
 - For is_new: false files, check the existing methods shown in the codebase context first — if one already returns the data the test needs (even under a different name), do NOT list a new method for it; reuse the existing one in the spec instead
 - is_new: true means create from scratch — list every method the test needs
@@ -199,11 +198,11 @@ Respond with this exact JSON:
 const POM_ONLY_HINT = `
 
 IMPORTANT — POM GENERATION STEP: This is step 1 of 2. Generate ONLY the Page Object Model \
-file(s) in pages/ that this test will need. Do NOT generate the test spec. \
+file(s) in ${pomDir()}/ that this test will need. Do NOT generate the test spec. \
 Respond with this exact JSON shape (no other fields needed):
 {
   "summary": "one-sentence description of what POM was created/updated",
-  "files": [{ "path": "pages/SomePage.ts", "content": "full file content" }]
+  "files": [{ "path": "${pomDir()}/SomePage.ts", "content": "full file content" }]
 }
 If the existing POM already has every locator and method this test needs, set files to [].
 Before adding any new method, check whether an existing method on this POM already returns the same data — if so, reuse it in the spec instead of adding a duplicate or forwarding-alias method.`;
@@ -213,7 +212,7 @@ const SPEC_ONLY_HINT = `
 IMPORTANT — SPEC GENERATION STEP: This is step 2 of 2. The POM has already been created \
 and is shown in the codebase context above. Generate ONLY the test spec file (tests/) and \
 fixture additions if needed. Use the exact class name, constructor signature, and method \
-names from the POM as it appears in the context. Do NOT output any pages/ files.
+names from the POM as it appears in the context. Do NOT output any ${pomDir()}/ files.
 
 Every POM this test uses must be obtained via a fixture (see CORE_RULES Fixtures section) — \
 never write \`new SomePage(page)\` in the spec. fixtures/index.ts is shown in the codebase \
@@ -466,7 +465,7 @@ export async function generateTestTool(args: {
         // Deduplicate by path — if two plans targeted the same file, last result wins
         const dedupedPomResults = new Map<string, GeneratedFile>();
         for (const file of pomResults) {
-          if (file && file.path.startsWith('pages/')) dedupedPomResults.set(file.path, file);
+          if (file && file.path.startsWith(`${pomDir()}/`)) dedupedPomResults.set(file.path, file);
         }
 
         for (const file of dedupedPomResults.values()) {
@@ -485,13 +484,13 @@ export async function generateTestTool(args: {
           written.push(file.path);
         }
 
-        pomGeneratedByLocal = written.some(p => p.startsWith('pages/'));
+        pomGeneratedByLocal = written.some(p => p.startsWith(`${pomDir()}/`));
 
         // ── Fallback: any planned POM not on disk → generate via Claude API ──
         // This covers files the local model failed, returned null for, or that
         // were rejected by the method-drop guard.
         const writtenSet = new Set(written);
-        const missingPoms = plan.poms.filter(p => p.file.startsWith('pages/') && !writtenSet.has(p.file));
+        const missingPoms = plan.poms.filter(p => p.file.startsWith(`${pomDir()}/`) && !writtenSet.has(p.file));
 
         if (missingPoms.length > 0) {
           const updatedContext = await readFocusedContextForFeature(featureKeywords);
@@ -506,7 +505,7 @@ ${missingList}
 Respond with the standard JSON:
 {
   "summary": "...",
-  "files": [{ "path": "pages/X.ts", "content": "..." }]
+  "files": [{ "path": "${pomDir()}/X.ts", "content": "..." }]
 }`;
           try {
             const fallbackRaw = await callClaude(buildUserBlocks({
@@ -516,7 +515,7 @@ Respond with the standard JSON:
             }));
             const fallbackParsed = parseJson(fallbackRaw);
             for (const file of fallbackParsed.files ?? []) {
-              if (!file.path.startsWith('pages/')) continue;
+              if (!file.path.startsWith(`${pomDir()}/`)) continue;
               const abs = join(ROOT, file.path);
               await safeWrite(abs, file.content, { allowOverwrite: true });
               written.push(file.path);
@@ -578,7 +577,7 @@ Respond with the standard JSON:
       }
 
       for (const file of pomParsed.files ?? []) {
-        if (!file.path.startsWith('pages/')) continue;
+        if (!file.path.startsWith(`${pomDir()}/`)) continue;
         const abs = join(ROOT, file.path);
         if (useLocal) {
           try {
@@ -603,7 +602,7 @@ Respond with the standard JSON:
   // may still need to add new methods. Tell Claude explicitly.
   const pomUpdateHint = !doPomSpecSplit ? `
 
-IMPORTANT — if this test needs POM methods that do not yet exist in the pages/ files shown \
+IMPORTANT — if this test needs POM methods that do not yet exist in the ${pomDir()}/ files shown \
 above, include the updated POM file in your response with the new methods added. \
 Never remove existing methods — only append new ones.` : '';
 
@@ -648,7 +647,7 @@ Never remove existing methods — only append new ones.` : '';
     const specFile = (parsed.files ?? []).find(
       f => f.path.startsWith('tests/') && f.path.endsWith('.spec.ts'),
     );
-    const pomFiles = (parsed.files ?? []).filter(f => f.path.startsWith('pages/'));
+    const pomFiles = (parsed.files ?? []).filter(f => f.path.startsWith(`${pomDir()}/`));
     const lines: string[] = [
       `**Dry run** — no files written, no tests run.`,
       '',
@@ -671,7 +670,7 @@ Never remove existing methods — only append new ones.` : '';
   for (const file of parsed.files ?? []) {
     const abs = join(ROOT, file.path);
     let allowOverwrite = false;
-    if (file.path.startsWith('pages/') || file.path.startsWith('tests/helpers/')) {
+    if (file.path.startsWith(`${pomDir()}/`) || file.path.startsWith('tests/helpers/')) {
       // Guard: never write an update that drops existing exported functions
       try {
         const existing = await readFile(abs, 'utf-8');
@@ -695,7 +694,7 @@ Never remove existing methods — only append new ones.` : '';
   }
 
   if (parsed.fixture_additions) {
-    const result = await safeWrite(join(ROOT, 'fixtures', 'index.ts'), parsed.fixture_additions);
+    const result = await safeWrite(join(ROOT, fixturesFile()), parsed.fixture_additions);
     if (result.ok) {
       written.push('fixtures/index.ts (updated)');
     } else {
@@ -814,7 +813,7 @@ Never remove existing methods — only append new ones.` : '';
     ...written.map((p) => `  - ${p}`),
   ];
 
-  if (doPomSpecSplit && written.some((p) => p.startsWith('pages/'))) {
+  if (doPomSpecSplit && written.some((p) => p.startsWith(`${pomDir()}/`))) {
     const pomNote = pomGeneratedByLocal
       ? `POMs planned by Claude API, built in parallel by ${LOCAL_MODEL} (local)`
       : 'POMs generated first, spec generated using the committed POMs';

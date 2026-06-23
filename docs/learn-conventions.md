@@ -73,16 +73,21 @@ no `trackCleanup`. After `learn_conventions --apply-pom --apply-conventions --wr
   `trackCleanup`.
 - **API test** — used the project's `apiClient` fixture (not raw `request`) and `data/testData`.
 
+### Layout — non-standard locations are detected
+
+`learn_conventions` finds the **POM directory** (scans `pages/`, `src/pages/`, `e2e/pages/`,
+`tests/pages/`) and the **fixtures module** (`fixtures/index.ts`, `fixtures.ts`,
+`support/fixtures.ts`, `tests/fixtures.ts`) and writes them to `pom.dir` /
+`testing.fixtures` — so a project with, say, `src/pages/` + `support/fixtures.ts` is
+configured automatically, and the whole engine (generation, the fixtures import path it
+emits, file reads/writes) follows. Both fields are also hand-editable. If your test folders
+differ, set `config.testing.folders` too.
+
 ### Known limitations
 
-- The conventions tell the model to **use** the `apiClient` / page-helper fixtures, but don't
-  yet enumerate their **method signatures** — so it can invent a generic call (e.g.
-  `apiClient.post()` instead of the project's `apiClient.verifyLogin()`), and may occasionally
-  `new` a base page instead of using its fixture. Surfacing the available methods/fixtures to
-  generation (a small "project map") is the natural next step.
-- The POM directory (`pages/`) and fixtures file (`fixtures/index.ts`) are still assumed;
-  projects using different locations need those aligned.
 - Parsing is regex-based; very unusual class structures may need a manual `config.pom` tweak.
+- The candidate location lists above are fixed — a POM dir or fixtures file outside them needs
+  `pom.dir` / `testing.fixtures` set by hand.
 
 ---
 

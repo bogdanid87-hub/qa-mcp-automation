@@ -1,9 +1,13 @@
 import { readdir, readFile } from 'fs/promises';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import { buildPomIndex, extractPomMethods, formatPomIndex, type PomIndexEntry } from './pom-index.js';
+import { pomDir, fixturesFile } from '../config.js';
 
 const ROOT = process.cwd();
-const DIRS = ['pages', 'fixtures', 'tests', 'utils'] as const;
+/** Directories scanned for project context — POM dir + fixtures dir + tests + utils, configurable. */
+function dirsToScan(): string[] {
+  return [...new Set([pomDir(), dirname(fixturesFile()), 'tests', 'utils'])];
+}
 
 interface FileEntry {
   name: string;
@@ -29,7 +33,7 @@ async function readDir(dir: string): Promise<FileEntry[]> {
 }
 
 async function readAllFiles(): Promise<FileEntry[]> {
-  const groups = await Promise.all(DIRS.map(readDir));
+  const groups = await Promise.all(dirsToScan().map(readDir));
   return groups.flat();
 }
 
@@ -84,7 +88,7 @@ export async function readFocusedContextForFailure(failureOutput: string): Promi
   }
 
   // Always include fixtures — nearly every spec imports from here
-  relevant.add('fixtures/index.ts');
+  relevant.add(fixturesFile());
 
   return buildFocusedContext(all, relevant);
 }
@@ -100,7 +104,7 @@ export async function readFocusedContextForFeature(keywords: string[]): Promise<
   const all = await readAllFiles();
 
   const relevant = new Set<string>();
-  relevant.add('fixtures/index.ts');
+  relevant.add(fixturesFile());
 
   const lower = keywords.map((k) => k.toLowerCase()).filter((k) => k.length > 3);
   for (const f of all) {
@@ -108,7 +112,7 @@ export async function readFocusedContextForFeature(keywords: string[]): Promise<
     if (lower.some((k) => fileName.includes(k))) relevant.add(f.name);
   }
 
-  const pomIndex = formatPomIndex(buildPomIndex(all.filter((f) => f.name.startsWith('pages/'))));
+  const pomIndex = formatPomIndex(buildPomIndex(all.filter((f) => f.name.startsWith(`${pomDir()}/`))));
   const context = buildFocusedContext(all, relevant);
   return pomIndex ? `${pomIndex}\n\n${context}` : context;
 }
@@ -116,7 +120,7 @@ export async function readFocusedContextForFeature(keywords: string[]): Promise<
 /** Build a POM Method Index over the real pages/*.ts files on disk. */
 export async function getPomIndex(): Promise<PomIndexEntry[]> {
   const all = await readAllFiles();
-  return buildPomIndex(all.filter((f) => f.name.startsWith('pages/')));
+  return buildPomIndex(all.filter((f) => f.name.startsWith(`${pomDir()}/`)));
 }
 
 /**
@@ -126,12 +130,12 @@ export async function getPomIndex(): Promise<PomIndexEntry[]> {
 export async function pomExistsForFeature(keywords: string[]): Promise<boolean> {
   const lower = keywords.map((k) => k.toLowerCase()).filter((k) => k.length > 3);
   try {
-    const entries = await readdir(join(ROOT, 'pages'));
+    const entries = await readdir(join(ROOT, pomDir()));
     const match = entries.find((f) => lower.some((k) => f.toLowerCase().includes(k)));
     if (!match) return false;
     // Locators-only POMs (from generate_pom) have no async methods — treat them
     // as "not ready" so generate_test still runs the POM step to add methods.
-    const content = await readFile(join(ROOT, 'pages', match), 'utf-8');
+    const content = await readFile(join(ROOT, pomDir(), match), 'utf-8');
     return extractPomMethods(content).length > 0;
   } catch {
     return false;
@@ -140,8 +144,8 @@ export async function pomExistsForFeature(keywords: string[]): Promise<boolean> 
 
 export async function listResourcesTool(): Promise<{ content: { type: 'text'; text: string }[] }> {
   const [pages, fixtures, tests] = await Promise.all([
-    readDir('pages'),
-    readDir('fixtures'),
+    readDir(pomDir()),
+    readDir(dirname(fixturesFile())),
     readDir('tests'),
   ]);
 

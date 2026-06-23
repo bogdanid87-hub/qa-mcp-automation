@@ -6,7 +6,7 @@ import { getPomIndex } from './list-resources.js';
 import { extractPomMethods, extractPomLocators, type PomIndexEntry } from './pom-index.js';
 import { extractJson } from './llm-utils.js';
 import { TokenBudget } from './budget.js';
-import { config } from '../config.js';
+import { config, pomDir } from '../config.js';
 
 const ROOT = process.cwd();
 const MODEL = config.models.primary;
@@ -380,7 +380,7 @@ export async function reviewGeneratedFiles(
     }),
   )).filter((f): f is { path: string; content: string } => f !== null);
 
-  const pomFiles = files.filter((f) => f.path.startsWith('pages/'));
+  const pomFiles = files.filter((f) => f.path.startsWith(`${pomDir()}/`));
   const specFiles = files.filter((f) => f.path.startsWith('tests/') && f.path.endsWith('.spec.ts'));
 
   const issues: ReviewIssue[] = [];

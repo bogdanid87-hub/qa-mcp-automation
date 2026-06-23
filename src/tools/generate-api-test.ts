@@ -17,7 +17,7 @@ import { findUnknownApiClientCalls } from './spec-checks.js';
 import { formatReqHint } from './requirements-registry.js';
 import { errorContent } from '../lib/format-error.js';
 import { conventionsPreamble } from '../prompts/system.js';
-import { config, SITE_URL, SITE_HOST, specKind } from '../config.js';
+import { config, SITE_URL, SITE_HOST, specKind, fixturesImportSpecifier } from '../config.js';
 
 const ROOT = process.cwd();
 const MODEL = config.models.primary;
@@ -46,7 +46,7 @@ request fixture. No browser, no page objects, no DOM — pure API testing.
 ## Rules
 
 ### Setup
-- Import: import { test, expect } from '../../fixtures' — unless the Project conventions above specify a different fixtures import path
+- Import: import { test, expect } from '${fixturesImportSpecifier(`${config.testing.folders.api}/x.spec.ts`)}' — unless the Project conventions above specify a different fixtures import path
 - Default to the request fixture; if the Project conventions above describe an API-client abstraction (e.g. an apiClient fixture), use that instead of raw request calls
 - baseURL: ${SITE_URL} — always use relative paths in request calls
 

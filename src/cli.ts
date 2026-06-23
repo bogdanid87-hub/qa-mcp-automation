@@ -1,8 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { readFile, readdir, stat, writeFile } from 'fs/promises';
 import { WORKSPACE_PATHS, ensureWorkspace, MY_TEST_TEMPLATE } from './workspace.js';
-import { config, registryNameForSpec, specKind } from './config.js';
-import { join } from 'path';
+import { config, registryNameForSpec, specKind, pomDir, fixturesFile } from './config.js';
+import { dirname, join } from 'path';
 import * as readline from 'readline';
 import { generateTestTool } from './tools/generate-test.js';
 import { runTests } from './tools/run-tests.js';
@@ -17,7 +17,7 @@ import { parseFileMetadata, parseMultipleSections } from './tools/cli-parsers.js
 const DEFAULT_BUDGET_USD = Infinity;
 
 const ROOT = process.cwd();
-const TRACKED_DIRS = ['pages', 'tests', 'fixtures'];
+const TRACKED_DIRS = [...new Set([pomDir(), 'tests', dirname(fixturesFile())])];
 const TRACKED_EXTRAS = [
   config.testing.registries.ui,
   config.testing.registries.api,

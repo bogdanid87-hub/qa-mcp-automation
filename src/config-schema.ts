@@ -74,6 +74,8 @@ export interface MqaConfig {
     };
     /** Playwright project name run_tests targets by default (default "chromium"). Set from the project's config by learn_conventions. */
     runnerProject?: string;
+    /** Project-root-relative path to the fixtures module (default "fixtures/index.ts"). Set by learn_conventions. */
+    fixtures?: string;
   };
   riskTiers: {
     critical: string[];
@@ -86,6 +88,8 @@ export interface MqaConfig {
     siteClass: string;
     siteClassProvides: string[]; // locators/methods siteClass owns — LLM told not to re-declare these
     intermediateClasses: IntermediateClass[];
+    /** Project-root-relative directory holding the page objects (default "pages"). Set by learn_conventions. */
+    dir?: string;
   };
   models: {
     primary: string;
