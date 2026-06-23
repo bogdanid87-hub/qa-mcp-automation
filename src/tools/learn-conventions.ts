@@ -10,12 +10,12 @@
  * Parsing is regex/heuristic (reuses pom-index.ts's parsers) — no AST dependency.
  */
 import { readdir, readFile } from 'fs/promises';
-import { join } from 'path';
+import { join, normalize } from 'path';
 import { safeWrite } from '../lib/safe-write.js';
 import { validate } from '../config-schema.js';
 import { WORKSPACE_PATHS, ensureWorkspace } from '../workspace.js';
 import { errorContent } from '../lib/format-error.js';
-import { buildPomIndex, extractPomLocators, type PomIndexEntry } from './pom-index.js';
+import { buildPomIndex, extractPomLocators, extractPomMethods, type PomIndexEntry, type PomMethod } from './pom-index.js';
 
 const ROOT = process.cwd();
 
@@ -181,6 +181,29 @@ export function detectFixtureShape(content: string): FixtureShape {
   };
 }
 
+/** The injected fixture that wraps an API-client abstraction (e.g. `apiClient: ApiClient`), if any. */
+export function findApiClientFixture(fixtures: FixtureShape | null): { name: string; type: string } | null {
+  if (!fixtures) return null;
+  return fixtures.injectedFixtures.find(
+    (f) => /client/i.test(f.type) || /^api/i.test(f.name) || /apiclient/i.test(f.name),
+  ) ?? null;
+}
+
+/** Resolve `import { ClassName } from '<path>'` in fixtures/index.ts to a project-root-relative .ts path. */
+export function resolveClassImport(fixturesContent: string, className: string): string | null {
+  const esc = className.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const m = fixturesContent.match(new RegExp(`import\\s*\\{[^}]*\\b${esc}\\b[^}]*\\}\\s*from\\s*['"]([^'"]+)['"]`));
+  if (!m) return null;
+  // The import is relative to fixtures/ (where fixtures/index.ts lives).
+  return normalize(join('fixtures', m[1])).replace(/\.ts$/, '') + '.ts';
+}
+
+export interface ApiClientInfo {
+  fixtureName: string;
+  className: string;
+  methods: PomMethod[];
+}
+
 export interface AuthoringIdioms {
   pomConsumption: 'fixture-injection' | 'instantiation' | 'mixed' | 'unknown';
   pomCounts: { injected: number; instantiated: number };
@@ -341,6 +364,8 @@ export interface DetectedConventions {
   fixtures: FixtureShape | null;
   idioms: AuthoringIdioms;
   runner: RunnerConfig | null;
+  /** The API-client abstraction behind the apiClient fixture + its methods, if the project uses one. */
+  apiClient: ApiClientInfo | null;
 }
 
 /** Render the detected conventions as a human-readable markdown report. */
@@ -429,7 +454,8 @@ export function renderConventionsBlock(d: DetectedConventions): string {
     out.push('- Consume page helpers via injected fixtures destructured from the test callback (e.g. `async ({ homePage }) => …`) — do NOT instantiate them with `new`.');
   }
   if (d.fixtures?.injectedFixtures.length) {
-    out.push(`- Available page/helper fixtures: ${d.fixtures.injectedFixtures.slice(0, 24).map((f) => `\`${f.name}\``).join(', ')}${d.fixtures.injectedFixtures.length > 24 ? ' …' : ''}.`);
+    const map = d.fixtures.injectedFixtures.slice(0, 24).map((f) => `\`${f.name}\` (${f.type})`).join(', ');
+    out.push(`- Use these existing fixtures for their classes — destructure from the test callback, do NOT \`new\` the class: ${map}${d.fixtures.injectedFixtures.length > 24 ? ' …' : ''}.`);
   }
   if (d.idioms.testImportPath) {
     out.push(`- Import \`test\`/\`expect\` from \`${d.idioms.testImportPath}\`.`);
@@ -439,6 +465,10 @@ export function renderConventionsBlock(d: DetectedConventions): string {
   }
   if (d.idioms.apiPattern === 'apiClient' || d.idioms.apiPattern === 'mixed') {
     out.push('- API tests use the project\'s `apiClient` fixture (an ApiClient abstraction), not the raw Playwright `request` fixture.');
+  }
+  if (d.apiClient) {
+    const sigs = d.apiClient.methods.slice(0, 30).map((m) => `\`${m.name}(${m.params})\``).join(', ');
+    out.push(`- The \`${d.apiClient.fixtureName}\` fixture (${d.apiClient.className}) exposes these methods — call them directly, do NOT invent generic ones like \`.post()\`: ${sigs}.`);
   }
   if (d.fixtures && !d.fixtures.hasTrackCleanup) {
     out.push('- This project has NO `trackCleanup` fixture — do NOT reference or add one; handle any teardown the way the existing specs do.');
@@ -487,7 +517,22 @@ export async function gatherConventions(): Promise<DetectedConventions> {
     .filter((x): x is string => !!x);
 
   let fixtures: FixtureShape | null = null;
-  try { fixtures = detectFixtureShape(await readFile(join(ROOT, 'fixtures', 'index.ts'), 'utf-8')); } catch { /* none */ }
+  let fixturesContent = '';
+  try { fixturesContent = await readFile(join(ROOT, 'fixtures', 'index.ts'), 'utf-8'); fixtures = detectFixtureShape(fixturesContent); } catch { /* none */ }
+
+  // Resolve the API-client class (e.g. apiClient: ApiClient) and extract its methods, so
+  // generation calls the real methods (verifyLogin(...)) instead of inventing apiClient.post().
+  let apiClient: ApiClientInfo | null = null;
+  const apiFixture = findApiClientFixture(fixtures);
+  if (apiFixture) {
+    const rel = resolveClassImport(fixturesContent, apiFixture.type);
+    if (rel) {
+      try {
+        const methods = extractPomMethods(await readFile(join(ROOT, rel), 'utf-8'));
+        if (methods.length) apiClient = { fixtureName: apiFixture.name, className: apiFixture.type, methods };
+      } catch { /* class file not found */ }
+    }
+  }
 
   let runnerSrc = '';
   try { runnerSrc = await readFile(join(ROOT, 'playwright.config.ts'), 'utf-8'); } catch { /* none */ }
@@ -502,6 +547,7 @@ export async function gatherConventions(): Promise<DetectedConventions> {
     fixtures,
     idioms: detectAuthoringIdioms(specs),
     runner,
+    apiClient,
   };
 }
 
