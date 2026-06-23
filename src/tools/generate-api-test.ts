@@ -11,6 +11,9 @@ import { markBacklogEntriesCovered } from './analyze-coverage.js';
 import { autoFixFailure } from './investigate-fix.js';
 import { writeTestAnnotation } from './annotations.js';
 import { extractJson } from './llm-utils.js';
+import { extractPomMethods } from './pom-index.js';
+import { detectFixtureShape, findApiClientFixture, resolveClassImport } from './learn-conventions.js';
+import { findUnknownApiClientCalls } from './spec-checks.js';
 import { formatReqHint } from './requirements-registry.js';
 import { errorContent } from '../lib/format-error.js';
 import { conventionsPreamble } from '../prompts/system.js';
@@ -232,6 +235,22 @@ async function callClaude(systemPrompt: string, userPrompt: string, apiKey: stri
     .join('');
 }
 
+/** Detect the project's API-client fixture + its method names, for the unknown-method guard. */
+async function detectApiClient(): Promise<{ fixtureName: string; methods: Set<string> } | null> {
+  try {
+    const fixturesContent = await readFile(join(ROOT, 'fixtures', 'index.ts'), 'utf-8');
+    const fx = findApiClientFixture(detectFixtureShape(fixturesContent));
+    if (!fx) return null;
+    const rel = resolveClassImport(fixturesContent, fx.type);
+    if (!rel) return null;
+    const methods = extractPomMethods(await readFile(join(ROOT, rel), 'utf-8')).map((m) => m.name);
+    if (methods.length === 0) return null;
+    return { fixtureName: fx.name, methods: new Set(methods) };
+  } catch {
+    return null;
+  }
+}
+
 export async function generateApiTestTool(args: {
   description: string;
   test_name?: string;
@@ -323,6 +342,23 @@ export async function generateApiTestTool(args: {
     f => specKind(f.path) === 'api' && f.path.endsWith('.spec.ts'),
   );
 
+  // Deterministic guard: flag calls to apiClient methods that don't exist on the class
+  // (e.g. an invented apiClient.post()) with a precise, actionable message + the real ones.
+  let apiMethodWarning = '';
+  if (specFile) {
+    const ac = await detectApiClient();
+    if (ac) {
+      const unknown = findUnknownApiClientCalls(specFile.content, ac.fixtureName, ac.methods);
+      if (unknown.length) {
+        apiMethodWarning = [
+          `⚠️ \`${ac.fixtureName}\` has no method ${unknown.map((u) => `\`${u}()\``).join(', ')}.`,
+          `   Available: ${[...ac.methods].slice(0, 24).map((m) => `${m}()`).join(', ')}.`,
+          '   Use a real method (or add the missing one to the API client) — the test will fail until then.',
+        ].join('\n');
+      }
+    }
+  }
+
   // ── Run and record ────────────────────────────────────────────────────────
   let testRunNote = '';
   let passing = true;
@@ -397,6 +433,7 @@ export async function generateApiTestTool(args: {
     ...written.map(p => `  - ${p}`),
   ];
 
+  if (apiMethodWarning) lines.push('', apiMethodWarning);
   if (testRunNote) lines.push('', testRunNote);
 
   return {

@@ -83,6 +83,21 @@ function bodyAsserts(body: string, assertingMethods: Set<string>): boolean {
 }
 
 /**
+ * API methods called as `<fixtureName>.method(...)` in `spec` that don't exist on the
+ * detected API-client class — the engine surfaces the real signatures to generation, but
+ * a model can still invent one (e.g. `apiClient.post()` instead of `apiClient.verifyLogin()`).
+ * Returns the unknown method names so generation can flag them precisely.
+ */
+export function findUnknownApiClientCalls(spec: string, fixtureName: string, knownMethods: Set<string>): string[] {
+  const re = new RegExp(`\\b${fixtureName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.(\\w+)\\s*\\(`, 'g');
+  const unknown = new Set<string>();
+  for (const m of spec.matchAll(re)) {
+    if (!knownMethods.has(m[1])) unknown.add(m[1]);
+  }
+  return [...unknown];
+}
+
+/**
  * Names of `test(...)` blocks in `spec` that contain no assertion (directly or via an
  * asserting POM method). `assertingMethods` comes from extractAssertingMethods over the
  * project's POMs. A non-empty result means the spec has a vacuously-passing test.
