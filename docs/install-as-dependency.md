@@ -74,6 +74,12 @@ should see the `qa` server connected and the tools available. `.mcp.json` expand
 
 `workspace/START_HERE.md` (scaffolded by `qa-init`) is the plain-English version of this.
 
+> **Already have tests?** Run [`learn_conventions`](learn-conventions.md) first
+> (`npm run learn_conventions -- --apply-pom --apply-conventions --write`). It detects the
+> project's existing page-helper hierarchy, fixtures, data source, and API style, and wires them
+> into the config so generated tests match the code you already have instead of the engine's
+> defaults.
+
 ---
 
 ## Notes

@@ -25,6 +25,7 @@ page"*, *"turn these requirements into tests"*) and the right tool runs. Full wa
 |------|-------------|-----|
 | `generate_auth_fixture` | Set up a reusable "logged-in" state so tests start signed in. Just give the login URL — the fields are auto-detected. | [docs/generate-auth-fixture.md](docs/generate-auth-fixture.md) |
 | `generate_pom` | Prepare a reusable "page helper" (Page Object) for a page in advance. Optional — `generate_test` makes these for you. | [docs/generate-pom.md](docs/generate-pom.md) |
+| `learn_conventions` (`npm run learn_conventions`) | Dropped the engine into a project that **already has tests**? Detects its conventions (page-helper hierarchy, fixtures, data source, API style) so generation matches the existing house style. | [docs/learn-conventions.md](docs/learn-conventions.md) |
 | `plan_e2e` | Preview a complex multi-page journey before generating it. `generate_test` does this internally. | [docs/plan-e2e.md](docs/plan-e2e.md) |
 | `analyze_coverage` | Find gaps and risk areas in the tests you already have; writes a report (and optional ready-to-run list). | [docs/analyze-coverage.md](docs/analyze-coverage.md) |
 | `generate_mock` | Fake a network response (e.g. a payment API like Stripe) or force an error/loading state. | [docs/generate-mock.md](docs/generate-mock.md) |
@@ -76,6 +77,7 @@ Day to day:
 | `npm run audit_site` | Crawl a site, recommend a page-helper structure, seed test data | [docs/audit-site.md](docs/audit-site.md) |
 | `npm run init_project` | Set up a new project (config + runnable scaffold) | [docs/init-project.md](docs/init-project.md) |
 | `npm run generate_knowledge` | Build `workspace/APP_KNOWLEDGE.md` from catalogs, backlog, coverage report | [docs/generate-app-knowledge.md](docs/generate-app-knowledge.md) |
+| `npm run learn_conventions` | Detect an existing project's test conventions; `-- --apply-pom --apply-conventions --write` applies them to config | [docs/learn-conventions.md](docs/learn-conventions.md) |
 | `npm run review_rules` | Saved-lesson hygiene report; `-- --promote <NNN>` makes a lesson engine-wide | [docs/review-rules.md](docs/review-rules.md) |
 | `npm run fix` | Diagnose and fix failing tests | [docs/investigate-and-fix.md](docs/investigate-and-fix.md) |
 | `npm run status` | Suite health at a glance | — |
