@@ -9,9 +9,31 @@ import {
   TESTS_VISUAL_PATH,
   buildPomHierarchyDescription,
   specKind,
+  pomDir,
+  fixturesFile,
+  relativeImport,
+  fixturesImportSpecifier,
   validate,
   type MqaConfig,
 } from '../config';
+
+describe('configurable POM dir + fixtures path', () => {
+  it('defaults to pages/ and fixtures/index.ts when config omits them', () => {
+    expect(pomDir()).toBe('pages');
+    expect(fixturesFile()).toBe('fixtures/index.ts');
+  });
+
+  it('fixturesImportSpecifier resolves the default fixtures relative to the spec', () => {
+    expect(fixturesImportSpecifier('tests/ui/x.spec.ts')).toBe('../../fixtures');
+    expect(fixturesImportSpecifier('tests/ui/sub/z.spec.ts')).toBe('../../../fixtures');
+  });
+
+  it('relativeImport handles non-standard fixtures locations + drops .ts / /index', () => {
+    expect(relativeImport('tests/ui/x.spec.ts', 'fixtures/index.ts')).toBe('../../fixtures');
+    expect(relativeImport('tests/ui/x.spec.ts', 'support/fixtures.ts')).toBe('../../support/fixtures');
+    expect(relativeImport('e2e/x.spec.ts', 'support/fixtures.ts')).toBe('../support/fixtures');
+  });
+});
 
 describe('config', () => {
   it('derives SITE_URL and SITE_HOST from project.siteUrl', () => {

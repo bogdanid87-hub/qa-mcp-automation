@@ -22,7 +22,7 @@ import { extractAssertingMethods, findNonAssertingTests } from './spec-checks.js
 import { TokenBudget } from './budget.js';
 import { errorContent } from '../lib/format-error.js';
 import { formatReqHint } from './requirements-registry.js';
-import { config, registryNameForSpec, specKind } from '../config.js';
+import { config, registryNameForSpec, specKind, pomDir, fixturesFile, fixturesImportSpecifier } from '../config.js';
 
 const ROOT = process.cwd();
 export const MODEL = config.models.primary;
@@ -40,7 +40,7 @@ export const MODEL = config.models.primary;
  */
 async function applyFixtureRewrites(parsed: GenerateResponse, pagePaths: string[]): Promise<void> {
   let fixturesContent: string;
-  try { fixturesContent = await readFile(join(ROOT, 'fixtures', 'index.ts'), 'utf-8'); }
+  try { fixturesContent = await readFile(join(ROOT, fixturesFile()), 'utf-8'); }
   catch { return; }
 
   const typeToFixture = buildFixtureMap(fixturesContent);
@@ -58,7 +58,7 @@ async function applyFixtureRewrites(parsed: GenerateResponse, pagePaths: string[
   if (target) {
     for (const [cls, fx] of typeToFixture) {
       try {
-        if (pomPrimaryPath(await readFile(join(ROOT, 'pages', `${cls}.ts`), 'utf-8')) === target) {
+        if (pomPrimaryPath(await readFile(join(ROOT, pomDir(), `${cls}.ts`), 'utf-8')) === target) {
           pageUnderTestFixture = fx;
           break;
         }
@@ -77,8 +77,7 @@ async function applyFixtureRewrites(parsed: GenerateResponse, pagePaths: string[
     }
 
     // Repoint test/expect from '@playwright/test' to the project's fixtures module.
-    const depth = f.path.split('/').length - 1; // tests/ui/x.spec.ts → 2 dirs deep
-    const fixturesPath = `${'../'.repeat(depth)}fixtures`;
+    const fixturesPath = fixturesImportSpecifier(f.path);
     const imp = rewriteFixturesImport(f.content, fixturesPath);
     if (imp.changed) {
       f.content = imp.content;
@@ -90,9 +89,9 @@ async function applyFixtureRewrites(parsed: GenerateResponse, pagePaths: string[
 /** Read all top-level pages/*.ts (POMs are on disk by the time we check the spec). */
 async function readPomContents(): Promise<string[]> {
   try {
-    const files = await readdir(join(ROOT, 'pages'));
+    const files = await readdir(join(ROOT, pomDir()));
     return await Promise.all(
-      files.filter((f) => f.endsWith('.ts')).map((f) => readFile(join(ROOT, 'pages', f), 'utf-8')),
+      files.filter((f) => f.endsWith('.ts')).map((f) => readFile(join(ROOT, pomDir(), f), 'utf-8')),
     );
   } catch {
     return [];
@@ -695,7 +694,7 @@ Never remove existing methods — only append new ones.` : '';
   }
 
   if (parsed.fixture_additions) {
-    const result = await safeWrite(join(ROOT, 'fixtures', 'index.ts'), parsed.fixture_additions);
+    const result = await safeWrite(join(ROOT, fixturesFile()), parsed.fixture_additions);
     if (result.ok) {
       written.push('fixtures/index.ts (updated)');
     } else {

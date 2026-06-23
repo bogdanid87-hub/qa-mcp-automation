@@ -9,7 +9,7 @@ import type { SiteAuditJson } from './site-audit.js';
 import { safeWrite } from '../lib/safe-write.js';
 import { TokenBudget } from './budget.js';
 import { compilePom, type PomSpec } from '../templates/pom.js';
-import { config, SITE_URL, SITE_HOST, buildPomHierarchyDescription } from '../config.js';
+import { config, SITE_URL, SITE_HOST, buildPomHierarchyDescription, pomDir } from '../config.js';
 import { formatOwnedElements, type OwnedElementsEntry } from './pom-index.js';
 import { errorContent } from '../lib/format-error.js';
 
@@ -159,7 +159,7 @@ async function loadOwnedElements(): Promise<OwnedElementsEntry[]> {
 
   const entries: OwnedElementsEntry[] = [];
   for (const c of classes) {
-    const relPath = `pages/${c.importFrom.replace(/^\.\//, '')}.ts`;
+    const relPath = `${pomDir()}/${c.importFrom.replace(/^\.\//, '')}.ts`;
     try {
       const content = await readFile(join(ROOT, relPath), 'utf-8');
       entries.push({ name: c.name, file: relPath, content });

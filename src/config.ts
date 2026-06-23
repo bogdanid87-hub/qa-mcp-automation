@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import { basename, join } from 'path';
+import { basename, dirname, join, relative, sep } from 'path';
 import { validate, type MqaConfig } from './config-schema.js';
 
 // Re-export the schema + validator so existing `from '../config.js'` imports keep
@@ -44,6 +44,33 @@ export const TESTS_VISUAL_PATH = join(ROOT, config.testing.registries.visual);
 
 export const SITE_URL = config.project.siteUrl;
 export const SITE_HOST = new URL(SITE_URL).hostname;
+
+/** Project-root-relative directory holding the page objects (default "pages"). */
+export function pomDir(): string {
+  return config.pom.dir ?? 'pages';
+}
+
+/** Project-root-relative path to the fixtures module (default "fixtures/index.ts"). */
+export function fixturesFile(): string {
+  return config.testing.fixtures ?? 'fixtures/index.ts';
+}
+
+/**
+ * The module specifier importing `toFile` from a spec at `fromSpec` — resolved relative
+ * to the spec's directory, with a trailing `/index` and the `.ts` extension dropped
+ * (e.g. tests/ui/x.spec.ts → fixtures/index.ts ⇒ "../../fixtures"). Pure/testable.
+ */
+export function relativeImport(fromSpec: string, toFile: string): string {
+  const posix = relative(dirname(fromSpec), toFile).split(sep).join('/')
+    .replace(/\.ts$/, '')
+    .replace(/\/index$/, '');
+  return posix.startsWith('.') ? posix : `./${posix}`;
+}
+
+/** The module specifier a spec at `specPath` uses to import the project's fixtures module. */
+export function fixturesImportSpecifier(specPath: string): string {
+  return relativeImport(specPath, fixturesFile());
+}
 
 /** Returns the correct registry file for a given spec path. */
 export function registryForSpec(specPath: string): string {
