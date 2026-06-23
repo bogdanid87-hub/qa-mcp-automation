@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { readFile } from 'fs/promises';
+import { readFile, readdir } from 'fs/promises';
 import { basename, join } from 'path';
 import { safeWrite } from '../lib/safe-write.js';
 import { getSystemBlocks, getSystemPrompt, buildUserBlocks, buildUserPrompt } from '../prompts/system.js';
@@ -18,6 +18,7 @@ import { extractJson } from './llm-utils.js';
 import { extractExportedFunctionNames, extractPomMethods } from './pom-index.js';
 import { reviewGeneratedFiles } from './review-generation.js';
 import { buildFixtureMap, pomPrimaryPath, rewriteNewPomFixtures } from './spec-fixture-rewrite.js';
+import { extractAssertingMethods, findNonAssertingTests } from './spec-checks.js';
 import { TokenBudget } from './budget.js';
 import { errorContent } from '../lib/format-error.js';
 import { formatReqHint } from './requirements-registry.js';
@@ -73,6 +74,18 @@ async function applyFixtureRewrites(parsed: GenerateResponse, pagePaths: string[
       f.content = content;
       process.stderr.write(`[generate-test] fixture rewrite (${f.path}) — ${rewrites.join('; ')}\n`);
     }
+  }
+}
+
+/** Read all top-level pages/*.ts (POMs are on disk by the time we check the spec). */
+async function readPomContents(): Promise<string[]> {
+  try {
+    const files = await readdir(join(ROOT, 'pages'));
+    return await Promise.all(
+      files.filter((f) => f.endsWith('.ts')).map((f) => readFile(join(ROOT, 'pages', f), 'utf-8')),
+    );
+  } catch {
+    return [];
   }
 }
 
@@ -699,11 +712,18 @@ Never remove existing methods — only append new ones.` : '';
   let lastFailureOutput = '';
 
   if (specFile) {
+    // Deterministic no-assertion guard: a test that asserts nothing passes vacuously,
+    // so the runner can't catch it. Resolved through the POMs (a test asserts directly
+    // or via an asserting POM method). POMs are on disk by now.
+    const assertingMethods = extractAssertingMethods(await readPomContents());
+    const noAssertTests = findNonAssertingTests(specFile.content, assertingMethods);
+
     const testOutput = await runTests(specFile.path);
     const passed = (testOutput.match(/✓/g) ?? []).length;
     const hasFailed = testOutput.includes('failed') || (testOutput.match(/✗/g) ?? []).length > 0;
 
-    if (passed > 0) {
+    // Only record as passing when it truly passed AND every test actually asserts.
+    if (passed > 0 && noAssertTests.length === 0) {
       const passingTests = parsePassingTests(testOutput);
       await recordPassingTests(passingTests);
       await tagSpecAfterRecording(specFile.path).catch(() => { /* non-fatal */ });
@@ -712,8 +732,22 @@ Never remove existing methods — only append new ones.` : '';
     }
 
     const registryName = registryNameForSpec(specFile.path);
-    if (passed > 0 && !hasFailed) {
+    if (passed > 0 && !hasFailed && noAssertTests.length === 0) {
       testRunNote = `✅ ${passed} test${passed === 1 ? '' : 's'} passed — recorded in ${registryName}`;
+    } else if (passed > 0 && !hasFailed && noAssertTests.length > 0) {
+      // Ran green but a test asserts nothing — never record it as a real pass.
+      passing = false;
+      const list = noAssertTests.map((t) => `"${t}"`).join(', ');
+      await writeTestAnnotation(
+        specFile.path,
+        `Tests with no assertion: ${list}`,
+        'broken',
+        `Test has no assertion — it passes without verifying anything. Add an expect() (directly or via a POM assertion method). Affected: ${list}`,
+      );
+      testRunNote = [
+        `⚠️ Ran green, but ${noAssertTests.length} test${noAssertTests.length === 1 ? '' : 's'} assert nothing — a test that verifies nothing passes vacuously.`,
+        `  NOT recorded as passing — annotated ⚠️ BROKEN: ${list}`,
+      ].join('\n');
     } else {
       passing = false;
       lastFailureOutput = testOutput;
