@@ -200,7 +200,9 @@ Never hardcode values that come from the live application — product names, pri
 - **Exception:** stable URL IDs (e.g. /product_details/1) and form field names are fine to hardcode
 
 ### Test data constants
-If test-data/constants.ts exists in the project, import from it instead of inventing values:
+If the Project conventions above name a test-data source (e.g. data/testData), use THAT module
+and ignore the test-data/constants guidance in this section. Otherwise, if test-data/constants.ts
+exists in the project, import from it instead of inventing values:
 - Use PRODUCTS[n].id for product navigation (e.g. /product_details/\${PRODUCTS[0].id})
 - Use SEARCH.valid[0] as a known-good search term, SEARCH.invalid[0] for empty-results test
 - Use TEST_USER for ANY form that takes user data — registration, login, checkout, subscription, reviews, contact forms, etc.
@@ -209,7 +211,7 @@ If test-data/constants.ts exists in the project, import from it instead of inven
   - TEST_USER.address / city / state / country / zipCode / mobile for any address field
 - Use REVIEW for review/feedback forms — REVIEW.name, REVIEW.email, REVIEW.text
 - Use PAYMENT.valid for checkout payment fields
-- Import only what is needed: import { PRODUCTS, TEST_USER, REVIEW } from '../../test-data/constants'
+- Import only what is needed: import { PRODUCTS, TEST_USER, REVIEW } from '../../test-data/constants' — unless the Project conventions above name a different data module, in which case import from that one
 - NEVER invent a name, email, address, card number, or review text inline — always import
 - If the test needs data that is NOT in constants.ts (e.g. a specific edge-case search term), note it as a comment so it can be added to the constants file: // TODO: add 'xyz' to SEARCH.invalid in test-data/constants.ts
 
