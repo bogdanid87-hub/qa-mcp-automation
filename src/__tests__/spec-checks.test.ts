@@ -1,5 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import { extractAssertingMethods, findNonAssertingTests } from '../tools/spec-checks';
+import { extractAssertingMethods, findNonAssertingTests, findUnknownApiClientCalls } from '../tools/spec-checks';
+
+describe('findUnknownApiClientCalls', () => {
+  const known = new Set(['verifyLogin', 'createAccount', 'deleteAccount']);
+  it('flags an invented method, not the real ones', () => {
+    const spec = `test('a', async ({ apiClient }) => {
+      await apiClient.verifyLogin(u, p);
+      await apiClient.post('/x', {});
+    });`;
+    expect(findUnknownApiClientCalls(spec, 'apiClient', known)).toEqual(['post']);
+  });
+  it('returns nothing when all calls are real', () => {
+    const spec = `await apiClient.verifyLogin(u, p); await apiClient.deleteAccount(u, p);`;
+    expect(findUnknownApiClientCalls(spec, 'apiClient', known)).toEqual([]);
+  });
+});
 
 describe('extractAssertingMethods', () => {
   it('flags methods that assert directly', () => {
