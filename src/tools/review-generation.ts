@@ -177,6 +177,80 @@ export function checkFixtureUsage(specFiles: { path: string; content: string }[]
   return issues;
 }
 
+// ── Deterministic check: POM calls page.goto() directly ─────────────────────
+
+/** Index just past the matching `}` for the `{` at openIdx. */
+function matchBrace(src: string, openIdx: number): number {
+  let depth = 0;
+  for (let i = openIdx; i < src.length; i++) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}' && --depth === 0) return i + 1;
+  }
+  return src.length;
+}
+
+/**
+ * Flags `page.goto(` inside a POM method other than `navigate` — POMs must route
+ * navigation through `this.navigate()` so popup dismissal and load-state handling stay
+ * consistent. The base class's own `navigate()` implementation is exempt.
+ */
+export function checkPomDirectGoto(pomFiles: { path: string; content: string }[]): ReviewIssue[] {
+  const issues: ReviewIssue[] = [];
+  const defRe = /\basync\s+(\w+)\s*\([^)]*\)\s*(?::[^{;]+)?\{/g;
+  for (const f of pomFiles) {
+    let m: RegExpExecArray | null;
+    defRe.lastIndex = 0;
+    while ((m = defRe.exec(f.content)) !== null) {
+      if (m[1] === 'navigate') continue; // the wrapper itself legitimately calls page.goto
+      const open = f.content.indexOf('{', m.index + m[0].length - 1);
+      const body = f.content.slice(open + 1, matchBrace(f.content, open) - 1);
+      if (/\bpage\.goto\s*\(/.test(body)) {
+        issues.push({
+          severity: 'warning',
+          category: 'pom-direct-goto',
+          file: f.path,
+          message: `\`${m[1]}()\` calls page.goto() directly — use this.navigate(path) instead so popup dismissal and load-state handling stay consistent (CORE_RULES Navigation).`,
+        });
+      }
+    }
+  }
+  return issues;
+}
+
+// ── Deterministic check: not.toBeVisible() race footgun ─────────────────────
+
+const WAIT_SIGNAL = /waitFor|toBeVisible|toHaveURL|toHaveText|toHaveCount|waitForResponse|waitForLoadState/;
+const ACTION_SIGNAL = /\.(click|press|fill|check|selectOption|setInputFiles|tap)\s*\(/;
+
+/**
+ * Flags `expect(...).not.toBeVisible()` used to assert "the site rejected this" right
+ * after an action, with no explicit wait first — the assertion runs before the site
+ * responds and gives a false pass (CORE_RULES). A `.not.toBeVisible()` preceded by a
+ * wait/positive assertion is left alone.
+ */
+export function checkNotVisibleFootgun(specFiles: { path: string; content: string }[]): ReviewIssue[] {
+  const issues: ReviewIssue[] = [];
+  for (const f of specFiles) {
+    const lines = f.content.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (!/\.not\s*\.\s*toBeVisible\s*\(/.test(lines[i])) continue;
+      // Look only at the lines BEFORE the assertion — the footgun line itself contains
+      // "toBeVisible", which would otherwise count as a (false) preceding wait.
+      const window = lines.slice(Math.max(0, i - 3), i).join('\n');
+      if (ACTION_SIGNAL.test(window) && !WAIT_SIGNAL.test(window)) {
+        issues.push({
+          severity: 'warning',
+          category: 'race-not-visible',
+          file: f.path,
+          message: 'Possible race: `.not.toBeVisible()` right after an action can pass before the site responds. If asserting the site rejected something, wait explicitly first (await the error to appear, or waitForResponse).',
+        });
+        break; // one note per spec is enough
+      }
+    }
+  }
+  return issues;
+}
+
 // ── LLM call: remaining CORE_RULES checks ──────────────────────────────────
 
 interface ReviewLlmResponse {
@@ -317,10 +391,12 @@ export async function reviewGeneratedFiles(
 
   if (pomFiles.length > 0) {
     issues.push(...checkForwardingAliases(pomFiles, await getPomIndex()));
+    issues.push(...checkPomDirectGoto(pomFiles));
   }
 
   if (specFiles.length > 0) {
     issues.push(...checkFixtureUsage(specFiles));
+    issues.push(...checkNotVisibleFootgun(specFiles));
   }
 
   if (files.length > 0) {

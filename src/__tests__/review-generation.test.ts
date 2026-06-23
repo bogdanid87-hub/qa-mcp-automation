@@ -4,6 +4,8 @@ import {
   checkLocatorCollisions,
   checkForwardingAliases,
   checkFixtureUsage,
+  checkPomDirectGoto,
+  checkNotVisibleFootgun,
   reviewGeneratedFiles,
 } from '../tools/review-generation';
 
@@ -187,6 +189,45 @@ test('adds to cart', async ({ page, cartPage }) => {
 `,
     }];
     expect(checkFixtureUsage(specFiles)).toEqual([]);
+  });
+});
+
+describe('checkPomDirectGoto', () => {
+  it('flags a POM method (not navigate) calling page.goto()', () => {
+    const pom = `export class P {
+      async navigate(path) { await this.page.goto(path); }
+      async goto() { await this.page.goto('/'); }
+    }`;
+    const issues = checkPomDirectGoto([{ path: 'pages/P.ts', content: pom }]);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toContain('goto()');
+    expect(issues[0].category).toBe('pom-direct-goto');
+  });
+
+  it('does not flag a POM that only uses this.navigate()', () => {
+    const pom = `export class P {
+      async goto() { await this.navigate('/'); }
+    }`;
+    expect(checkPomDirectGoto([{ path: 'pages/P.ts', content: pom }])).toHaveLength(0);
+  });
+});
+
+describe('checkNotVisibleFootgun', () => {
+  it('flags .not.toBeVisible() right after an action with no wait', () => {
+    const spec = `test('x', async ({ page }) => {
+      await page.click('#submit');
+      await expect(page.locator('#err')).not.toBeVisible();
+    });`;
+    expect(checkNotVisibleFootgun([{ path: 'tests/ui/x.spec.ts', content: spec }])).toHaveLength(1);
+  });
+
+  it('does not flag when a wait/positive assertion precedes it', () => {
+    const spec = `test('x', async ({ page }) => {
+      await page.click('#submit');
+      await expect(page.locator('#ok')).toBeVisible();
+      await expect(page.locator('#modal')).not.toBeVisible();
+    });`;
+    expect(checkNotVisibleFootgun([{ path: 'tests/ui/x.spec.ts', content: spec }])).toHaveLength(0);
   });
 });
 
