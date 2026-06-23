@@ -8,8 +8,11 @@ import {
   extractLocatorFieldNames,
   buildPomConfig,
   computePomApply,
+  renderConventionsBlock,
   type PomHierarchy,
+  type DetectedConventions,
 } from '../tools/learn-conventions';
+import { conventionsPreamble } from '../prompts/system';
 
 // ── POM hierarchy ────────────────────────────────────────────────────────────
 
@@ -229,5 +232,52 @@ describe('computePomApply', () => {
   it('reports no change when config.pom already matches', () => {
     const current = { pom: buildPomConfig(HIERARCHY) };
     expect(computePomApply(current, HIERARCHY).changed).toBe(false);
+  });
+});
+
+// ── renderConventionsBlock + prompt injection (PR 3) ─────────────────────────
+
+describe('renderConventionsBlock', () => {
+  const detected: DetectedConventions = {
+    hierarchy: HIERARCHY, // collapsed, ProductListingPage intermediate, SidebarComponent
+    fixtures: { exportsTest: true, exportsExpect: true, hasTrackCleanup: false, baseExtension: './routeBlocker', injectedFixtures: [{ name: 'homePage', type: 'HomePage' }, { name: 'apiClient', type: 'ApiClient' }] },
+    idioms: { pomConsumption: 'fixture-injection', pomCounts: { injected: 9, instantiated: 2 }, testImportPath: '../../fixtures/index', dataSources: ['../../data/testData'], apiPattern: 'apiClient', apiCounts: { apiClient: 2, request: 0 }, usesTags: false, usesSteps: false },
+    runner: null,
+  };
+
+  it('emits the collapsed-hierarchy, fixture-injection, data, apiClient and no-trackCleanup rules', () => {
+    const block = renderConventionsBlock(detected);
+    expect(block).toContain('there is NO separate site class');
+    expect(block).toContain('injected fixtures');
+    expect(block).toContain('`../../fixtures/index`');
+    expect(block).toContain('`../../data/testData`');
+    expect(block).toContain('apiClient');
+    expect(block).toContain('NO `trackCleanup` fixture');
+    expect(block).toContain('SidebarComponent');
+  });
+
+  it('omits inapplicable lines (no trackCleanup warning when it exists; no apiClient line for request style)', () => {
+    const block = renderConventionsBlock({
+      ...detected,
+      fixtures: { ...detected.fixtures!, hasTrackCleanup: true },
+      idioms: { ...detected.idioms, apiPattern: 'request', dataSources: [] },
+    });
+    expect(block).not.toContain('NO `trackCleanup`');
+    expect(block).not.toContain('ApiClient abstraction'); // the API-pattern line is omitted for request-style
+    expect(block).not.toContain('Test data lives');
+  });
+});
+
+describe('conventionsPreamble (prompt injection)', () => {
+  it('wraps conventions in a highest-priority precedence header', () => {
+    const p = conventionsPreamble('- do X\n- do Y');
+    expect(p).toContain('highest priority');
+    expect(p).toMatch(/FOLLOW THE CONVENTION HERE/);
+    expect(p).toContain('- do X');
+  });
+
+  it('returns empty string when no conventions are set', () => {
+    expect(conventionsPreamble(undefined)).toBe('');
+    expect(conventionsPreamble('   ')).toBe('');
   });
 });

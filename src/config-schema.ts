@@ -93,6 +93,8 @@ export interface MqaConfig {
   audit?: AuditConfig;
   /** Optional project-specific prompt enrichments injected into generation prompts. */
   prompts?: {
+    /** Detected authoring conventions (from learn_conventions) injected at the top of the generation prompt; takes precedence over the engine's general rules. */
+    conventions?: string;
     /** Site-specific API quirks (response shapes, tricky fields) injected into the API test prompt. */
     apiNotes?: string;
     /** Site-specific API response contract (e.g. HTTP status vs in-body result code) for the API test prompt. */
