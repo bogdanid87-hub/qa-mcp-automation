@@ -326,6 +326,16 @@ export function computePomApply(currentConfig: Record<string, unknown>, hierarch
   return { changed: summary.length > 0, newPom, summary, newConfigJson: JSON.stringify(next, null, 2) + '\n' };
 }
 
+/** The project's primary UI-test project name, for run_tests's default --project. */
+export function primaryProject(runner: RunnerConfig | null): string | null {
+  if (!runner || runner.projects.length === 0) return null;
+  const skip = new Set(['setup', 'api', 'visual']);
+  return runner.projects.find((p) => /^chromium$/i.test(p))
+    ?? runner.projects.find((p) => /chrom/i.test(p))
+    ?? runner.projects.find((p) => !skip.has(p.toLowerCase()))
+    ?? runner.projects[0];
+}
+
 export interface DetectedConventions {
   hierarchy: PomHierarchy | null;
   fixtures: FixtureShape | null;
@@ -551,6 +561,13 @@ async function applySection(
       const apply = computePomApply(merged, detected.hierarchy);
       merged = JSON.parse(apply.newConfigJson);
       diff.push(...(apply.changed ? apply.summary.map((s) => `pom — ${s}`) : ['pom — already matches the detected hierarchy.']));
+    }
+    // Set the runner project so run_tests targets the project's own primary project.
+    const primary = primaryProject(detected.runner);
+    const testing = merged.testing as { runnerProject?: string } | undefined;
+    if (primary && testing && testing.runnerProject !== primary) {
+      diff.push(`testing.runnerProject — ${testing.runnerProject ?? '(unset)'} → ${primary}`);
+      merged = { ...merged, testing: { ...testing, runnerProject: primary } };
     }
   }
 

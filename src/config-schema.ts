@@ -72,6 +72,8 @@ export interface MqaConfig {
       e2e: string;
       visual: string;
     };
+    /** Playwright project name run_tests targets by default (default "chromium"). Set from the project's config by learn_conventions. */
+    runnerProject?: string;
   };
   riskTiers: {
     critical: string[];

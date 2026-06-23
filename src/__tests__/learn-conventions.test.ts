@@ -9,8 +9,10 @@ import {
   buildPomConfig,
   computePomApply,
   renderConventionsBlock,
+  primaryProject,
   type PomHierarchy,
   type DetectedConventions,
+  type RunnerConfig,
 } from '../tools/learn-conventions';
 import { conventionsPreamble } from '../prompts/system';
 
@@ -173,6 +175,23 @@ describe('detectRunnerConfig + stripComments', () => {
   it('stripComments removes block and full-line comments', () => {
     expect(stripComments('a\n// gone\nb /* x */')).toContain('a');
     expect(stripComments('a\n// gone\nb')).not.toContain('gone');
+  });
+});
+
+describe('primaryProject', () => {
+  const r = (projects: string[]): RunnerConfig => ({ projects, hasChromium: false, hasFirefox: false, hasWebkit: false, hasVisual: false, setupStyle: 'none', storageState: null });
+  it('prefers an exact chromium project', () => {
+    expect(primaryProject(r(['setup', 'chromium', 'api']))).toBe('chromium');
+  });
+  it('falls back to a chrome-ish project name', () => {
+    expect(primaryProject(r(['setup', 'Desktop Chrome', 'visual']))).toBe('Desktop Chrome');
+  });
+  it('skips setup/api/visual when no chromium', () => {
+    expect(primaryProject(r(['setup', 'e2e', 'api', 'visual']))).toBe('e2e');
+  });
+  it('returns null when there are no projects', () => {
+    expect(primaryProject(r([]))).toBeNull();
+    expect(primaryProject(null)).toBeNull();
   });
 });
 
