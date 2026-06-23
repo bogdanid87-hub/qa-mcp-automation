@@ -11,6 +11,8 @@ import {
   renderConventionsBlock,
   findApiClientFixture,
   resolveClassImport,
+  detectPomDir,
+  detectFixturesFile,
   primaryProject,
   type PomHierarchy,
   type DetectedConventions,
@@ -180,6 +182,30 @@ describe('detectRunnerConfig + stripComments', () => {
   });
 });
 
+describe('detectPomDir / detectFixturesFile (non-standard layouts)', () => {
+  it('picks the first candidate dir that has a page-object class', () => {
+    expect(detectPomDir([
+      { dir: 'pages', contents: ['// nothing'] },
+      { dir: 'src/pages', contents: ['export class HomePage extends BasePage {}'] },
+    ])).toBe('src/pages');
+    expect(detectPomDir([{ dir: 'pages', contents: [] }])).toBeNull();
+  });
+
+  it('picks the first fixtures file that exports test', () => {
+    expect(detectFixturesFile([
+      { path: 'fixtures/index.ts', content: '// no export' },
+      { path: 'support/fixtures.ts', content: 'export const test = base.extend({});' },
+    ])).toBe('support/fixtures.ts');
+    expect(detectFixturesFile([{ path: 'fixtures/index.ts', content: 'nothing' }])).toBeNull();
+  });
+
+  it('resolveClassImport honors a non-standard fixtures dir', () => {
+    const content = "import { ApiClient } from '../api/ApiClient';";
+    expect(resolveClassImport(content, 'ApiClient', 'support')).toBe('api/ApiClient.ts');
+    expect(resolveClassImport(content, 'ApiClient', 'fixtures')).toBe('api/ApiClient.ts');
+  });
+});
+
 describe('findApiClientFixture / resolveClassImport', () => {
   const fx = { exportsTest: true, exportsExpect: true, hasTrackCleanup: false, baseExtension: './routeBlocker', injectedFixtures: [{ name: 'homePage', type: 'HomePage' }, { name: 'apiClient', type: 'ApiClient' }] };
   it('finds the api-client fixture by name/type', () => {
@@ -278,6 +304,8 @@ describe('renderConventionsBlock', () => {
     idioms: { pomConsumption: 'fixture-injection', pomCounts: { injected: 9, instantiated: 2 }, testImportPath: '../../fixtures/index', dataSources: ['../../data/testData'], apiPattern: 'apiClient', apiCounts: { apiClient: 2, request: 0 }, usesTags: false, usesSteps: false },
     runner: null,
     apiClient: { fixtureName: 'apiClient', className: 'ApiClient', methods: [{ name: 'verifyLogin', params: 'email: string, password: string', returnType: '' }] },
+    pomDir: 'pages',
+    fixturesPath: 'fixtures/index.ts',
   };
 
   it('emits the collapsed-hierarchy, fixture-injection, data, apiClient and no-trackCleanup rules', () => {
