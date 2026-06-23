@@ -26,6 +26,31 @@ export function pomPrimaryPath(pomContent: string): string | null {
   return m ? m[1] : null;
 }
 
+/**
+ * Repoint a spec's `test`/`expect` import away from '@playwright/test' to the project's
+ * fixtures module (the convention) — using the base `test` bypasses the custom fixtures
+ * (ad-blocking, page-object fixtures, trackCleanup). Non-fixture names imported from
+ * '@playwright/test' (Page, Locator, APIResponse, …) are kept on a separate import.
+ * `fixturesPath` is the spec-relative path to the fixtures module (e.g. '../../fixtures').
+ * Returns the spec unchanged if it doesn't import `test` from '@playwright/test'.
+ */
+export function rewriteFixturesImport(spec: string, fixturesPath: string): { content: string; changed: boolean } {
+  const re = /import\s*\{([^}]*)\}\s*from\s*['"]@playwright\/test['"]\s*;?/;
+  const m = spec.match(re);
+  if (!m) return { content: spec, changed: false };
+
+  const names = m[1].split(',').map((s) => s.trim()).filter(Boolean);
+  if (!names.includes('test')) return { content: spec, changed: false }; // e.g. only `APIResponse` — fine
+
+  const fixtureNames = names.filter((n) => n === 'test' || n === 'expect');
+  const rest = names.filter((n) => n !== 'test' && n !== 'expect');
+
+  let replacement = `import { ${fixtureNames.join(', ')} } from '${fixturesPath}';`;
+  if (rest.length) replacement += `\nimport { ${rest.join(', ')} } from '@playwright/test';`;
+
+  return { content: spec.replace(re, replacement), changed: true };
+}
+
 const CALLBACK_RE = /async\s*\(\s*\{([^}]*)\}\s*\)\s*=>\s*\{/g;
 const NEW_DECL_RE = /[ \t]*(?:const|let)\s+(\w+)\s*=\s*new\s+(\w+)\s*\(\s*page\s*\)\s*;?[ \t]*\n?/g;
 
