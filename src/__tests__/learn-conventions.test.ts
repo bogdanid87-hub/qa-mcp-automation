@@ -285,6 +285,7 @@ describe('renderConventionsBlock', () => {
     expect(block).toContain('there is NO separate site class');
     expect(block).toContain('`../../fixtures/index`');
     expect(block).toContain('`../../data/testData`');
+    expect(block).toContain('do NOT import from `test-data/constants`'); // explicit negation vs the engine default
     expect(block).toContain('apiClient');
     expect(block).toContain('NO `trackCleanup` fixture');
     expect(block).toContain('SidebarComponent');

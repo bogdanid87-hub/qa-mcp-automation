@@ -461,7 +461,7 @@ export function renderConventionsBlock(d: DetectedConventions): string {
     out.push(`- Import \`test\`/\`expect\` from \`${d.idioms.testImportPath}\`.`);
   }
   if (d.idioms.dataSources.length) {
-    out.push(`- Test data lives in ${d.idioms.dataSources.map((s) => `\`${s}\``).join(', ')} — use it instead of inlining literals.`);
+    out.push(`- Test data lives in ${d.idioms.dataSources.map((s) => `\`${s}\``).join(', ')} — import from there, do NOT import from \`test-data/constants\` or inline literals.`);
   }
   if (d.idioms.apiPattern === 'apiClient' || d.idioms.apiPattern === 'mixed') {
     out.push('- API tests use the project\'s `apiClient` fixture (an ApiClient abstraction), not the raw Playwright `request` fixture.');
