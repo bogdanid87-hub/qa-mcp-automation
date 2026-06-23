@@ -392,6 +392,51 @@ export function renderConventionsReport(d: DetectedConventions): string {
 
 function yn(b: boolean): string { return b ? '✅' : '❌'; }
 
+/**
+ * Render the detected conventions as a concise, imperative block for injection into the
+ * generation system prompt. Deterministic (no LLM) — only emits lines that actually apply,
+ * so a project that doesn't use, say, an ApiClient gets no API-pattern instruction.
+ */
+export function renderConventionsBlock(d: DetectedConventions): string {
+  const out: string[] = ['This project already follows the conventions below — match them exactly:', ''];
+  const h = d.hierarchy;
+
+  if (h) {
+    if (h.collapsed) {
+      out.push(`- Page helpers extend \`${h.baseClass}\`, which itself owns the site nav/footer — there is NO separate site class. New page helpers extend \`${h.baseClass}\` (or an intermediate below), never a "SitePage".`);
+    } else {
+      out.push(`- Page-helper hierarchy: \`${h.baseClass}\` (base) → \`${h.siteClass}\` (owns site nav/footer). Full pages extend \`${h.siteClass}\`.`);
+    }
+    if (h.intermediateClasses.length) {
+      out.push(`- Intermediate page classes (extend the right one when applicable): ${h.intermediateClasses.map((c) => `\`${c.name}\` (${c.importFrom})`).join(', ')}.`);
+    }
+    if (h.components.length) {
+      out.push(`- Reusable UI components live in pages/components/ (${h.components.map((c) => `\`${c}\``).join(', ')}) — compose these rather than re-implementing their locators.`);
+    }
+  }
+
+  if (d.idioms.pomConsumption === 'fixture-injection' || d.idioms.pomConsumption === 'mixed') {
+    out.push('- Consume page helpers via injected fixtures destructured from the test callback (e.g. `async ({ homePage }) => …`) — do NOT instantiate them with `new`.');
+  }
+  if (d.fixtures?.injectedFixtures.length) {
+    out.push(`- Available page/helper fixtures: ${d.fixtures.injectedFixtures.slice(0, 24).map((f) => `\`${f.name}\``).join(', ')}${d.fixtures.injectedFixtures.length > 24 ? ' …' : ''}.`);
+  }
+  if (d.idioms.testImportPath) {
+    out.push(`- Import \`test\`/\`expect\` from \`${d.idioms.testImportPath}\`.`);
+  }
+  if (d.idioms.dataSources.length) {
+    out.push(`- Test data lives in ${d.idioms.dataSources.map((s) => `\`${s}\``).join(', ')} — use it instead of inlining literals.`);
+  }
+  if (d.idioms.apiPattern === 'apiClient' || d.idioms.apiPattern === 'mixed') {
+    out.push('- API tests use the project\'s `apiClient` fixture (an ApiClient abstraction), not the raw Playwright `request` fixture.');
+  }
+  if (d.fixtures && !d.fixtures.hasTrackCleanup) {
+    out.push('- This project has NO `trackCleanup` fixture — do NOT reference or add one; handle any teardown the way the existing specs do.');
+  }
+
+  return out.join('\n') + '\n';
+}
+
 // ── I/O wrapper (the MCP tool) ──────────────────────────────────────────────────
 
 async function readDirTs(dir: string): Promise<{ name: string; content: string }[]> {
@@ -451,7 +496,7 @@ export async function gatherConventions(): Promise<DetectedConventions> {
 }
 
 export async function learnConventionsTool(
-  args: { output?: string; applyPom?: boolean; write?: boolean } = {},
+  args: { output?: string; applyPom?: boolean; applyConventions?: boolean; write?: boolean } = {},
 ): Promise<{ content: { type: 'text'; text: string }[] }> {
   await ensureWorkspace();
   const detected = await gatherConventions();
@@ -471,42 +516,62 @@ export async function learnConventionsTool(
     detected.runner ? `Runner: projects ${detected.runner.projects.join(', ') || '(none)'}` : 'Runner: no config',
   ];
 
-  if (args.applyPom) {
-    lines.push('', ...(await applyPomSection(detected.hierarchy, !!args.write)));
+  if (args.applyPom || args.applyConventions) {
+    lines.push('', ...(await applySection(detected, { pom: !!args.applyPom, conventions: !!args.applyConventions, write: !!args.write })));
   } else {
-    lines.push('', 'Review the report. Run with --apply-pom to write the detected hierarchy into mcp-qa.config.json.');
+    lines.push('', 'Review the report. Run with --apply-pom and/or --apply-conventions to write into mcp-qa.config.json.');
   }
 
   return { content: [{ type: 'text', text: lines.join('\n') }] };
 }
 
-/** Apply (or dry-run) the detected POM hierarchy into mcp-qa.config.json. Returns summary lines. */
-async function applyPomSection(hierarchy: PomHierarchy | null, write: boolean): Promise<string[]> {
-  if (!hierarchy) return ['⚠️  --apply-pom: no page objects found under pages/ — nothing to apply.'];
-
+/**
+ * Apply (or dry-run) the detected hierarchy and/or conventions block into
+ * mcp-qa.config.json. Returns summary lines. Both pieces merge into one config write.
+ */
+async function applySection(
+  detected: DetectedConventions,
+  opts: { pom: boolean; conventions: boolean; write: boolean },
+): Promise<string[]> {
   const configPath = join(ROOT, 'mcp-qa.config.json');
   let raw: string;
   try { raw = await readFile(configPath, 'utf-8'); }
-  catch { return ['⚠️  --apply-pom: mcp-qa.config.json not found — run qa-init first, then --apply-pom.']; }
+  catch { return ['⚠️  --apply: mcp-qa.config.json not found — run qa-init first, then apply.']; }
 
-  let currentConfig: Record<string, unknown>;
-  try { currentConfig = JSON.parse(raw); }
-  catch (err) { return [`⚠️  --apply-pom: could not parse mcp-qa.config.json: ${(err as Error).message}`]; }
+  let merged: Record<string, unknown>;
+  try { merged = JSON.parse(raw); }
+  catch (err) { return [`⚠️  --apply: could not parse mcp-qa.config.json: ${(err as Error).message}`]; }
 
-  const apply = computePomApply(currentConfig, hierarchy);
-  try { validate(JSON.parse(apply.newConfigJson)); }
-  catch (err) { return [`⚠️  --apply-pom: the merged config is invalid, not writing: ${(err as Error).message}`]; }
+  const diff: string[] = [];
 
-  if (!apply.changed) return ['✓ config.pom already matches the detected hierarchy — no change.'];
+  if (opts.pom) {
+    if (!detected.hierarchy) {
+      diff.push('pom: no page objects found under pages/ — skipped.');
+    } else {
+      const apply = computePomApply(merged, detected.hierarchy);
+      merged = JSON.parse(apply.newConfigJson);
+      diff.push(...(apply.changed ? apply.summary.map((s) => `pom — ${s}`) : ['pom — already matches the detected hierarchy.']));
+    }
+  }
 
-  const header = write ? '✅ Applied to mcp-qa.config.json — pom changes:' : '👀 Dry run — proposed pom changes (not written):';
-  const out = [header, ...apply.summary.map((s) => `  - ${s}`)];
+  if (opts.conventions) {
+    const block = renderConventionsBlock(detected);
+    const prev = (merged.prompts as { conventions?: string } | undefined)?.conventions;
+    merged = { ...merged, prompts: { ...(merged.prompts as object ?? {}), conventions: block } };
+    diff.push(prev === block ? 'prompts.conventions — already up to date.' : `prompts.conventions — ${prev ? 'updated' : 'set'} (${block.trimEnd().split('\n').length} lines).`);
+  }
 
-  if (write) {
-    const w = await safeWrite(configPath, apply.newConfigJson, { allowOverwrite: true });
-    if (!w.ok) return [`⚠️  --apply-pom: failed to write mcp-qa.config.json: ${w.reason}`];
+  try { validate(merged as unknown as Parameters<typeof validate>[0]); }
+  catch (err) { return [`⚠️  --apply: the merged config is invalid, not writing: ${(err as Error).message}`]; }
+
+  const header = opts.write ? '✅ Applied to mcp-qa.config.json:' : '👀 Dry run — proposed changes (not written):';
+  const out = [header, ...diff.map((s) => `  - ${s}`)];
+
+  if (opts.write) {
+    const w = await safeWrite(configPath, JSON.stringify(merged, null, 2) + '\n', { allowOverwrite: true });
+    if (!w.ok) return [`⚠️  --apply: failed to write mcp-qa.config.json: ${w.reason}`];
   } else {
-    out.push('', 'Re-run with `--apply-pom --write` to apply these changes.');
+    out.push('', 'Re-run with `--write` to apply these changes.');
   }
   return out;
 }

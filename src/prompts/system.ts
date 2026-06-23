@@ -136,9 +136,11 @@ Locator rules:
 - Each page class gets its own fixture (lazily instantiated with { page })
 - Check EXISTING FIXTURES before adding a new one
 - All fixtures share the single overridden 'page' (which has ad-blocking + popup handling)
-- trackCleanup is a built-in fixture (already in fixtures/index.ts) for registering
-  teardown of data created during a test — see "User management & test data cleanup"
-  below. It already exists; never propose re-adding it via fixture_additions.
+- trackCleanup: the engine's default scaffold ships a built-in trackCleanup fixture in
+  fixtures/index.ts for registering teardown of data created during a test — see "User
+  management & test data cleanup" below. When it exists, never propose re-adding it via
+  fixture_additions. If the Project conventions above say this project has NO trackCleanup
+  fixture, do NOT reference it — handle teardown the way the project's existing specs do.
 
 Specs must NEVER instantiate a POM with \`new SomePage(page)\`. Always obtain it through a
 fixture, destructured straight from the test callback. If fixtures/index.ts does not yet
@@ -163,7 +165,7 @@ The spec then consumes it directly — no manual construction:
   RIGHT: test('...', async ({ page, cartPage }) => { ... });
 
 ### Test file conventions
-- Import: import { test, expect } from '../../fixtures'  (for ${UI_DIR}/ and ${E2E_DIR}/)
+- Import: import { test, expect } from '../../fixtures'  (for ${UI_DIR}/ and ${E2E_DIR}/) — unless the Project conventions above specify a different fixtures import path
 - Wrap every test inside test.describe('Meaningful Name', () => { ... })
 - Every test MUST contain at least one expect() assertion
 - The spec file is determined by the PRIMARY page where the main user action happens — not by where the test ends or what it asserts on
@@ -525,10 +527,29 @@ async function loadFrameworkRules(): Promise<string> {
  * Returns the full system prompt: core rules + any promoted framework rules +
  * any accumulated project-specific learned rules.
  */
+/**
+ * Lead the prompt with the project's detected conventions and explicit precedence —
+ * they reflect the project's existing code, so where any general rule conflicts, the
+ * model follows these. Returns '' when no conventions are configured. Pure/testable.
+ */
+export function conventionsPreamble(conventions?: string): string {
+  const text = conventions?.trim();
+  if (!text) return '';
+  return `## Project conventions (highest priority — detected from this project's existing code)
+
+When any general rule further down conflicts with a convention here, FOLLOW THE CONVENTION HERE.
+
+${text}
+
+---
+
+`;
+}
+
 export async function getSystemPrompt(): Promise<string> {
   const [framework, learned] = await Promise.all([loadFrameworkRules(), loadLearnedRules()]);
 
-  let prompt = CORE_RULES;
+  let prompt = conventionsPreamble(config.prompts?.conventions) + CORE_RULES;
 
   if (framework) {
     prompt += `

@@ -49,9 +49,10 @@ const HANDLERS: Record<string, (args: any) => unknown> = {
   generate_mock:         (args) => generateMockTool(args),
   generate_app_knowledge:(args) => generateAppKnowledgeTool(args),
   learn_conventions:     (args) => learnConventionsTool({
-    output:   args.output,
-    applyPom: args.apply_pom,
-    write:    args.write,
+    output:           args.output,
+    applyPom:         args.apply_pom,
+    applyConventions: args.apply_conventions,
+    write:            args.write,
   }),
   plan_e2e:              (args) => planE2eTool(args),
   init_project:          (args) => initProjectTool({
