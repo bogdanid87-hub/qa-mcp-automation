@@ -208,7 +208,7 @@ const FIXTURES_CANDIDATES = ['fixtures/index.ts', 'fixtures.ts', 'support/fixtur
 /** First candidate dir whose .ts files declare a page-object class; null if none. */
 export function detectPomDir(scanned: { dir: string; contents: string[] }[]): string | null {
   for (const { dir, contents } of scanned) {
-    if (contents.some((c) => /export\s+class\s+\w+/.test(c))) return dir;
+    if (contents.some((c) => /export\s+(?:abstract\s+|default\s+)*class\s+\w+/.test(c))) return dir;
   }
   return null;
 }
@@ -552,7 +552,7 @@ export async function gatherConventions(): Promise<DetectedConventions> {
 
   const componentFiles = await readDirTs(`${pomDir}/components`);
   const componentClassNames = componentFiles
-    .map((f) => f.content.match(/export\s+class\s+(\w+)/)?.[1])
+    .map((f) => f.content.match(/export\s+(?:abstract\s+|default\s+)*class\s+(\w+)/)?.[1])
     .filter((x): x is string => !!x);
 
   const scannedFixtures: { path: string; content: string }[] = [];
