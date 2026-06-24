@@ -93,6 +93,20 @@ describe('detectPomHierarchy — collapsed (nav on the base class)', () => {
   it('returns null when there are no page classes', () => {
     expect(detectPomHierarchy([{ name: 'pages/empty.ts', content: '// nothing' }])).toBeNull();
   });
+
+  it('recognises an `export abstract class` base (real saucedemo shape)', () => {
+    // Regression: a real project declared `export abstract class BasePage`; the class
+    // regex missed the `abstract` modifier, so subclasses looked like roots and the
+    // wrong base was picked.
+    const pages = [
+      { name: 'pages/BasePage.ts', content: 'export abstract class BasePage {\n  readonly nav: Locator;\n  async goto() { await expect(this.page).toHaveURL("/"); }\n}' },
+      { name: 'pages/CartPage.ts', content: 'import { BasePage } from "./BasePage";\nexport class CartPage extends BasePage { async checkout() {} }' },
+      { name: 'pages/LoginPage.ts', content: 'import { BasePage } from "./BasePage";\nexport class LoginPage extends BasePage { async login() {} }' },
+    ];
+    const h = detectPomHierarchy(pages)!;
+    expect(h.baseClass).toBe('BasePage');
+    expect(h.leafPages.sort()).toEqual(['CartPage', 'LoginPage']);
+  });
 });
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────

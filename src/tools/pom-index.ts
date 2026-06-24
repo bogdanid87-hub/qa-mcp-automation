@@ -33,7 +33,7 @@ export interface OwnedElementsEntry {
   content: string;
 }
 
-const CLASS_RE = /export\s+class\s+(\w+)(?:\s+extends\s+(\w+))?/;
+const CLASS_RE = /export\s+(?:abstract\s+|default\s+)*class\s+(\w+)(?:\s+extends\s+(\w+))?/;
 
 const METHOD_RE = /async\s+(\w+)\s*(?:<[^>]*>)?\s*\(([^)]*)\)\s*(?::\s*([^{]+?))?\s*\{/g;
 
