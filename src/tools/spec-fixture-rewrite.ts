@@ -70,11 +70,13 @@ export function rewriteToInstantiation(
   pomClasses: Set<string>,
   importPathFor: (className: string) => string,
 ): { content: string; changed: boolean } {
-  // No fixtures module exists — test/expect come from @playwright/test.
+  // No fixtures module exists — test/expect must come from @playwright/test. Repoint any
+  // non-@playwright/test source the model used (a fixtures module that doesn't exist here).
   const working = spec.replace(
-    /import\s*\{([^}]*\btest\b[^}]*)\}\s*from\s*['"][^'"]+['"]\s*;?/,
-    (_m, names) => `import {${names}} from '@playwright/test';`,
+    /import\s*\{([^}]*\btest\b[^}]*)\}\s*from\s*['"](?!@playwright\/test['"])[^'"]+['"]\s*;?/,
+    (_m, names) => `import { ${names.trim()} } from '@playwright/test';`,
   );
+  const importChanged = working !== spec;
 
   const classesToImport = new Set<string>();
   let out = '';
@@ -98,7 +100,8 @@ export function rewriteToInstantiation(
   }
   out += working.slice(cursor);
 
-  if (classesToImport.size === 0) return { content: working, changed: false };
+  // No POM params to convert: the only possible change is the import repoint above.
+  if (classesToImport.size === 0) return { content: out, changed: importChanged };
 
   const imports = [...classesToImport].sort().map((c) => `import { ${c} } from '${importPathFor(c)}';`).join('\n');
   const firstNlAfterImport = out.indexOf('\n', out.indexOf('import '));
