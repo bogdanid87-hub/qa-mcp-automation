@@ -1,10 +1,26 @@
 # Showcase — one engine, three very different real projects
 
-The engine's headline claim is *"drop it into any existing Playwright project and it
-generates tests in **that project's** house style."* This page proves it on three real,
-**independently-authored** open-source projects with deliberately different conventions —
-including one that hadn't been touched in **five years**. Nothing here was adapted to suit
-the engine; the engine adapted to each of them.
+**What this is.** `qa-mcp-engine` generates [Playwright](https://playwright.dev) tests for a
+website automatically. You run it inside [Claude Code](https://claude.com/claude-code) and ask,
+in plain English, for the test you want; it reads your existing test suite and writes new tests
+that match it.
+
+**Why "match it" is the hard part.** A generic AI test generator writes code in *its* own
+style — foreign imports, the wrong folder, a different way of wiring page objects — and a
+reviewer bounces it. This engine instead detects how *your* project already writes tests and
+produces code in that same style, so the result drops into a pull request without looking out
+of place. This page proves that on three real, **independently-authored** open-source projects
+with deliberately different conventions — including one untouched for **five years**. Nothing
+was adapted to suit the engine; the engine adapted to each of them.
+
+> **A few terms used throughout.** A **POM** (Page Object Model) is a class that wraps one page
+> and exposes methods like `login()` so tests don't deal in raw selectors. A test gets its POM
+> in one of two styles: **instantiation** — `const loginPage = new LoginPage(page)` written
+> inside the test — or **fixture-injection** — the POM is wired up once, centrally, and handed
+> to the test as a ready-made argument: `async ({ loginPage }) => …`. A project picks one style
+> and sticks to it, and matching that choice is exactly what the engine has to get right. The
+> tools below (`generate_test`, `analyze_coverage`, …) are run by asking for them in Claude
+> Code — they're exposed over [MCP](https://modelcontextprotocol.io).
 
 Every spec and tool output below is a real captured run — two generated tests per project,
 then five more of the engine's tools exercised end to end.
@@ -14,14 +30,14 @@ then five more of the engine's tools exercised end to end.
 | Project | Age | Target site | House style |
 |---|---|---|---|
 | [ecureuill/saucedemo-playwright](https://github.com/ecureuill/saucedemo-playwright) | ~2.5 yrs | saucedemo.com | POMs in **`tests/pages/`**, `abstract class BasePage`, **`new`-instantiation**, no fixtures, JSON data files |
-| [automationexercise-playwright](https://github.com/bogdanid87-hub/automationexercise-playwright) | maintained | automationexercise.com | `pages/` + `fixtures/index.ts`, **collapsed** hierarchy, **fixture-injection**, an **`ApiClient`** abstraction, `data/testData.ts` |
+| [automationexercise-playwright](https://github.com/bogdanid87-hub/automationexercise-playwright) | current | automationexercise.com | `pages/` + `fixtures/index.ts`, **collapsed** hierarchy, **fixture-injection**, an **`ApiClient`** abstraction, `data/testData.ts` |
 | [andrewbayd/playwright-page-object](https://github.com/andrewbayd/playwright-page-object) | **~5 yrs** | angular.realworld.io | flat POMs (no base class), **no fixtures**, `new`-instantiation, kebab-case files |
 
 Three different sites, three different layouts, three different test-authoring styles.
 
 ---
 
-## Step 1 — `learn_conventions` reads each project (token-free)
+## Step 1 — `learn_conventions` reads each project (free — no AI calls)
 
 Run against each project untouched, the detector reports each project's actual conventions:
 
@@ -29,13 +45,14 @@ Run against each project untouched, the detector reports each project's actual c
 |---|---|---|---|
 | POM directory | **`tests/pages`** (non-standard) | `pages` | `pages` |
 | Base / hierarchy | `BasePage`, collapsed, 7 pages | `BasePage`, collapsed, 1 intermediate, 14 pages, 1 component | `HomePage`, flat, 4 pages |
-| Fixtures | none | **16 injected**, no `trackCleanup` | none |
+| Fixtures | none | **16 injected** | none |
 | POM consumption | **instantiation** | **fixture-injection** | **instantiation** |
 | API style | none | **mixed (ApiClient)** | none |
 | Runner projects | setup / e2e / visual / UI | chromium / api | Chrome / Firefox / WebKit |
 
-The configurable `pom.dir` carries `tests/pages` through the whole engine; the rest is
-written into `config.prompts.conventions` so generation follows it.
+Whatever it finds — including a non-standard POM folder like `tests/pages` — is saved as that
+project's config and fed into every later step, so generation follows the project's real layout
+instead of a one-size-fits-all default.
 
 ---
 
@@ -208,7 +225,7 @@ because each run picked up its own project's detected conventions.
 third-party calls, standing up auth, and repairing failures — is automated too. Every block
 below is a real captured run.
 
-### `status` — suite health at a glance (token-free)
+### `status` — suite health at a glance (free — no AI calls)
 
 ```
 📊 QA Suite Status
