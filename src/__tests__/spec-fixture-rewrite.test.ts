@@ -174,6 +174,23 @@ test('x', async ({ page }) => {
     expect(content).toBe(spec);
   });
 
+  it('repoints a wrong fixtures import even when the spec already instantiates POMs', () => {
+    // The model wrote instantiation style (no POM params to convert) but still imported
+    // test/expect from a fixtures module that does not exist in a no-fixtures project.
+    const spec = `import { test, expect } from '../fixtures';
+import { LoginPage } from '../pages/LoginPage';
+
+test('x', async ({ page }) => {
+  const loginPage = new LoginPage(page);
+  await loginPage.login('u', 'p');
+});`;
+    const { content, changed } = rewriteToInstantiation(spec, pomClasses, importPathFor);
+    expect(changed).toBe(true);
+    expect(content).toContain("import { test, expect } from '@playwright/test';");
+    expect(content).not.toContain("from '../fixtures'");
+    expect(content).toContain('const loginPage = new LoginPage(page);');
+  });
+
   it('does not duplicate page when it is already in the destructure', () => {
     const spec = `import { test } from '../fixtures';
 
