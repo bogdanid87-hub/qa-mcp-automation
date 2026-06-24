@@ -51,6 +51,63 @@ export function rewriteFixturesImport(spec: string, fixturesPath: string): { con
   return { content: spec.replace(re, replacement), changed: true };
 }
 
+const pascal = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * Reverse of rewriteNewPomFixtures: for a project that has NO test fixtures (it
+ * instantiates page objects directly), rewrite a generated spec's fixture-injection
+ * back to `const x = new XPage(page)`. The engine's prompt is biased toward
+ * fixture-injection and ignores the convention inconsistently, so this enforces the
+ * instantiation style deterministically.
+ *
+ * An injected param is converted only when its PascalCase name is a real POM class
+ * (`loginPage` → `LoginPage` ∈ pomClasses); built-ins (`page`, `request`, …) are left.
+ * `importPathFor(className)` gives the spec-relative import path for each class.
+ * Also repoints the `test`/`expect` import to '@playwright/test' (no fixtures module).
+ */
+export function rewriteToInstantiation(
+  spec: string,
+  pomClasses: Set<string>,
+  importPathFor: (className: string) => string,
+): { content: string; changed: boolean } {
+  // No fixtures module exists — test/expect come from @playwright/test.
+  const working = spec.replace(
+    /import\s*\{([^}]*\btest\b[^}]*)\}\s*from\s*['"][^'"]+['"]\s*;?/,
+    (_m, names) => `import {${names}} from '@playwright/test';`,
+  );
+
+  const classesToImport = new Set<string>();
+  let out = '';
+  let cursor = 0;
+  CALLBACK_RE.lastIndex = 0;
+  let cb: RegExpExecArray | null;
+  while ((cb = CALLBACK_RE.exec(working)) !== null) {
+    const names = cb[1].split(',').map((s) => s.trim()).filter(Boolean);
+    const pomParams = names.filter((n) => pomClasses.has(pascal(n)));
+    const bodyOpen = working.indexOf('{', cb.index + cb[0].length - 1);
+    const bodyEnd = matchBrace(working, bodyOpen);
+    if (pomParams.length === 0) { out += working.slice(cursor, bodyEnd); cursor = bodyEnd; continue; }
+
+    const kept = names.filter((n) => !pomParams.includes(n));
+    if (!kept.includes('page')) kept.unshift('page');
+    const decls = pomParams.map((p) => { classesToImport.add(pascal(p)); return `  const ${p} = new ${pascal(p)}(page);`; }).join('\n');
+    const body = working.slice(bodyOpen + 1, bodyEnd - 1);
+
+    out += working.slice(cursor, cb.index) + `async ({ ${kept.join(', ')} }) => {\n${decls}\n${body}}`;
+    cursor = bodyEnd;
+  }
+  out += working.slice(cursor);
+
+  if (classesToImport.size === 0) return { content: working, changed: false };
+
+  const imports = [...classesToImport].sort().map((c) => `import { ${c} } from '${importPathFor(c)}';`).join('\n');
+  const firstNlAfterImport = out.indexOf('\n', out.indexOf('import '));
+  out = firstNlAfterImport === -1
+    ? `${imports}\n${out}`
+    : `${out.slice(0, firstNlAfterImport + 1)}${imports}\n${out.slice(firstNlAfterImport + 1)}`;
+  return { content: out, changed: true };
+}
+
 const CALLBACK_RE = /async\s*\(\s*\{([^}]*)\}\s*\)\s*=>\s*\{/g;
 const NEW_DECL_RE = /[ \t]*(?:const|let)\s+(\w+)\s*=\s*new\s+(\w+)\s*\(\s*page\s*\)\s*;?[ \t]*\n?/g;
 
