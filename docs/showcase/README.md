@@ -56,14 +56,15 @@ instead of a one-size-fits-all default.
 
 ---
 
-## Step 2 — `generate_test` matches each project's style
+## Step 2 — the *same two tests*, three house styles
 
-The same kinds of prompts — *"log in and verify the landing page"*, plus one feature test —
-produce code that looks like it belongs in each codebase. Two per project:
+To make the difference visible, every project is asked for the **same two tests** — a valid
+login, then a rejected invalid login. The scenario is held constant; only the house style
+changes. Watch the same test come out three different ways.
 
-### saucedemo — `new`-instantiation, `@playwright/test`, `tests/pages`, JSON data
+### Test 1 — log in with valid credentials
 
-**1. Log in as a standard user**
+**saucedemo** — instantiation (`new`), `@playwright/test`, POMs new'd up in a `beforeEach`:
 
 ```typescript
 import test, { expect } from "@playwright/test";
@@ -88,81 +89,24 @@ test.describe('Sign In', () => {
 });
 ```
 
-**2. Sort the inventory Z→A** — reuses the project's `SortOptions` enum and `products.json`:
-
-```typescript
-import { test, expect } from '@playwright/test';
-import { InventoryPage } from '../pages/InventoryPage';
-import { SortOptions } from '../fixtures/models';
-import data from '../fixtures/data/products.json';
-
-test.describe('Inventory Sort', () => {
-  test('Should sort products from Z to A after login as standard_user @regression', async ({ page }) => {
-    const inventoryPage = new InventoryPage(page);           // ← instantiation
-    await page.goto('/');
-    await page.fill('#user-name', 'standard_user');
-    await page.fill('#password', 'secret_sauce');
-    await page.click('#login-button');
-
-    await inventoryPage.sort(SortOptions.ZA);                // ← the project's enum
-    const expectedFirst = data.za[0].name;                  // ← the project's JSON data
-    // …assert first/last items match the Z-to-A order…
-  });
-});
-```
-
-### AutomationExercise — fixture-injection, custom fixtures module, `ApiClient`
-
-**1. Product search** — fixture-injection (`{ productsPage }`), no `new`:
-
-```typescript
-import { test, expect } from '../../fixtures/index';
-
-test.describe('Product Search', () => {
-  test('should display matching products when searching for "dress" @smoke @regression', async ({ productsPage }) => {
-    await productsPage.goto();                               // ← injected fixture
-    await productsPage.searchFor('dress');
-    await expect(productsPage.searchedProductsHeader).toBeVisible();
-
-    const count = await productsPage.getProductCount();
-    expect(count, 'search for "dress" should return at least one product').toBeGreaterThan(0);
-
-    const productNames = await productsPage.getProductNames();
-    productNames.forEach(name => {
-      expect(name.toLowerCase()).toContain('dress');
-    });
-  });
-});
-```
-
-**2. Login API** — the project's body-`responseCode` API convention; this one was generated
-**and run live, passing against the real API**:
+**AutomationExercise** — fixture-injection: the `loginPage` is **handed in as an argument**
+(no `new`), `test` imported from the project's own fixtures module, data from `testData.ts`:
 
 ```typescript
 import { test, expect } from '../../fixtures';
-import type { APIResponse } from '@playwright/test';
+import { USERS } from '../../data/testData';
 
-test.describe('Auth API', () => {
-  test.beforeAll(async ({ request }) => {
-    await request.post('/api/createAccount', { form: { /* full required account fields */ } });
-  });
-  test.afterAll(async ({ request }) => {
-    await request.delete('/api/deleteAccount', { form: { email: testEmail, password: testPassword } });
-  });
-
-  test('should verify login with valid credentials @smoke @critical', async ({ request }) => {
-    const response = await request.post('/api/verifyLogin', { form: { email: testEmail, password: testPassword } });
-    expect(response.status()).toBe(200);                    // ← transport is always 200…
-    const body = await response.json();
-    expect(body.responseCode).toBe(200);                    // ← …real result is in the body
-    expect(body.message).toBe('User exists!');
+test.describe('Login', () => {
+  test('should log in with valid credentials and show logged-in username @smoke @regression', async ({ loginPage }) => {
+    await loginPage.goto();                                  // ← injected fixture, no `new`
+    await loginPage.loginPageLoaded();
+    await loginPage.login(USERS.existing.email, USERS.existing.password);
+    await expect(loginPage.loggedInAsText).toBeVisible();
   });
 });
 ```
 
-### andrewbayd — flat POMs, no fixtures, `new`-instantiation, kebab-case files
-
-**1. Sign in**
+**andrewbayd** — instantiation (`new`), `@playwright/test`, flat kebab-case POM files:
 
 ```typescript
 import { test, expect } from '@playwright/test';
@@ -184,38 +128,63 @@ test.describe('Login', () => {
 });
 ```
 
-**2. Log out via Settings** — reuses four of the project's flat POMs:
+### Test 2 — reject invalid credentials
+
+Same test again, three styles — and each one found that project's *real* error element /
+helper on its own:
+
+**saucedemo** — instantiation, asserts saucedemo's own `.error-message-container`:
 
 ```typescript
 import { test, expect } from '@playwright/test';
-import { HomePage } from '../pages/home-page';
-import { LoginPage } from '../pages/login-page';
-import { LogoutPage } from '../pages/logout-page';
-import { SettingsPage } from '../pages/settings-page';
+import { LoginPage } from '../pages/LoginPage';
 
-test.describe('Logout', () => {
-  test('should log out from settings and see Sign in link @smoke @regression', async ({ page }) => {
-    const homePage = new HomePage(page);
-    const loginPage = new LoginPage(page);
-    const settingsPage = new SettingsPage(page);
-    const logoutPage = new LogoutPage(page);
+test.describe('Login', () => {
+  test('should show error message for invalid username and password @regression @negative', async ({ page }) => {
+    const loginPage = new LoginPage(page);                  // ← instantiation
+    await loginPage.goto();
+    await loginPage.page.locator('#user-name').fill('invalid_user');
+    await loginPage.page.locator('#password').fill('wrong_password');
+    await loginPage.page.locator('#login-button').click();
 
-    await homePage.open();
-    await homePage.goToLoginPage();
-    await loginPage.login('test@example.com', 'password123');
-
-    await homePage.goToSettings();
-    await settingsPage.logout();
-
-    const isLoggedOut = await logoutPage.userIsLoggedOut();
-    expect(isLoggedOut).toBe(true);
+    await expect(loginPage.page.locator('.error-message-container')).toBeVisible();
   });
 });
 ```
 
-Opposite conventions across the board — `new` vs injection, `@playwright/test` vs a custom
-fixtures module, raw assertions vs an `ApiClient` — all produced from the **same engine**,
-because each run picked up its own project's detected conventions.
+**AutomationExercise** — fixture-injection again, reusing the POM's `expectLoginError()` helper:
+
+```typescript
+import { test, expect } from '../../fixtures';
+
+test.describe('Login', () => {
+  test('should show error message when logging in with invalid credentials @regression @negative', async ({ loginPage }) => {
+    await loginPage.goto();                                  // ← injected fixture, no `new`
+    await loginPage.login('invalid_user@example.com', 'wrongpassword123');
+    await loginPage.expectLoginError();
+  });
+});
+```
+
+**andrewbayd** — instantiation, asserting the live RealWorld error copy verbatim:
+
+```typescript
+import { test, expect } from '@playwright/test';
+import { LoginPage } from '../pages/login-page';
+
+test.describe('Login', () => {
+  test('should show error message when signing in with invalid credentials @regression @negative', async ({ page }) => {
+    const loginPage = new LoginPage(page);                  // ← instantiation
+    await loginPage.login('invalid@example.com', 'wrongpassword123');
+    await loginPage.verifyErrorMessage('That email and password combination is invalid.');
+  });
+});
+```
+
+Same two tests, three codebases. The only thing that changed is the style the engine wrote in:
+**instantiation vs fixture-injection**, `@playwright/test` vs a custom fixtures module, each
+project's own error helper and the real error text it discovered on that site — all from one
+engine, because each run followed the conventions detected in Step 1.
 
 ---
 
