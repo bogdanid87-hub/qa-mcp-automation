@@ -41,7 +41,7 @@ written into `config.prompts.conventions` so generation follows it.
 ## Step 2 — `generate_test` matches each project's style
 
 The same prompt — *"log in and verify the landing page"* — produces code that looks like it
-belongs in each codebase. Side by side:
+belongs in each codebase. All three side by side:
 
 **saucedemo** — `new`-instantiation, plain `@playwright/test` import, `tests/pages` layout, the project's component pattern:
 
@@ -77,6 +77,28 @@ test('should return 200 and User exists for valid credentials @smoke @regression
   });
 ```
 
+**andrewbayd (realworld)** — flat POMs, **no fixtures**, kebab-case files, `new`-instantiation, plain `@playwright/test` import:
+
+```typescript
+import { test, expect } from '@playwright/test';
+import { HomePage } from '../pages/home-page';
+import { LoginPage } from '../pages/login-page';
+import testdata from './testdata';
+
+test.describe('Login', () => {
+  test('should sign in with valid credentials and show Your Feed @smoke @regression', async ({ page }) => {
+    const loginPage = new LoginPage(page);          // ← instantiation, page injected
+    const homePage = new HomePage(page);
+
+    await loginPage.goto();
+    await loginPage.login(testdata.email, testdata.password);
+
+    const isLoggedIn = await homePage.userIsLoggedIn();   // ← the project's own method name
+    expect(isLoggedIn, 'user should be logged in after valid login').toBe(true);
+  });
+});
+```
+
 Opposite conventions — `new` vs injection, `@playwright/test` vs a custom fixtures module,
 raw assertions vs an ApiClient — produced from the **same engine**, because each picked up its
 own project's detected conventions.
@@ -90,6 +112,12 @@ never would:
 
 - **`export abstract class BasePage`** wasn't recognised by the class detector, so the saucedemo
   hierarchy was mis-rooted ([fixed in #101](https://github.com/bogdanid87-hub/qa-mcp-automation/pull/101)).
+- **Fixture-injection bias on a no-fixtures project** — for andrewbayd the model first emitted
+  `async ({ loginPage, homePage })` + an import from a fixtures module that doesn't exist, despite
+  the detected `instantiation` convention. Prompt wording alone didn't fix it, so a deterministic
+  post-generation transform now rewrites it back to `new`-instantiation
+  ([fixed in #103](https://github.com/bogdanid87-hub/qa-mcp-automation/pull/103)) — the same
+  detect-and-enforce-after-generation approach used for the inverse rewrite.
 
 That's the point of testing on unfamiliar real codebases: it hardens the engine against the
 messiness of the real world, not a curated happy path.
