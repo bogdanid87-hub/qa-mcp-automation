@@ -107,6 +107,11 @@ already have (not the engine's defaults). See
 [docs/install-as-dependency.md#existing-playwright-project-already-have-tests](docs/install-as-dependency.md#existing-playwright-project-already-have-tests)
 and [docs/learn-conventions.md](docs/learn-conventions.md).
 
+> **See it on real projects:** [docs/showcase/](docs/showcase/) runs the engine across three
+> independently-authored open-source Playwright suites (including one untouched for 5 years) and
+> shows it detecting each project's conventions and generating tests that match — `new`-instantiation
+> for one, fixture-injection + ApiClient for another — from the same engine.
+
 ---
 
 ## Prerequisites
