@@ -15,14 +15,14 @@ import { autoFixFailure } from './investigate-fix.js';
 import { writeTestAnnotation } from './annotations.js';
 import { readAppLimitations } from './generate-app-knowledge.js';
 import { extractJson } from './llm-utils.js';
-import { extractExportedFunctionNames, extractPomMethods } from './pom-index.js';
+import { extractExportedFunctionNames, extractPomMethods, buildPomIndex } from './pom-index.js';
 import { reviewGeneratedFiles } from './review-generation.js';
-import { buildFixtureMap, pomPrimaryPath, rewriteNewPomFixtures, rewriteFixturesImport } from './spec-fixture-rewrite.js';
+import { buildFixtureMap, pomPrimaryPath, rewriteNewPomFixtures, rewriteFixturesImport, rewriteToInstantiation } from './spec-fixture-rewrite.js';
 import { extractAssertingMethods, findNonAssertingTests } from './spec-checks.js';
 import { TokenBudget } from './budget.js';
 import { errorContent } from '../lib/format-error.js';
 import { formatReqHint } from './requirements-registry.js';
-import { config, registryNameForSpec, specKind, pomDir, fixturesFile, fixturesImportSpecifier } from '../config.js';
+import { config, registryNameForSpec, specKind, pomDir, fixturesFile, fixturesImportSpecifier, relativeImport } from '../config.js';
 
 const ROOT = process.cwd();
 export const MODEL = config.models.primary;
@@ -39,12 +39,15 @@ export const MODEL = config.models.primary;
  * navigate() path matches the first requested page_path. Mutates parsed.files in place.
  */
 async function applyFixtureRewrites(parsed: GenerateResponse, pagePaths: string[]): Promise<void> {
-  let fixturesContent: string;
+  let fixturesContent = '';
   try { fixturesContent = await readFile(join(ROOT, fixturesFile()), 'utf-8'); }
-  catch { return; }
+  catch { /* no fixtures module — instantiation project, handled below */ }
 
   const typeToFixture = buildFixtureMap(fixturesContent);
-  if (typeToFixture.size === 0) return;
+  if (typeToFixture.size === 0) {
+    await applyInstantiationRewrites(parsed);
+    return;
+  }
 
   const ancestors = new Set<string>([
     config.pom.baseClass,
@@ -86,12 +89,43 @@ async function applyFixtureRewrites(parsed: GenerateResponse, pagePaths: string[
   }
 }
 
+/**
+ * No-fixtures project: rewrite a generated spec's fixture-injection back to direct
+ * `const x = new XPage(page)` instantiation (the convention here). Deterministic
+ * counterpart to applyFixtureRewrites — the prompt biases toward fixture-injection
+ * even when conventions say otherwise, so we enforce instantiation after the fact.
+ */
+async function applyInstantiationRewrites(parsed: GenerateResponse): Promise<void> {
+  const classToFile = new Map<string, string>();
+  for (const e of buildPomIndex(await readPomFiles())) classToFile.set(e.className, e.file);
+  if (classToFile.size === 0) return;
+  const pomClasses = new Set(classToFile.keys());
+
+  for (const f of parsed.files ?? []) {
+    if (!(f.path.startsWith('tests/') && f.path.endsWith('.spec.ts'))) continue;
+    const importPathFor = (cls: string) => relativeImport(f.path, classToFile.get(cls) ?? `${pomDir()}/${cls}.ts`);
+    const r = rewriteToInstantiation(f.content, pomClasses, importPathFor);
+    if (r.changed) {
+      f.content = r.content;
+      process.stderr.write(`[generate-test] rewrote fixture-injection → instantiation (${f.path})\n`);
+    }
+  }
+}
+
 /** Read all top-level pages/*.ts (POMs are on disk by the time we check the spec). */
 async function readPomContents(): Promise<string[]> {
+  return (await readPomFiles()).map((f) => f.content);
+}
+
+/** POM files with their project-relative paths (e.g. `{ name: 'pages/LoginPage.ts', content }`). */
+async function readPomFiles(): Promise<{ name: string; content: string }[]> {
   try {
     const files = await readdir(join(ROOT, pomDir()));
     return await Promise.all(
-      files.filter((f) => f.endsWith('.ts')).map((f) => readFile(join(ROOT, pomDir(), f), 'utf-8')),
+      files.filter((f) => f.endsWith('.ts')).map(async (f) => ({
+        name: `${pomDir()}/${f}`,
+        content: await readFile(join(ROOT, pomDir(), f), 'utf-8'),
+      })),
     );
   } catch {
     return [];

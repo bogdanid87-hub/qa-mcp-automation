@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildFixtureMap, pomPrimaryPath, rewriteNewPomFixtures, rewriteFixturesImport } from '../tools/spec-fixture-rewrite';
+import { buildFixtureMap, pomPrimaryPath, rewriteNewPomFixtures, rewriteFixturesImport, rewriteToInstantiation } from '../tools/spec-fixture-rewrite';
 
 describe('buildFixtureMap', () => {
   it('maps each fixture class to its fixture name', () => {
@@ -125,5 +125,64 @@ test('b', async ({ page }) => {
     const { content } = rewriteNewPomFixtures(spec, map);
     expect(content).toContain('await cartPage.open();');
     expect(content).toContain('await homePage.goto();');
+  });
+});
+
+describe('rewriteToInstantiation', () => {
+  const pomClasses = new Set(['LoginPage', 'HomePage']);
+  const importPathFor = (cls: string) => `../pages/${cls}`;
+
+  it('converts injected POM params to `new XPage(page)` + imports + @playwright/test', () => {
+    const spec = `import { test, expect } from '../fixtures';
+
+test('login', async ({ loginPage, homePage }) => {
+  await loginPage.login('u', 'p');
+  await homePage.expectLoaded();
+});`;
+    const { content, changed } = rewriteToInstantiation(spec, pomClasses, importPathFor);
+    expect(changed).toBe(true);
+    expect(content).toContain("import { test, expect } from '@playwright/test';");
+    expect(content).toContain("import { HomePage } from '../pages/HomePage';");
+    expect(content).toContain("import { LoginPage } from '../pages/LoginPage';");
+    expect(content).toContain('async ({ page }) => {');
+    expect(content).toContain('const loginPage = new LoginPage(page);');
+    expect(content).toContain('const homePage = new HomePage(page);');
+    expect(content).toContain("await loginPage.login('u', 'p');");
+  });
+
+  it('keeps non-POM params (request, page) and adds page when absent', () => {
+    const spec = `import { test } from '../fixtures';
+
+test('x', async ({ loginPage, request }) => {
+  await loginPage.login('u', 'p');
+  await request.get('/api');
+});`;
+    const { content } = rewriteToInstantiation(spec, pomClasses, importPathFor);
+    expect(content).toContain('async ({ page, request }) => {');
+    expect(content).toContain('const loginPage = new LoginPage(page);');
+  });
+
+  it('leaves a spec with no injected POM params unchanged', () => {
+    const spec = `import { test, expect } from '@playwright/test';
+
+test('x', async ({ page }) => {
+  await page.goto('/');
+  expect(await page.title()).toBeTruthy();
+});`;
+    const { content, changed } = rewriteToInstantiation(spec, pomClasses, importPathFor);
+    expect(changed).toBe(false);
+    expect(content).toBe(spec);
+  });
+
+  it('does not duplicate page when it is already in the destructure', () => {
+    const spec = `import { test } from '../fixtures';
+
+test('x', async ({ page, loginPage }) => {
+  await loginPage.login('u', 'p');
+});`;
+    const { content } = rewriteToInstantiation(spec, pomClasses, importPathFor);
+    expect(content).toContain('async ({ page }) => {');
+    expect(content).not.toContain('page, page');
+    expect(content).toContain('const loginPage = new LoginPage(page);');
   });
 });
