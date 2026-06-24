@@ -6,7 +6,8 @@ generates tests in **that project's** house style."* This page proves it on thre
 including one that hadn't been touched in **five years**. Nothing here was adapted to suit
 the engine; the engine adapted to each of them.
 
-Every spec below is a real captured run — two generated tests per project.
+Every spec and tool output below is a real captured run — two generated tests per project,
+then five more of the engine's tools exercised end to end.
 
 ## The three projects
 
@@ -198,6 +199,108 @@ test.describe('Logout', () => {
 Opposite conventions across the board — `new` vs injection, `@playwright/test` vs a custom
 fixtures module, raw assertions vs an `ApiClient` — all produced from the **same engine**,
 because each run picked up its own project's detected conventions.
+
+---
+
+## Step 3 — the rest of the workflow (not just generation)
+
+`generate_test` is one of fifteen tools. The QA loop — measuring coverage, mocking
+third-party calls, standing up auth, and repairing failures — is automated too. Every block
+below is a real captured run.
+
+### `status` — suite health at a glance (token-free)
+
+```
+📊 QA Suite Status
+  Registries:
+    TESTS_UI.md      13 passing    1 broken    1 app bug
+    TESTS_API.md     23 passing    0 broken    0 app bugs
+    TESTS_VISUAL.md   4 passing    0 broken    0 app bugs
+    Total            40 passing    1 broken    1 app bug
+
+  ⚠️  Bottom line: 3 things could use attention:
+  • 1 test is broken — run `npm run fix` to investigate.
+  • 1 test found an app bug, not a test bug — review and report it.
+  • 4 tests aren't tagged yet — run `npm run tag_tests`.
+```
+
+### `analyze_coverage` — finds the gaps in an existing spec
+
+Pointed at a single happy-path `contact.spec.ts`, it reasons about *which* untested paths
+matter most — separating **priority** (urgency to write) from **risk** (feature criticality):
+
+```
+✅ Coverage analysis complete — 5 gaps found  (0 critical · 0 high · 1 medium · 4 low)
+
+Priority: Medium (1)
+  should-submit-contact-form-without-file-attachment-and-show-success
+  ℹ️ The no-attachment path is the dominant real-world usage. The only existing test always
+     attaches a file, so a regression that breaks plain submission would be completely
+     invisible to the suite.
+```
+
+It spotted that the *majority* user path (submitting without a file) was the biggest blind
+spot — not just "add more asserts."
+
+### `generate_mock` — a network mock from one request
+
+Asked (in Claude Code) to mock `https://api.stripe.com/v1/charges**` returning a succeeded
+charge, it writes a ready-to-use route fixture:
+
+```typescript
+// fixtures/mocks/paymentGateway.ts
+export async function mockPaymentGateway(page: Page): Promise<void> {
+  await page.route('https://api.stripe.com/v1/charges**', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: 'ch_3Nq', status: 'succeeded', amount: 2500, currency: 'usd' }),
+    });
+  });
+}
+export async function unmockPaymentGateway(page: Page): Promise<void> {
+  await page.unroute('https://api.stripe.com/v1/charges**');
+}
+```
+
+### `generate_auth_fixture` — auto-detects the login form, wires the fixture
+
+Run against saucedemo's live login page (no selectors supplied), it **inspected the DOM and
+found the fields itself**, then wired a setup task + a `loggedInPage` fixture:
+
+```
+**Auto-detected login fields** (confirm, or re-run with explicit selectors):
+  - email/username → #user-name
+  - password       → #password
+  - submit         → #login-button
+
+**Files updated:**
+  - tests/global.setup.ts — new setup task added
+  - fixtures/index.ts — loggedInPage fixture added
+  - .gitignore — test-data/.auth/loggedIn.json excluded
+```
+
+### `investigate_and_fix` — tells you when it's *your app* that's broken, not the test
+
+The valuable thing here isn't patching selectors — it's refusing to fake a green when the
+test is right and the application is wrong. Run against the live automationexercise.com suite,
+the engine hit a failing product-search test, investigated the API responses and the DOM, and
+concluded the **site itself** was defective — then wrote that verdict into the spec instead of
+touching the assertions to make it pass:
+
+```
+/* ⚠️  APP BUG — This test is correct; the application under test has a defect.
+ * Expected: searching 'top' should only return products whose name contains 'top'.
+ * Actual:   the site's search endpoint matches across category/description too, so
+ *           non-matching products (e.g. 'Little Girls Mr. Panda Shirt') are returned.
+ * Do NOT change this test — it documents a real bug. Fix the application instead. */
+```
+
+That annotation is committed in
+[`tests/ui/search.spec.ts`](../../tests/ui/search.spec.ts) — a real defect on a real public
+site, caught and correctly **attributed to the app** by the engine rather than silently
+mutated away. (When the failure genuinely is the test — a drifted selector, a renamed field —
+the same tool repairs the spec and records a reusable lesson so the mistake doesn't recur.)
 
 ---
 
