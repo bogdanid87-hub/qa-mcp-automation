@@ -14,8 +14,9 @@ that match it.
   ([ground truth ↓](#does-it-match-a-humans-tests-ground-truth))
 - **It works on strangers' code too.** Same result on two third-party repos with completely
   different conventions — one of them untouched for **five years**.
-- **One test, three house styles.** The identical login test comes out as `new`-instantiation
-  in one project and fixture-injection in another — because it reads each project first.
+- **One prompt, three house styles.** The same login *request* comes out as `new`-instantiation
+  in one project and fixture-injection in another — and asserts on each app's own "logged-in"
+  signal — because it reads each project first.
 - **It has judgment.** When a generated test failed, it correctly blamed a **real bug in the
   live site**, not the test
   ([↓](#investigate_and_fix--tells-you-when-its-your-app-thats-broken-not-the-test)).
@@ -39,10 +40,6 @@ Nothing was adapted to suit the engine; the engine adapted to each of them.
 > and sticks to it, and matching that choice is exactly what the engine has to get right. The
 > tools below (`generate_test`, `analyze_coverage`, …) are run by asking for them in Claude
 > Code — they're exposed over [MCP](https://modelcontextprotocol.io).
-
-<!-- TODO(visual): drop a side-by-side screenshot or short terminal gif here — the same login
-     prompt producing instantiation (saucedemo) vs fixture-injection (AutomationExercise).
-     This is the single highest-ROI addition for a first-time/recruiter skim. -->
 
 ## The three projects
 
@@ -75,11 +72,19 @@ instead of a one-size-fits-all default.
 
 ---
 
-## Step 2 — the *same two tests*, three house styles
+## Step 2 — the *same two prompts*, three house styles
 
-To make the difference visible, every project is asked for the **same two tests** — a valid
-login, then a rejected invalid login. The scenario is held constant; only the house style
-changes. Watch the same test come out three different ways.
+Every project gets the **same two prompts** — *log in with valid credentials and verify it
+worked*, then *reject an invalid login*. The **request** is held constant; the code that comes
+back is not. Two things change in the output, and both are the engine adapting to the project:
+
+1. the **house style** — instantiation vs fixture-injection, `@playwright/test` vs a custom
+   fixtures module (the focus of this page); and
+2. the **assertion** — each app signals success and failure differently, and the engine finds
+   each one live (saucedemo lands on its inventory page, RealWorld shows a "Your Feed" link,
+   AutomationExercise shows "Logged in as …").
+
+So these aren't three copies of one test — they're three *idiomatic* tests for the same intent.
 
 ### Test 1 — log in with valid credentials
 
@@ -150,8 +155,7 @@ test.describe('Login', () => {
 
 ### Test 2 — reject invalid credentials
 
-Same test again, three styles — and each one found that project's *real* error element /
-helper on its own:
+Same prompt again — and each one found that project's *real* error element / helper on its own:
 
 **AutomationExercise (mine)** — fixture-injection, reusing the POM's `expectLoginError()` helper:
 
@@ -201,10 +205,12 @@ test.describe('Login', () => {
 });
 ```
 
-Same two tests, three codebases. The only thing that changed is the style the engine wrote in:
-**instantiation vs fixture-injection**, `@playwright/test` vs a custom fixtures module, each
-project's own error helper and the real error text it discovered on that site — all from one
-engine, because each run followed the conventions detected in Step 1.
+Same two prompts, three codebases. Both the **style** (instantiation vs fixture-injection,
+`@playwright/test` vs a custom fixtures module) and the **success/failure check** vary —
+saucedemo lands on its inventory page, RealWorld checks a "Your Feed" link, AutomationExercise
+checks "Logged in as …", and each asserts the error its own way. The engine discovered each
+app's real signal and wrote it in that project's idiom — all from one engine, following the
+conventions detected in Step 1.
 
 ---
 
