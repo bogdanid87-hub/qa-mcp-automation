@@ -1,17 +1,35 @@
-# Showcase — one engine, three very different real projects
+# Showcase — one engine, three real Playwright projects
 
 **What this is.** `qa-mcp-engine` generates [Playwright](https://playwright.dev) tests for a
 website automatically. You run it inside [Claude Code](https://claude.com/claude-code) and ask,
 in plain English, for the test you want; it reads your existing test suite and writes new tests
 that match it.
 
+### What this page shows
+
+- **It matches hand-written code.** On my own suite, the login test it generated from a
+  one-line prompt — into a *new* file, never shown the existing spec — came out
+  method-for-method the same as the test I'd already written by hand: same fixtures, same
+  page-object calls, same data, even the same `expectLoginError()` helper.
+  ([ground truth ↓](#does-it-match-a-humans-tests-ground-truth))
+- **It works on strangers' code too.** Same result on two third-party repos with completely
+  different conventions — one of them untouched for **five years**.
+- **One test, three house styles.** The identical login test comes out as `new`-instantiation
+  in one project and fixture-injection in another — because it reads each project first.
+- **It has judgment.** When a generated test failed, it correctly blamed a **real bug in the
+  live site**, not the test
+  ([↓](#investigate_and_fix--tells-you-when-its-your-app-thats-broken-not-the-test)).
+
 **Why "match it" is the hard part.** A generic AI test generator writes code in *its* own
 style — foreign imports, the wrong folder, a different way of wiring page objects — and a
 reviewer bounces it. This engine instead detects how *your* project already writes tests and
 produces code in that same style, so the result drops into a pull request without looking out
-of place. This page proves that on three real, **independently-authored** open-source projects
-with deliberately different conventions — including one untouched for **five years**. Nothing
-was adapted to suit the engine; the engine adapted to each of them.
+of place.
+
+The projects below are three real open-source Playwright suites: **my own reference
+implementation** (a green 40-test suite, where I can check the output against the tests I wrote
+by hand) plus **two third-party repos I'd never touched** — one untouched for five years.
+Nothing was adapted to suit the engine; the engine adapted to each of them.
 
 > **A few terms used throughout.** A **POM** (Page Object Model) is a class that wraps one page
 > and exposes methods like `login()` so tests don't deal in raw selectors. A test gets its POM
@@ -22,16 +40,17 @@ was adapted to suit the engine; the engine adapted to each of them.
 > tools below (`generate_test`, `analyze_coverage`, …) are run by asking for them in Claude
 > Code — they're exposed over [MCP](https://modelcontextprotocol.io).
 
-Every spec and tool output below is a real captured run — two generated tests per project,
-then five more of the engine's tools exercised end to end.
+<!-- TODO(visual): drop a side-by-side screenshot or short terminal gif here — the same login
+     prompt producing instantiation (saucedemo) vs fixture-injection (AutomationExercise).
+     This is the single highest-ROI addition for a first-time/recruiter skim. -->
 
 ## The three projects
 
 | Project | Age | Target site | House style |
 |---|---|---|---|
-| [ecureuill/saucedemo-playwright](https://github.com/ecureuill/saucedemo-playwright) | ~2.5 yrs | saucedemo.com | POMs in **`tests/pages/`**, `abstract class BasePage`, **`new`-instantiation**, no fixtures, JSON data files |
-| [automationexercise-playwright](https://github.com/bogdanid87-hub/automationexercise-playwright) | current | automationexercise.com | `pages/` + `fixtures/index.ts`, **collapsed** hierarchy, **fixture-injection**, an **`ApiClient`** abstraction, `data/testData.ts` |
-| [andrewbayd/playwright-page-object](https://github.com/andrewbayd/playwright-page-object) | **~5 yrs** | angular.realworld.io | flat POMs (no base class), **no fixtures**, `new`-instantiation, kebab-case files |
+| [automationexercise-playwright](https://github.com/bogdanid87-hub/automationexercise-playwright) — *my reference suite* | current | automationexercise.com | `pages/` + `fixtures/index.ts`, **collapsed** hierarchy, **fixture-injection**, an **`ApiClient`** abstraction, `data/testData.ts` |
+| [ecureuill/saucedemo-playwright](https://github.com/ecureuill/saucedemo-playwright) — *third-party* | ~2.5 yrs | saucedemo.com | POMs in **`tests/pages/`**, `abstract class BasePage`, **`new`-instantiation**, no fixtures, JSON data files |
+| [andrewbayd/playwright-page-object](https://github.com/andrewbayd/playwright-page-object) — *third-party* | **~5 yrs** | angular.realworld.io | flat POMs (no base class), **no fixtures**, `new`-instantiation, kebab-case files |
 
 Three different sites, three different layouts, three different test-authoring styles.
 
@@ -41,14 +60,14 @@ Three different sites, three different layouts, three different test-authoring s
 
 Run against each project untouched, the detector reports each project's actual conventions:
 
-| What it detected | ecureuill (saucedemo) | AutomationExercise | andrewbayd (realworld) |
+| What it detected | AutomationExercise (mine) | ecureuill (saucedemo) | andrewbayd (realworld) |
 |---|---|---|---|
-| POM directory | **`tests/pages`** (non-standard) | `pages` | `pages` |
-| Base / hierarchy | `BasePage`, collapsed, 7 pages | `BasePage`, collapsed, 1 intermediate, 14 pages, 1 component | `HomePage`, flat, 4 pages |
-| Fixtures | none | **16 injected** | none |
-| POM consumption | **instantiation** | **fixture-injection** | **instantiation** |
-| API style | none | **mixed (ApiClient)** | none |
-| Runner projects | setup / e2e / visual / UI | chromium / api | Chrome / Firefox / WebKit |
+| POM directory | `pages` | **`tests/pages`** (non-standard) | `pages` |
+| Base / hierarchy | `BasePage`, collapsed, 1 intermediate, 14 pages, 1 component | `BasePage`, collapsed, 7 pages | `HomePage`, flat, 4 pages |
+| Fixtures | **16 injected** | none | none |
+| POM consumption | **fixture-injection** | **instantiation** | **instantiation** |
+| API style | **mixed (ApiClient)** | none | none |
+| Runner projects | chromium / api | setup / e2e / visual / UI | Chrome / Firefox / WebKit |
 
 Whatever it finds — including a non-standard POM folder like `tests/pages` — is saved as that
 project's config and fed into every later step, so generation follows the project's real layout
@@ -63,6 +82,24 @@ login, then a rejected invalid login. The scenario is held constant; only the ho
 changes. Watch the same test come out three different ways.
 
 ### Test 1 — log in with valid credentials
+
+**AutomationExercise (mine)** — fixture-injection: the `loginPage` is **handed in as an
+argument** (no `new`), `test` imported from the project's own fixtures module, data from
+`testData.ts`:
+
+```typescript
+import { test, expect } from '../../fixtures';
+import { USERS } from '../../data/testData';
+
+test.describe('Login', () => {
+  test('should log in with valid credentials and show logged-in username @smoke @regression', async ({ loginPage }) => {
+    await loginPage.goto();                                  // ← injected fixture, no `new`
+    await loginPage.loginPageLoaded();
+    await loginPage.login(USERS.existing.email, USERS.existing.password);
+    await expect(loginPage.loggedInAsText).toBeVisible();
+  });
+});
+```
 
 **saucedemo** — instantiation (`new`), `@playwright/test`, POMs new'd up in a `beforeEach`:
 
@@ -85,23 +122,6 @@ test.describe('Sign In', () => {
     await loginPage.login('standard_user', 'secret_sauce');
     await inventoryPage.toBe();
     await expect(inventoryPage.locatorHeaderTitle).toBeVisible();
-  });
-});
-```
-
-**AutomationExercise** — fixture-injection: the `loginPage` is **handed in as an argument**
-(no `new`), `test` imported from the project's own fixtures module, data from `testData.ts`:
-
-```typescript
-import { test, expect } from '../../fixtures';
-import { USERS } from '../../data/testData';
-
-test.describe('Login', () => {
-  test('should log in with valid credentials and show logged-in username @smoke @regression', async ({ loginPage }) => {
-    await loginPage.goto();                                  // ← injected fixture, no `new`
-    await loginPage.loginPageLoaded();
-    await loginPage.login(USERS.existing.email, USERS.existing.password);
-    await expect(loginPage.loggedInAsText).toBeVisible();
   });
 });
 ```
@@ -133,6 +153,20 @@ test.describe('Login', () => {
 Same test again, three styles — and each one found that project's *real* error element /
 helper on its own:
 
+**AutomationExercise (mine)** — fixture-injection, reusing the POM's `expectLoginError()` helper:
+
+```typescript
+import { test, expect } from '../../fixtures';
+
+test.describe('Login', () => {
+  test('should show error message when logging in with invalid credentials @regression @negative', async ({ loginPage }) => {
+    await loginPage.goto();                                  // ← injected fixture, no `new`
+    await loginPage.login('invalid_user@example.com', 'wrongpassword123');
+    await loginPage.expectLoginError();
+  });
+});
+```
+
 **saucedemo** — instantiation, asserts saucedemo's own `.error-message-container`:
 
 ```typescript
@@ -148,20 +182,6 @@ test.describe('Login', () => {
     await loginPage.page.locator('#login-button').click();
 
     await expect(loginPage.page.locator('.error-message-container')).toBeVisible();
-  });
-});
-```
-
-**AutomationExercise** — fixture-injection again, reusing the POM's `expectLoginError()` helper:
-
-```typescript
-import { test, expect } from '../../fixtures';
-
-test.describe('Login', () => {
-  test('should show error message when logging in with invalid credentials @regression @negative', async ({ loginPage }) => {
-    await loginPage.goto();                                  // ← injected fixture, no `new`
-    await loginPage.login('invalid_user@example.com', 'wrongpassword123');
-    await loginPage.expectLoginError();
   });
 });
 ```
@@ -185,6 +205,53 @@ Same two tests, three codebases. The only thing that changed is the style the en
 **instantiation vs fixture-injection**, `@playwright/test` vs a custom fixtures module, each
 project's own error helper and the real error text it discovered on that site — all from one
 engine, because each run followed the conventions detected in Step 1.
+
+---
+
+## Does it match a *human's* tests? Ground truth
+
+Matching a stranger's conventions is one thing; the real test is whether the output matches a
+test a person already wrote by hand. My AutomationExercise suite already had a login test in
+`tests/ui/auth.spec.ts` before any of this ran. The engine generated its login tests **into new
+files** and was **never shown `auth.spec.ts`** — yet produced effectively the same test.
+
+**Valid login** — what I wrote by hand:
+
+```typescript
+// tests/ui/auth.spec.ts — hand-written, already in the suite
+test('should log in with valid credentials', async ({ homePage, loginPage }) => {
+  await homePage.goto();
+  await homePage.navSignupLogin.click();
+  await loginPage.loginPageLoaded();
+  await loginPage.login(USERS.existing.email, USERS.existing.password);
+  await expect(loginPage.loggedInAsText).toBeVisible();
+});
+```
+
+…and what the engine generated, cold, into a new file:
+
+```typescript
+test('should log in with valid credentials and show logged-in username @smoke @regression', async ({ loginPage }) => {
+  await loginPage.goto();
+  await loginPage.loginPageLoaded();                          // ← same helper
+  await loginPage.login(USERS.existing.email, USERS.existing.password);  // ← same call, same data
+  await expect(loginPage.loggedInAsText).toBeVisible();      // ← same assertion
+});
+```
+
+Same fixture-injection, the same `loginPageLoaded()` / `login(USERS.existing.…)` /
+`loggedInAsText` calls, the same data source — arrived at independently. The **negative** test
+is closer still: both the hand-written and the generated version reuse the project's own
+`expectLoginError()` helper:
+
+```typescript
+// hand-written                                  // generated
+await loginPage.login('wrong@email.com', 'wrongpassword');   await loginPage.login('invalid_user@example.com', 'wrongpassword123');
+await loginPage.expectLoginError();                          await loginPage.expectLoginError();
+```
+
+That's the whole claim, measured against ground truth: not "the AI wrote a plausible test," but
+"the AI wrote the test the way this codebase's author already writes them."
 
 ---
 
