@@ -68,7 +68,7 @@ When `investigate_and_fix` classifies a failure as an app bug, it writes `/* ⚠
 ### PRD risk analysis with multi-format input
 `analyze_prd` accepts text, Markdown, PDFs (passed natively to the Claude API — no third-party parser), and images (wireframes, mockups via vision). It classifies features by risk tier (critical → revenue impact, high → trust/data, medium → conversion, low → content), generates test suggestions in a structured batch format, and filters against existing `TESTS_UI.md` coverage so the output is a genuine gap list. The `--tier` and `--focus` flags scope the output to a sprint without re-running the full analysis.
 
-See `examples/` for two worked PRD analyses — a Save for Later cart feature and a Dynamic Cart Shipping Estimator — and a coverage gap analysis for the subscription spec. The examples show the tool identifying cross-feature risks not explicitly stated in the PRD, correctly handling out-of-scope constraints, and flagging test asymmetries.
+See [examples/](examples/) for two worked PRD analyses — a Save for Later cart feature and a Dynamic Cart Shipping Estimator — and a coverage gap analysis for the subscription spec. The examples show the tool identifying cross-feature risks not explicitly stated in the PRD, correctly handling out-of-scope constraints, and flagging test asymmetries.
 
 ### Test registry and reconciliation
 
@@ -106,6 +106,13 @@ source, and API-client pattern into the config, so generated tests match the cod
 already have (not the engine's defaults). See
 [docs/install-as-dependency.md#existing-playwright-project-already-have-tests](docs/install-as-dependency.md#existing-playwright-project-already-have-tests)
 and [docs/learn-conventions.md](docs/learn-conventions.md).
+
+> **See it on real projects:** [examples/](examples/) runs the engine across three real
+> open-source Playwright suites — my own reference suite plus two third-party repos I'd never
+> touched (one untouched for 5 years) — detecting each project's conventions and generating
+> tests that match: `new`-instantiation for one, fixture-injection + ApiClient for another, from
+> the same engine. The [cross-project showcase](examples/cross-project-showcase.md) is the full
+> walkthrough.
 
 ---
 
@@ -337,12 +344,11 @@ qa-mcp-automation/
 │       ├── products.spec.ts          ← nav bar, sidebar, search bar baselines
 │       └── cart.spec.ts              ← cart table structure with content masked
 │
-├── examples/                         ← sample tool outputs for portfolio reference
-│   ├── saveForLater.md               ← PRD input: Save for Later cart feature
-│   ├── saveForLater-analysis.txt     ← analyze_prd output: 5 critical / 2 high / 5 medium-low
-│   ├── dynamicCart.md                ← PRD input: Dynamic Cart Shipping Estimator
-│   ├── dynamicCart-analysis.txt      ← analyze_prd output: 8 critical / 1 high / 5 medium-low
-│   └── subscription-coverage-analysis.md  ← analyze_coverage output for subscription spec
+├── examples/                         ← all "see it work" demos (start here)
+│   ├── README.md                     ← index of every example
+│   ├── cross-project-showcase.md     ← flagship: one engine, three real repos, 7 tools
+│   ├── prd-analysis/                 ← analyze_prd: PRD input (.prd.md) → backlog (.backlog.txt)
+│   └── coverage/                     ← analyze_coverage output for the subscription spec
 │
 ├── mcp-qa.config.json                ← project config — site URL, folders, registries, risk tiers, POM hierarchy
 ├── learned-rules.md                  ← lessons auto-appended by investigate_and_fix, injected into the system prompt
