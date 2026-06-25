@@ -356,7 +356,7 @@ touching the assertions to make it pass:
 ```
 
 That annotation is committed in
-[`tests/ui/search.spec.ts`](../../tests/ui/search.spec.ts) — a real defect on a real public
+[`tests/ui/search.spec.ts`](../tests/ui/search.spec.ts) — a real defect on a real public
 site, caught and correctly **attributed to the app** by the engine rather than silently
 mutated away. (When the failure genuinely is the test — a drifted selector, a renamed field —
 the same tool repairs the spec and records a reusable lesson so the mistake doesn't recur.)
@@ -373,6 +373,6 @@ npx qa-learn --apply-pom --apply-conventions --write   # detects tests/pages + i
 # then ask generate_test (in Claude Code) for any login/cart/checkout test
 ```
 
-See [docs/learn-conventions.md](../learn-conventions.md) for what's detected and
-[docs/install-as-dependency.md](../install-as-dependency.md#existing-playwright-project-already-have-tests)
+See [docs/learn-conventions.md](../docs/learn-conventions.md) for what's detected and
+[docs/install-as-dependency.md](../docs/install-as-dependency.md#existing-playwright-project-already-have-tests)
 for the existing-project flow.
