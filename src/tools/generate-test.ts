@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { readFile, readdir } from 'fs/promises';
+import { readFile, readdir, rm } from 'fs/promises';
 import { basename, join } from 'path';
 import { safeWrite } from '../lib/safe-write.js';
 import { getSystemBlocks, getSystemPrompt, buildUserBlocks, buildUserPrompt } from '../prompts/system.js';
@@ -445,6 +445,23 @@ export async function generateTestTool(args: {
 
   const written: string[] = [];
 
+  // POMs are persisted to disk during the orchestration phase *only* so the spec call
+  // can re-read them. That means a dry run would otherwise leave new/modified POM files
+  // behind. Record each POM's prior state before writing so a dry run can roll it back:
+  // null = the file didn't exist (delete it), a string = its original content (restore it).
+  const pomBackups = new Map<string, string | null>();
+  const recordPomWrite = async (abs: string): Promise<void> => {
+    if (pomBackups.has(abs)) return; // keep the earliest (true original) backup
+    try { pomBackups.set(abs, await readFile(abs, 'utf-8')); }
+    catch { pomBackups.set(abs, null); }
+  };
+  const restorePomWrites = async (): Promise<void> => {
+    for (const [abs, original] of pomBackups) {
+      if (original === null) await rm(abs, { force: true });
+      else await safeWrite(abs, original, { allowOverwrite: true });
+    }
+  };
+
   // Split POM and spec generation into two calls when no POM exists yet.
   // This guarantees the spec call sees the committed POM — eliminating method-name
   // mismatches between the two files that occur when both are invented simultaneously.
@@ -514,6 +531,7 @@ export async function generateTestTool(args: {
           } catch { /* new file — no guard needed */ }
           // The method-drop guard above already vets this POM file —
           // pass allowOverwrite so safeWrite's generic shrink check doesn't double-guard.
+          await recordPomWrite(abs);
           await safeWrite(abs, file.content, { allowOverwrite: true });
           written.push(file.path);
         }
@@ -551,6 +569,7 @@ Respond with the standard JSON:
             for (const file of fallbackParsed.files ?? []) {
               if (!file.path.startsWith(`${pomDir()}/`)) continue;
               const abs = join(ROOT, file.path);
+              await recordPomWrite(abs);
               await safeWrite(abs, file.content, { allowOverwrite: true });
               written.push(file.path);
             }
@@ -622,6 +641,7 @@ Respond with the standard JSON:
             if (missing.length > 0) { pomGeneratedByLocal = false; continue; }
           } catch { /* new file */ }
         }
+        await recordPomWrite(abs);
         await safeWrite(abs, file.content, { allowOverwrite: true });
         written.push(file.path);
       }
@@ -678,6 +698,8 @@ Never remove existing methods — only append new ones.` : '';
 
   // ── Dry-run gate: show proposed output without writing or running ─────────
   if (args.dry_run) {
+    // Roll back any POMs persisted for the spec call above — a dry run writes nothing.
+    await restorePomWrites();
     const specFile = (parsed.files ?? []).find(
       f => f.path.startsWith('tests/') && f.path.endsWith('.spec.ts'),
     );
